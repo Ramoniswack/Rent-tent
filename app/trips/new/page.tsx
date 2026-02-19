@@ -328,14 +328,26 @@ export default function CreateTripPage() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-[#f5f8f7] bg-topographic">
-        <main className="flex-grow flex items-center justify-center py-12 px-4">
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
+        {/* Main Wrapper */}
+        <div className="relative flex-grow w-full flex items-center justify-center overflow-hidden py-12">
+          {/* Background Gradients & Overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#f5f8f7] to-[#f1f5f9] dark:from-[#0f231d] dark:to-[#05100d] z-0"></div>
+          
+          {/* Topographic Pattern */}
+          <div 
+            className="absolute inset-0 opacity-50 z-0 pointer-events-none"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23059467' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`
+            }}
+          ></div>
+
           {/* Card Container */}
-          <div className="w-full max-w-[640px] bg-white dark:bg-[#132a24] rounded-2xl shadow-[0_25px_50px_-12px_rgba(5,148,103,0.15)] p-8 md:p-12 relative overflow-hidden transition-all">
+          <div className="relative w-full max-w-[640px] bg-white dark:bg-[#152e26] rounded-2xl shadow-2xl p-8 md:p-12 z-10 mx-4 border border-white/50 dark:border-white/5 overflow-hidden transition-all">
             {/* Close Button */}
             <button
               onClick={() => router.back()}
-              className="absolute top-8 right-8 text-slate-400 hover:text-[#059467] transition-colors"
+              className="absolute top-8 right-8 text-slate-400 dark:text-slate-500 hover:text-[#059467] dark:hover:text-[#059467] transition-colors"
             >
               <X className="w-7 h-7" />
             </button>
@@ -473,21 +485,21 @@ export default function CreateTripPage() {
                 {/* Upload Button */}
                 <label
                   htmlFor="coverPhotoInput"
-                  className={`w-full border-2 border-dashed border-[#059467]/40 bg-[#e7f4f0]/30 dark:bg-[#059467]/5 hover:bg-[#e7f4f0]/60 dark:hover:bg-[#059467]/10 rounded-input p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group ${
+                  className={`w-full border-2 border-dashed border-[#059467]/40 dark:border-[#059467]/60 bg-[#e7f4f0]/30 dark:bg-[#059467]/5 hover:bg-[#e7f4f0]/60 dark:hover:bg-[#059467]/10 rounded-input p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group ${
                     uploadingImage || loading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  <div className="size-12 rounded-full bg-white dark:bg-[#059467]/20 flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
+                  <div className="size-12 rounded-full bg-white dark:bg-[#1a3d34] flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                     {uploadingImage ? (
                       <Loader2 className="text-[#059467] w-6 h-6 animate-spin" />
                     ) : (
                       <Upload className="text-[#059467] w-6 h-6" />
                     )}
                   </div>
-                  <p className="text-[#059467] font-bold text-sm">
+                  <p className="text-[#059467] dark:text-[#10b981] font-bold text-sm">
                     {uploadingImage ? 'Uploading...' : coverPhotoUrl ? 'Change Cover Photo' : 'Click to upload'}
                   </p>
-                  <p className="text-slate-500 text-xs mt-1">
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
                     JPG, PNG or WEBP (max. 5MB)
                   </p>
                 </label>
@@ -498,7 +510,7 @@ export default function CreateTripPage() {
                     <img
                       src={coverPhotoUrl}
                       alt="Cover preview"
-                      className="w-full h-48 object-cover rounded-input border-2 border-[#059467]/20"
+                      className="w-full h-48 object-cover rounded-input border-2 border-[#059467]/20 dark:border-[#059467]/40"
                     />
                     <button
                       type="button"
@@ -525,7 +537,7 @@ export default function CreateTripPage() {
                   <span className="text-[#0d1c17] dark:text-white text-base font-bold">
                     Public Trip
                   </span>
-                  <span className="text-slate-500 text-sm">
+                  <span className="text-slate-500 dark:text-slate-400 text-sm">
                     Visible to the community and explore page
                   </span>
                 </div>
@@ -538,7 +550,7 @@ export default function CreateTripPage() {
                     disabled={loading}
                     className="sr-only peer"
                   />
-                  <div className="w-14 h-8 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#059467]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467] peer-disabled:opacity-50 peer-disabled:cursor-not-allowed" />
+                  <div className="w-14 h-8 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#059467]/20 dark:peer-focus:ring-[#059467]/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467] peer-disabled:opacity-50 peer-disabled:cursor-not-allowed" />
                 </label>
               </div>
 
@@ -569,7 +581,7 @@ export default function CreateTripPage() {
               </div>
             </form>
           </div>
-        </main>
+        </div>
       </div>
       <div className="hidden md:block">
         <Footer />

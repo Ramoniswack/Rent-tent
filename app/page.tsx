@@ -76,7 +76,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f5f8f7]">
+    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
       <Header />
 
       {/* Hero Section */}
@@ -88,8 +88,8 @@ export default function Home() {
             alt="Mist covered mountains and forest landscape"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-[#0f231d]/40 mix-blend-multiply"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0f231d]/30 via-transparent to-[#f5f8f7]"></div>
+          <div className="absolute inset-0 bg-[#0f231d]/40 dark:bg-[#0f231d]/60 mix-blend-multiply"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0f231d]/30 via-transparent to-[#f5f8f7] dark:to-[#0f231d]"></div>
         </div>
 
         <div className="relative z-10 max-w-[1440px] mx-auto px-6 lg:px-20 w-full grid grid-cols-12 gap-8">
@@ -111,7 +111,7 @@ export default function Home() {
             </h1>
 
             {/* Description */}
-            <p className="text-lg md:text-xl text-slate-100 font-medium max-w-2xl leading-relaxed opacity-90">
+            <p className="text-lg md:text-xl text-slate-100 dark:text-slate-200 font-medium max-w-2xl leading-relaxed opacity-90">
               The all-in-one workspace for digital nomads to plan trips, track budgets, and rent premium gear anywhere in the world.
             </p>
 
@@ -148,14 +148,14 @@ export default function Home() {
       {/* Features Section */}
       <section
         id="features"
-        className="py-24 px-6 lg:px-20 max-w-[1440px] mx-auto bg-[#f5f8f7] relative z-10 -mt-20 rounded-t-[3rem]"
+        className="py-24 px-6 lg:px-20 max-w-[1440px] mx-auto bg-[#f5f8f7] dark:bg-[#0f231d] relative z-10 -mt-20 rounded-t-[3rem]"
       >
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
           <div className="max-w-2xl">
-            <h2 className="text-[#0f231d] text-4xl md:text-[48px] font-black leading-tight tracking-tight mb-4">
+            <h2 className="text-[#0f231d] dark:text-white text-4xl md:text-[48px] font-black leading-tight tracking-tight mb-4">
               Built for the Modern Explorer
             </h2>
-            <p className="text-slate-500 text-lg">
+            <p className="text-slate-500 dark:text-slate-400 text-lg">
               Everything you need to seamlessly transition from work to wanderlust.
             </p>
           </div>
@@ -165,13 +165,13 @@ export default function Home() {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group border border-slate-100"
+              className="bg-white dark:bg-[#152e26] p-8 rounded-3xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group border border-slate-100 dark:border-white/5"
             >
-              <div className="size-14 rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467] mb-6 group-hover:bg-[#059467] group-hover:text-white transition-colors duration-300">
+              <div className="size-14 rounded-2xl bg-[#059467]/10 dark:bg-[#059467]/20 flex items-center justify-center text-[#059467] dark:text-[#10b981] mb-6 group-hover:bg-[#059467] group-hover:text-white transition-colors duration-300">
                 <feature.icon className="w-7 h-7" />
               </div>
-              <h3 className="text-[#0f231d] text-xl font-bold mb-3">{feature.title}</h3>
-              <p className="text-slate-500 leading-relaxed">{feature.description}</p>
+              <h3 className="text-[#0f231d] dark:text-white text-xl font-bold mb-3">{feature.title}</h3>
+              <p className="text-slate-500 dark:text-slate-400 leading-relaxed">{feature.description}</p>
             </div>
           ))}
         </div>
@@ -179,17 +179,17 @@ export default function Home() {
 
       {/* Large CTA Break */}
       <section className="py-12 px-6 lg:px-20 max-w-[1440px] mx-auto">
-        <div className="relative rounded-3xl overflow-hidden bg-[#0f231d] h-[400px] flex items-center justify-center text-center px-4">
+        <div className="relative rounded-3xl overflow-hidden bg-[#0f231d] dark:bg-[#152e26] h-[400px] flex items-center justify-center text-center px-4">
           <img
             src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1920&q=80"
             alt="Person planning travel"
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
+            className="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20"
           />
           <div className="relative z-10 flex flex-col items-center gap-6 max-w-2xl">
             <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight">
               Ready to roam freely?
             </h2>
-            <p className="text-slate-300 text-lg">
+            <p className="text-slate-300 dark:text-slate-400 text-lg">
               Join 50,000+ nomads using NomadNotes to plan smarter and travel lighter.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
@@ -211,12 +211,12 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-24 px-6 lg:px-20 max-w-[1440px] mx-auto bg-[#f5f8f7]">
+      <section className="py-24 px-6 lg:px-20 max-w-[1440px] mx-auto bg-[#f5f8f7] dark:bg-[#0f231d]">
         <div className="text-center mb-16">
-          <h2 className="text-[#0f231d] text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="text-[#0f231d] dark:text-white text-3xl md:text-4xl font-bold mb-4">
             Loved by Travelers
           </h2>
-          <p className="text-slate-500 max-w-xl mx-auto">
+          <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
             Don't just take our word for it. Here's what the community has to say.
           </p>
         </div>
@@ -225,7 +225,7 @@ export default function Home() {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="flex flex-col gap-6 bg-white p-8 rounded-3xl shadow-sm border border-slate-100"
+              className="flex flex-col gap-6 bg-white dark:bg-[#152e26] p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5"
             >
               <div className="flex gap-1 text-[#f59e0b]">
                 {[...Array(5)].map((_, i) => (
@@ -241,7 +241,7 @@ export default function Home() {
                   />
                 ))}
               </div>
-              <p className="text-[#0f231d] text-lg font-medium leading-relaxed">
+              <p className="text-[#0f231d] dark:text-white text-lg font-medium leading-relaxed">
                 "{testimonial.text}"
               </p>
               <div className="flex items-center gap-4 mt-auto">
@@ -251,8 +251,8 @@ export default function Home() {
                   className="size-12 rounded-full object-cover"
                 />
                 <div>
-                  <div className="text-[#0f231d] font-bold text-sm">{testimonial.name}</div>
-                  <div className="text-slate-500 text-xs">{testimonial.role}</div>
+                  <div className="text-[#0f231d] dark:text-white font-bold text-sm">{testimonial.name}</div>
+                  <div className="text-slate-500 dark:text-slate-400 text-xs">{testimonial.role}</div>
                 </div>
               </div>
             </div>

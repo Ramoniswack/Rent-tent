@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
-import LocationMap from '../../../components/LocationMap';
 import { gearAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -21,6 +21,13 @@ import {
   Search,
   MapPin
 } from 'lucide-react';
+
+const LocationMap = dynamic(() => import('../../../components/LocationMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[200px] rounded-input overflow-hidden relative shadow-inner bg-slate-200 dark:bg-slate-700 animate-pulse" />
+  ),
+});
 
 // Cloudinary types
 declare global {
@@ -1109,8 +1116,21 @@ export default function AddGearPage() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col items-center">
-        <main className="w-full max-w-[640px] flex-1 flex flex-col justify-start px-4 sm:px-0 mt-6 mb-8">
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
+        {/* Main Wrapper */}
+        <div className="relative flex-grow w-full flex items-center justify-center overflow-hidden py-12">
+          {/* Background Gradients & Overlay */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#f5f8f7] to-[#f1f5f9] dark:from-[#0f231d] dark:to-[#05100d] z-0"></div>
+          
+          {/* Topographic Pattern */}
+          <div 
+            className="absolute inset-0 opacity-50 z-0 pointer-events-none"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23059467' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`
+            }}
+          ></div>
+
+        <main className="relative w-full max-w-[640px] flex-1 flex flex-col justify-start px-4 sm:px-0 mt-6 mb-8 z-10">
           {/* Progress Stepper */}
           <div className="mb-10 px-4">
             <div className="relative flex justify-between items-center w-full">
@@ -1213,6 +1233,7 @@ export default function AddGearPage() {
             </div>
           </form>
         </main>
+        </div>
       </div>
       <div className="hidden md:block">
         <Footer />
