@@ -63,7 +63,7 @@ export default function MessagesPage() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
@@ -394,9 +394,20 @@ export default function MessagesPage() {
 
     // Track handler for receiving remote stream
     pc.ontrack = (event) => {
-      console.log('Received remote track:', event.streams[0]);
+      console.log('Received remote track:', event.track.kind, event.streams[0]);
       if (remoteVideoRef.current && event.streams[0]) {
+        console.log('Setting remote stream to element');
         remoteVideoRef.current.srcObject = event.streams[0];
+        
+        // Force play for audio
+        if (remoteVideoRef.current instanceof HTMLAudioElement || remoteVideoRef.current instanceof HTMLVideoElement) {
+          remoteVideoRef.current.play().catch(err => {
+            console.error('Error playing remote stream:', err);
+            showNotification('Click to enable audio', 'info');
+          });
+        }
+      } else {
+        console.error('Remote video ref not available');
       }
     };
 
@@ -420,6 +431,37 @@ export default function MessagesPage() {
     };
 
     return pc;
+  };
+
+  // Test media devices
+  const testMediaDevices = async () => {
+    try {
+      console.log('Testing media devices...');
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      console.log('Available devices:', devices);
+      
+      const audioDevices = devices.filter(d => d.kind === 'audioinput');
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      
+      console.log(`Found ${audioDevices.length} microphones and ${videoDevices.length} cameras`);
+      
+      if (audioDevices.length === 0) {
+        showNotification('No microphone found', 'error');
+        return false;
+      }
+      
+      // Test audio
+      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Audio test successful:', audioStream);
+      audioStream.getTracks().forEach(track => track.stop());
+      
+      showNotification('Media devices working!', 'success');
+      return true;
+    } catch (error: any) {
+      console.error('Media device test failed:', error);
+      showNotification(`Media test failed: ${error.message}`, 'error');
+      return false;
+    }
   };
 
   // Start call
@@ -903,19 +945,33 @@ export default function MessagesPage() {
         {/* Call UI Overlay */}
         {inCall && (
           <div className="fixed inset-0 bg-black z-50 flex flex-col">
-            {/* Remote Video */}
+            {/* Remote Video/Audio */}
             <div className="flex-1 relative">
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                className="w-full h-full object-cover"
-              />
+              {callType === 'video' ? (
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full h-full object-cover"
+                  onLoadedMetadata={() => console.log('Remote video loaded')}
+                  onError={(e) => console.error('Remote video error:', e)}
+                />
+              ) : (
+                <audio
+                  ref={remoteVideoRef as React.RefObject<HTMLAudioElement>}
+                  autoPlay
+                  onLoadedMetadata={() => console.log('Remote audio loaded')}
+                  onError={(e) => console.error('Remote audio error:', e)}
+                />
+              )}
               {callType === 'audio' && (
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
                   <div className="text-center">
-                    <div className="w-32 h-32 rounded-full bg-slate-700 mx-auto mb-4" />
+                    <div className="w-32 h-32 rounded-full bg-slate-700 mx-auto mb-4 flex items-center justify-center">
+                      <Phone className="w-16 h-16 text-white" />
+                    </div>
                     <p className="text-white text-xl font-semibold">{selectedMatch?.name}</p>
+                    <p className="text-white/60 text-sm mt-2">Audio Call</p>
                   </div>
                 </div>
               )}
@@ -930,6 +986,8 @@ export default function MessagesPage() {
                   playsInline
                   muted
                   className="w-full h-full object-cover"
+                  onLoadedMetadata={() => console.log('Local video loaded')}
+                  onError={(e) => console.error('Local video error:', e)}
                 />
               </div>
             )}
@@ -962,6 +1020,14 @@ export default function MessagesPage() {
               >
                 <PhoneOff className="w-6 h-6" />
               </button>
+            </div>
+
+            {/* Call Info */}
+            <div className="absolute top-8 left-1/2 transform -translate-x-1/2 text-center bg-black/30 px-4 py-2 rounded-lg">
+              <p className="text-white text-lg font-semibold mb-1">{selectedMatch?.name}</p>
+              <p className="text-white/80 text-sm">
+                {callType === 'video' ? 'Video Call' : 'Audio Call'}
+              </p>
             </div>
           </div>
         )}
