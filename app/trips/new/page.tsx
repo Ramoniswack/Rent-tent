@@ -215,9 +215,58 @@ export default function CreateTripPage() {
     setCoverPhotoUrl('');
   };
 
-  const handleLocationSelect = (lat: number, lng: number) => {
+  const handleLocationSelect = async (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
     console.log('Selected location:', { lat, lng });
+    
+    // Reverse geocode to get location name
+    try {
+      setGeocoding(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10`
+      );
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        // Extract a clean location name
+        const address = data.address;
+        let locationName = '';
+        
+        // Build location name from address components
+        if (address.city || address.town || address.village) {
+          locationName = address.city || address.town || address.village;
+        } else if (address.county) {
+          locationName = address.county;
+        } else if (address.state) {
+          locationName = address.state;
+        }
+        
+        // Add country if available
+        if (address.country && locationName) {
+          locationName += `, ${address.country}`;
+        } else if (address.country) {
+          locationName = address.country;
+        }
+        
+        // Fallback to display_name if we couldn't build a clean name
+        if (!locationName) {
+          locationName = data.display_name.split(',').slice(0, 2).join(',');
+        }
+        
+        // Update the destination field
+        setFormData(prev => ({
+          ...prev,
+          destination: locationName,
+          country: address.country || prev.country
+        }));
+        
+        console.log('Reverse geocoded location:', locationName);
+      }
+    } catch (err) {
+      console.error('Reverse geocoding error:', err);
+    } finally {
+      setGeocoding(false);
+    }
   };
 
   return (
@@ -297,7 +346,7 @@ export default function CreateTripPage() {
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                     <Search className="w-3 h-3" />
-                    Type a location and the map will update automatically
+                    Type a location or click on the map to select
                   </p>
                 </div>
 
@@ -318,17 +367,16 @@ export default function CreateTripPage() {
                     Start Date
                   </label>
                   <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#059467] pointer-events-none w-5 h-5 z-10" />
                     <input
                       type="date"
                       name="startDate"
                       value={formData.startDate}
                       onChange={handleInputChange}
                       disabled={loading}
-                      className="w-full h-14 bg-slate-100 dark:bg-slate-800 border-none rounded-input px-5 text-base text-[#0d1c17] dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#059467] focus:ring-offset-2 dark:focus:ring-offset-[#132a24] transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                      placeholder="Select start date"
+                      className="w-full h-14 bg-slate-100 dark:bg-slate-800 border-none rounded-input pl-12 pr-5 text-base text-[#0d1c17] dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#059467] focus:ring-offset-2 dark:focus:ring-offset-[#132a24] transition-all disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                       required
                     />
-                    <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-5 h-5" />
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -336,17 +384,16 @@ export default function CreateTripPage() {
                     End Date
                   </label>
                   <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[#059467] pointer-events-none w-5 h-5 z-10" />
                     <input
                       type="date"
                       name="endDate"
                       value={formData.endDate}
                       onChange={handleInputChange}
                       disabled={loading}
-                      className="w-full h-14 bg-slate-100 dark:bg-slate-800 border-none rounded-input px-5 text-base text-[#0d1c17] dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#059467] focus:ring-offset-2 dark:focus:ring-offset-[#132a24] transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
-                      placeholder="Select end date"
+                      className="w-full h-14 bg-slate-100 dark:bg-slate-800 border-none rounded-input pl-12 pr-5 text-base text-[#0d1c17] dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-[#059467] focus:ring-offset-2 dark:focus:ring-offset-[#132a24] transition-all disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                       required
                     />
-                    <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none w-5 h-5" />
                   </div>
                 </div>
               </div>

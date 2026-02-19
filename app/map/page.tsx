@@ -207,16 +207,17 @@ export default function MapPage() {
           
           console.log('All trips from API:', data);
           console.log('Trips with coordinates:', data.filter((trip: Trip) => trip.lat && trip.lng));
-          console.log('Completed trips:', data.filter((trip: Trip) => trip.status === 'completed'));
-          console.log('Completed trips with coordinates:', data.filter((trip: Trip) => trip.status === 'completed' && trip.lat && trip.lng));
           
-          // Filter trips that have coordinates
-          const tripsWithCoords = data.filter((trip: Trip) => trip.lat && trip.lng);
-          setTrips(tripsWithCoords);
+          // Show all trips, not just those with coordinates
+          setTrips(data);
           
-          // Select first trip by default
-          if (tripsWithCoords.length > 0 && !selectedTrip) {
-            setSelectedTrip(tripsWithCoords[0]._id);
+          // Select first trip with coordinates by default
+          const firstTripWithCoords = data.find((trip: Trip) => trip.lat && trip.lng);
+          if (firstTripWithCoords && !selectedTrip) {
+            setSelectedTrip(firstTripWithCoords._id);
+          } else if (data.length > 0 && !selectedTrip) {
+            // If no trips have coordinates, select the first one anyway
+            setSelectedTrip(data[0]._id);
           }
         } else {
           // Fetch matched friends
@@ -374,9 +375,10 @@ export default function MapPage() {
       markersRef.current = {};
 
       if (activeTab === 'trips') {
-        // Add markers for each trip
-        filteredTrips.forEach((trip) => {
-          if (!trip.lat || !trip.lng) return;
+        // Add markers for each trip that has coordinates
+        const tripsWithCoords = filteredTrips.filter(trip => trip.lat && trip.lng);
+        
+        tripsWithCoords.forEach((trip) => {
           
           const isSelected = trip._id === selectedTrip;
 
@@ -405,7 +407,7 @@ export default function MapPage() {
             popupAnchor: [0, -48],
           });
 
-          const marker = L.marker([trip.lat, trip.lng], { icon: customIcon }).addTo(mapRef.current);
+          const marker = L.marker([trip.lat!, trip.lng!], { icon: customIcon }).addTo(mapRef.current);
 
           const image = trip.imageUrl || getDefaultImage(trip.destination);
           const popupContent = `
@@ -442,12 +444,10 @@ export default function MapPage() {
           markersRef.current[trip._id] = marker;
         });
 
-        // Fit bounds for trips
-        if (filteredTrips.length > 0) {
+        // Fit bounds for trips with coordinates
+        if (tripsWithCoords.length > 0) {
           const bounds = L.latLngBounds(
-            filteredTrips
-              .filter(trip => trip.lat && trip.lng)
-              .map((trip) => [trip.lat!, trip.lng!])
+            tripsWithCoords.map((trip) => [trip.lat!, trip.lng!])
           );
           mapRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
         }
@@ -667,7 +667,7 @@ export default function MapPage() {
               filteredTrips.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-gray-500 dark:text-gray-400 mb-4">
-                    {trips.length === 0 ? 'No trips with locations yet' : 'No trips found'}
+                    {trips.length === 0 ? 'No trips yet' : 'No trips found'}
                   </p>
                   {trips.length === 0 && (
                     <button
@@ -681,32 +681,47 @@ export default function MapPage() {
               ) : (
                 filteredTrips.map((trip) => {
                   const image = trip.imageUrl || getDefaultImage(trip.destination);
+                  const hasLocation = trip.lat && trip.lng;
                   return (
                     <div
                       key={trip._id}
-                      onClick={() => setSelectedTrip(trip._id)}
-                      className={`bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border hover:shadow-lg transition-all cursor-pointer group flex gap-4 items-center ${
-                        selectedTrip === trip._id
+                      onClick={() => hasLocation && setSelectedTrip(trip._id)}
+                      className={`bg-white dark:bg-slate-800 p-3 rounded-2xl shadow-md border hover:shadow-lg transition-all ${
+                        hasLocation ? 'cursor-pointer' : 'cursor-default opacity-60'
+                      } group flex gap-4 items-center ${
+                        selectedTrip === trip._id && hasLocation
                           ? 'border-[#059467] ring-2 ring-[#059467]/10'
                           : 'border-gray-100 dark:border-slate-700'
                       }`}
                     >
                       <div
-                        className={`w-20 h-20 shrink-0 rounded-xl bg-cover bg-center transition-all ${
+                        className={`w-20 h-20 shrink-0 rounded-xl bg-cover bg-center transition-all relative ${
                           selectedTrip === trip._id ? '' : 'grayscale group-hover:grayscale-0'
                         }`}
                         style={{ backgroundImage: `url(${image})` }}
-                      />
+                      >
+                        {!hasLocation && (
+                          <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                            <MapPin className="w-6 h-6 text-white/80" />
+                          </div>
+                        )}
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start">
                           <h4 className="font-bold text-[#0d1c17] dark:text-white truncate">{trip.title}</h4>
-                          <MapPin
-                            className={`w-5 h-5 transition-colors flex-shrink-0 ml-2 ${
-                              selectedTrip === trip._id
-                                ? 'text-[#059467]'
-                                : 'text-gray-400 group-hover:text-[#059467]'
-                            }`}
-                          />
+                          {hasLocation ? (
+                            <MapPin
+                              className={`w-5 h-5 transition-colors flex-shrink-0 ml-2 ${
+                                selectedTrip === trip._id
+                                  ? 'text-[#059467]'
+                                  : 'text-gray-400 group-hover:text-[#059467]'
+                              }`}
+                            />
+                          ) : (
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 flex-shrink-0 ml-2 font-medium">
+                              No location
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {formatDates(trip.startDate, trip.endDate)}

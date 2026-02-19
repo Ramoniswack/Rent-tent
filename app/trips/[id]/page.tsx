@@ -1613,22 +1613,7 @@ export default function TripDetailsPage() {
                 )}
 
                 {/* Smart Tip */}
-                <div className="bg-slate-900 p-8 rounded-xl relative overflow-hidden">
-                  <div className="relative z-10">
-                    <h5 className="text-white text-lg font-bold mb-2">Smart Tip</h5>
-                    <p className="text-[#059467]/70 text-sm mb-6 leading-relaxed">
-                      Track your daily spending to stay within budget. Consider setting category limits for better control.
-                    </p>
-                    <button className="w-full py-3 bg-[#059467] text-white text-xs font-black uppercase tracking-widest rounded-full hover:bg-[#047854] transition-all">
-                      View Detailed Report
-                    </button>
-                  </div>
-                  
-                  {/* Abstract Background Pattern */}
-                  <div className="absolute -right-4 -bottom-4 opacity-10">
-                    <TrendingUp className="w-32 h-32 text-white" />
-                  </div>
-                </div>
+              
 
                 {/* Collaborator Spending */}
                 {calculateCollaboratorSpending().length > 0 && (
@@ -1726,7 +1711,7 @@ export default function TripDetailsPage() {
             {/* Packing Tab Sidebar */}
             {activeTab === 'packing' && (
               <>
-                {/* Gear Suggestions */}
+                Gear Suggestions
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-[#059467]/5 p-6">
                   <div className="flex items-center gap-2 mb-6">
                     <Lightbulb className="w-5 h-5 text-[#f59e0b]" />
