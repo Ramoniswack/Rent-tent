@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import { BookingCardSkeleton } from '../../../components/SkeletonCard';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -140,10 +141,25 @@ function RentalDashboard() {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
-          <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
+          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+              <div className="space-y-2 animate-pulse">
+                <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded w-48" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-64" />
+              </div>
+              <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-full w-32 animate-pulse" />
+            </div>
+            <div className="flex flex-col gap-5">
+              {[1, 2, 3].map((i) => (
+                <BookingCardSkeleton key={i} />
+              ))}
+            </div>
+          </main>
         </div>
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </>
     );
   }

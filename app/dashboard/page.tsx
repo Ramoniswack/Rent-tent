@@ -7,6 +7,7 @@ import { tripAPI } from '../../services/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import { TripCardSkeleton, DashboardStatSkeleton } from '../../components/SkeletonCard';
 import { 
   Calendar, 
   Search, 
@@ -196,10 +197,32 @@ function DashboardPage() {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
-          <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
+          <main className="mx-auto w-full max-w-[1440px] px-4 md:px-6 lg:px-20 py-6 md:py-12">
+            {/* Hero Title Skeleton */}
+            <div className="mb-6 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
+              <div className="space-y-2 animate-pulse">
+                <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded w-64" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-96" />
+              </div>
+              <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-full w-40 animate-pulse" />
+            </div>
+
+            {/* Stats Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
+              {[1, 2, 3].map((i) => (
+                <DashboardStatSkeleton key={i} />
+              ))}
+            </div>
+
+            {/* Trips Grid Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <TripCardSkeleton key={i} />
+              ))}
+            </div>
+          </main>
         </div>
-        {/* Footer - Hidden on mobile */}
         <div className="hidden md:block">
           <Footer />
         </div>

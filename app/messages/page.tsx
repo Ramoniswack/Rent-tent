@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import { MessageListSkeleton } from '../../components/SkeletonCard';
 import { messageAPI } from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import { 
@@ -1062,9 +1063,8 @@ function MessagesPage() {
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="w-10 h-10 text-[#059467] animate-spin mb-4" />
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Loading conversations...</p>
+              <div className="p-4">
+                <MessageListSkeleton />
               </div>
             ) : error ? (
               <div className="text-center py-16 px-4">

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { gearAPI } from '../../services/api';
+import { GearCardSkeleton } from '../../components/SkeletonCard';
 import {
   Search,
   MapPin,
@@ -472,9 +473,12 @@ export default function GearPage() {
           </div>
 
           {/* Loading State */}
+          {/* Loading Skeleton */}
           {loading && (
-            <div className="flex justify-center items-center py-20">
-              <div className="w-12 h-12 border-4 border-[#059467] border-t-transparent rounded-full animate-spin" />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-16">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <GearCardSkeleton key={i} />
+              ))}
             </div>
           )}
 
