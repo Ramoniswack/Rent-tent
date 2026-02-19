@@ -371,14 +371,20 @@ export default function MessagesPage() {
     const configuration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ]
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+      ],
+      iceCandidatePoolSize: 10
     };
 
     const pc = new RTCPeerConnection(configuration);
 
+    // ICE candidate handler
     pc.onicecandidate = (event) => {
       if (event.candidate && socket) {
+        console.log('Sending ICE candidate:', event.candidate);
         socket.emit('ice:candidate', {
           to: selectedMatch?._id || selectedMatch?.id,
           candidate: event.candidate
@@ -386,9 +392,30 @@ export default function MessagesPage() {
       }
     };
 
+    // Track handler for receiving remote stream
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
+      console.log('Received remote track:', event.streams[0]);
+      if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    // Connection state change handler
+    pc.onconnectionstatechange = () => {
+      console.log('Connection state:', pc.connectionState);
+      if (pc.connectionState === 'connected') {
+        showNotification('Call connected', 'success');
+      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        showNotification('Call disconnected', 'error');
+        endCall();
+      }
+    };
+
+    // ICE connection state change handler
+    pc.oniceconnectionstatechange = () => {
+      console.log('ICE connection state:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+        showNotification('Connection lost', 'error');
       }
     };
 
@@ -397,51 +424,94 @@ export default function MessagesPage() {
 
   // Start call
   const startCall = async (type: 'audio' | 'video') => {
-    if (!selectedMatch || !socket) return;
+    if (!selectedMatch || !socket) {
+      showNotification('Cannot start call: No connection', 'error');
+      return;
+    }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: type === 'video'
-      });
+      console.log(`Starting ${type} call...`);
+      
+      // Request media permissions
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: type === 'video' ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        } : false
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Got local stream:', stream);
 
       localStreamRef.current = stream;
+      
+      // Display local video
       if (localVideoRef.current && type === 'video') {
         localVideoRef.current.srcObject = stream;
       }
 
+      // Create peer connection
       const pc = createPeerConnection();
       peerConnectionRef.current = pc;
 
+      // Add tracks to peer connection
       stream.getTracks().forEach(track => {
+        console.log('Adding track:', track.kind);
         pc.addTrack(track, stream);
       });
 
-      const offer = await pc.createOffer();
+      // Create and send offer
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === 'video'
+      });
+      
       await pc.setLocalDescription(offer);
+      console.log('Created offer:', offer);
 
       socket.emit('call:offer', {
         to: selectedMatch._id || selectedMatch.id,
-        offer,
+        offer: pc.localDescription,
         type
       });
 
       setInCall(true);
       setCallType(type);
+      showNotification(`Calling ${selectedMatch.name}...`, 'info');
       
       // Play ringtone while waiting for answer
       if (ringtoneRef.current) {
         ringtoneRef.current.play().catch(err => console.log('Ringtone play failed:', err));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting call:', error);
-      showNotification('Could not access camera/microphone', 'error');
+      
+      let errorMessage = 'Could not start call';
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Camera/microphone permission denied';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No camera/microphone found';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Camera/microphone is already in use';
+      }
+      
+      showNotification(errorMessage, 'error');
+      endCall();
     }
   };
 
   // Accept call
   const acceptCall = async () => {
-    if (!incomingCall || !socket) return;
+    if (!incomingCall || !socket) {
+      showNotification('Cannot accept call', 'error');
+      return;
+    }
 
     // Stop ringtone
     if (ringtoneRef.current) {
@@ -450,44 +520,77 @@ export default function MessagesPage() {
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: incomingCall.type === 'video'
-      });
+      console.log('Accepting call...');
+      
+      // Request media permissions
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        video: incomingCall.type === 'video' ? {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        } : false
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Got local stream:', stream);
 
       localStreamRef.current = stream;
+      
+      // Display local video
       if (localVideoRef.current && incomingCall.type === 'video') {
         localVideoRef.current.srcObject = stream;
       }
 
+      // Create peer connection
       const pc = createPeerConnection();
       peerConnectionRef.current = pc;
 
+      // Add tracks to peer connection
       stream.getTracks().forEach(track => {
+        console.log('Adding track:', track.kind);
         pc.addTrack(track, stream);
       });
 
       // Set remote description from the offer
       if (incomingCall.offer) {
+        console.log('Setting remote description:', incomingCall.offer);
         await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
       }
 
       // Create answer
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      console.log('Created answer:', answer);
 
       // Send answer back
       socket.emit('call:answer', { 
         to: incomingCall.from, 
-        answer 
+        answer: pc.localDescription
       });
 
       setInCall(true);
       setCallType(incomingCall.type);
       setIncomingCall(null);
-    } catch (error) {
+      showNotification('Call connected', 'success');
+    } catch (error: any) {
       console.error('Error accepting call:', error);
-      showNotification('Could not access camera/microphone', 'error');
+      
+      let errorMessage = 'Could not accept call';
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Camera/microphone permission denied';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No camera/microphone found';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Camera/microphone is already in use';
+      }
+      
+      showNotification(errorMessage, 'error');
+      rejectCall();
     }
   };
 
@@ -507,21 +610,37 @@ export default function MessagesPage() {
 
   // End call
   const endCall = () => {
+    console.log('Ending call...');
+    
     // Stop ringtone
     if (ringtoneRef.current) {
       ringtoneRef.current.pause();
       ringtoneRef.current.currentTime = 0;
     }
     
-    if (socket && selectedMatch) {
+    // Notify other user
+    if (socket && selectedMatch && inCall) {
       socket.emit('call:end', { to: selectedMatch._id || selectedMatch.id });
     }
 
+    // Stop all local media tracks
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind);
+        track.stop();
+      });
       localStreamRef.current = null;
     }
 
+    // Clear video elements
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+
+    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
