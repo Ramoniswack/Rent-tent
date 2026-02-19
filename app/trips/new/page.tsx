@@ -163,7 +163,7 @@ export default function CreateTripPage() {
       {
         cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'ddiptfgrs',
         uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'nomadnotes_gear',
-        sources: ['local', 'url', 'camera'],
+        sources: ['local', 'camera'],
         multiple: false,
         maxFiles: 1,
         maxFileSize: 5000000,
@@ -173,6 +173,7 @@ export default function CreateTripPage() {
         croppingAspectRatio: 2,
         showSkipCropButton: true,
         croppingShowDimensions: true,
+        showPoweredBy: false,
         styles: {
           palette: {
             window: '#FFFFFF',
@@ -209,6 +210,61 @@ export default function CreateTripPage() {
     );
 
     widget.open();
+  };
+
+  // Direct file upload handler
+  const handleDirectFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a valid image file (JPG, PNG, or WEBP)');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5000000) {
+      setError('Image size must be less than 5MB');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+
+    try {
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'nomadnotes_gear');
+      formData.append('folder', 'nomadnotes/trips');
+
+      // Upload to Cloudinary
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'ddiptfgrs'}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setCoverPhotoUrl(data.secure_url);
+      console.log('Image uploaded successfully:', data.secure_url);
+    } catch (err) {
+      console.error('Upload error:', err);
+      setError('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = ''; // Reset input for next upload
+    }
   };
 
   const removeCoverPhoto = () => {
@@ -404,12 +460,22 @@ export default function CreateTripPage() {
                   Cover Photo
                 </label>
                 
-                {/* Cloudinary Upload Button */}
-                <button
-                  type="button"
-                  onClick={handleCloudinaryUpload}
+                {/* Direct File Input */}
+                <input
+                  type="file"
+                  id="coverPhotoInput"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleDirectFileUpload}
                   disabled={uploadingImage || loading}
-                  className="w-full border-2 border-dashed border-[#059467]/40 bg-[#e7f4f0]/30 dark:bg-[#059467]/5 hover:bg-[#e7f4f0]/60 dark:hover:bg-[#059467]/10 rounded-input p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="hidden"
+                />
+                
+                {/* Upload Button */}
+                <label
+                  htmlFor="coverPhotoInput"
+                  className={`w-full border-2 border-dashed border-[#059467]/40 bg-[#e7f4f0]/30 dark:bg-[#059467]/5 hover:bg-[#e7f4f0]/60 dark:hover:bg-[#059467]/10 rounded-input p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group ${
+                    uploadingImage || loading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   <div className="size-12 rounded-full bg-white dark:bg-[#059467]/20 flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                     {uploadingImage ? (
@@ -424,7 +490,7 @@ export default function CreateTripPage() {
                   <p className="text-slate-500 text-xs mt-1">
                     JPG, PNG or WEBP (max. 5MB)
                   </p>
-                </button>
+                </label>
 
                 {/* Image Preview */}
                 {coverPhotoUrl && (

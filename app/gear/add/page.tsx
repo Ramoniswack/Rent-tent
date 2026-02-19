@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import LocationMap from '../../../components/LocationMap';
 import { gearAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -16,7 +17,9 @@ import {
   X as XIcon,
   Upload,
   Loader2,
-  Camera
+  Camera,
+  Search,
+  MapPin
 } from 'lucide-react';
 
 // Cloudinary types
@@ -33,6 +36,8 @@ export default function AddGearPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([27.7172, 85.3240]); // Default to Kathmandu
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
     title: '',
@@ -153,6 +158,74 @@ export default function AddGearPage() {
     }));
   };
 
+  // Direct file upload handler for multiple images
+  const handleDirectImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Check if adding these files would exceed the limit
+    if (formData.images.length + files.length > 5) {
+      setError(`You can only upload up to 5 images. You have ${formData.images.length} already.`);
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+
+    try {
+      const uploadPromises = files.map(async (file) => {
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+          throw new Error(`Invalid file type: ${file.name}`);
+        }
+
+        // Validate file size (5MB)
+        if (file.size > 5000000) {
+          throw new Error(`File too large: ${file.name} (max 5MB)`);
+        }
+
+        // Create FormData for upload
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'nomadnotes_gear');
+        formData.append('folder', 'nomadnotes/gear');
+
+        // Upload to Cloudinary
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'ddiptfgrs'}/image/upload`,
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Upload failed for ${file.name}`);
+        }
+
+        const data = await response.json();
+        return data.secure_url;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...uploadedUrls]
+      }));
+
+      console.log('Images uploaded successfully:', uploadedUrls);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload images. Please try again.');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = ''; // Reset input
+    }
+  };
+
   // Cloudinary upload function
   const handleCloudinaryUpload = () => {
     if (typeof window === 'undefined' || !window.cloudinary) {
@@ -166,9 +239,9 @@ export default function AddGearPage() {
       {
         cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
         uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
-        sources: ['local', 'url', 'camera'],
-        multiple: false,
-        maxFiles: 1,
+        sources: ['local', 'camera'],
+        multiple: true,
+        maxFiles: 5 - formData.images.length,
         maxFileSize: 5000000, // 5MB
         clientAllowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
         folder: 'nomadnotes/gear',
@@ -177,6 +250,7 @@ export default function AddGearPage() {
         croppingAspectRatio: 1.5, // 3:2 ratio
         showSkipCropButton: false,
         croppingShowDimensions: true,
+        showPoweredBy: false,
         styles: {
           palette: {
             window: '#FFFFFF',
@@ -216,6 +290,62 @@ export default function AddGearPage() {
     );
 
     widget.open();
+  };
+
+  // Location handlers
+  const handleLocationSelect = async (lat: number, lng: number) => {
+    setSelectedLocation({ lat, lng });
+    console.log('Selected location:', { lat, lng });
+
+    // Reverse geocode to get location name
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+      );
+      const data = await response.json();
+      
+      let locationName = '';
+      if (data.address) {
+        const parts = [];
+        if (data.address.city) parts.push(data.address.city);
+        else if (data.address.town) parts.push(data.address.town);
+        else if (data.address.village) parts.push(data.address.village);
+        
+        if (data.address.state) parts.push(data.address.state);
+        if (data.address.country) parts.push(data.address.country);
+        
+        locationName = parts.join(', ');
+      }
+      
+      if (locationName) {
+        setFormData(prev => ({ ...prev, location: locationName }));
+      }
+    } catch (err) {
+      console.error('Reverse geocoding error:', err);
+    }
+  };
+
+  const handleLocationInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, location: value }));
+
+    // Debounce geocoding
+    if (value.length > 3) {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=1`
+        );
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const { lat, lon } = data[0];
+          setMapCenter([parseFloat(lat), parseFloat(lon)]);
+          setSelectedLocation({ lat: parseFloat(lat), lng: parseFloat(lon) });
+        }
+      } catch (err) {
+        console.error('Geocoding error:', err);
+      }
+    }
   };
 
   const validateStep = () => {
@@ -439,15 +569,31 @@ export default function AddGearPage() {
                 >
                   Location *
                 </label>
-                <input
-                  className="w-full px-4 py-4 bg-[#f5f8f7] dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white font-medium placeholder:text-slate-400"
-                  id="location"
-                  name="location"
-                  placeholder="e.g., Vancouver, BC"
-                  type="text"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  required
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-[#059467] pointer-events-none w-5 h-5 z-10" />
+                  <input
+                    className="w-full px-4 py-4 pl-12 bg-[#f5f8f7] dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white font-medium placeholder:text-slate-400"
+                    id="location"
+                    name="location"
+                    placeholder="e.g., Vancouver, BC"
+                    type="text"
+                    value={formData.location}
+                    onChange={handleLocationInputChange}
+                    required
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 ml-1">
+                  <Search className="w-3 h-3" />
+                  Type a location or click on the map to select
+                </p>
+
+                {/* Map Snippet */}
+                <LocationMap 
+                  onLocationSelect={handleLocationSelect}
+                  initialPosition={mapCenter}
+                  selectedLocation={selectedLocation}
+                  height="200px"
+                  key={`${mapCenter[0]}-${mapCenter[1]}`}
                 />
               </div>
 
@@ -565,108 +711,66 @@ export default function AddGearPage() {
                 Add Images
               </h1>
               <p className="text-slate-500 dark:text-slate-400">
-                Show off your gear with photos
+                Upload up to 5 photos of your gear
               </p>
             </div>
 
             <div className="flex flex-col gap-6">
-              {/* Cloudinary Upload Button */}
-              <div className="space-y-4">
-                <button
-                  type="button"
-                  onClick={handleCloudinaryUpload}
-                  disabled={uploadingImage || formData.images.length >= 5}
-                  className="w-full px-6 py-4 bg-[#059467] hover:bg-[#047854] disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-2xl font-semibold transition-colors flex items-center justify-center gap-3"
-                >
+              {/* Direct File Input */}
+              <input
+                type="file"
+                id="gearImagesInput"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                multiple
+                onChange={handleDirectImageUpload}
+                disabled={uploadingImage || formData.images.length >= 5}
+                className="hidden"
+              />
+
+              {/* Upload Button */}
+              <label
+                htmlFor="gearImagesInput"
+                className={`w-full border-2 border-dashed border-[#059467]/40 bg-[#e7f4f0]/30 dark:bg-[#059467]/5 hover:bg-[#e7f4f0]/60 dark:hover:bg-[#059467]/10 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group ${
+                  uploadingImage || formData.images.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <div className="size-16 rounded-full bg-white dark:bg-[#059467]/20 flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
                   {uploadingImage ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Uploading...
-                    </>
+                    <Loader2 className="text-[#059467] w-8 h-8 animate-spin" />
                   ) : (
-                    <>
-                      <Camera className="w-5 h-5" />
-                      Upload from Device
-                    </>
+                    <Camera className="text-[#059467] w-8 h-8" />
                   )}
-                </button>
-
-                {/* Divider */}
-                <div className="relative flex items-center">
-                  <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                  <span className="flex-shrink mx-4 text-sm text-slate-500 dark:text-slate-400 bg-[#f5f8f7] dark:bg-[#0f231d] px-2">
-                    or add image URL
-                  </span>
-                  <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
                 </div>
-              </div>
-
-              {/* Image URL Input */}
-              <div className="space-y-2">
-                <label
-                  className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1"
-                  htmlFor="imageInput"
-                >
-                  Image URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    className="flex-1 px-4 py-4 bg-[#f5f8f7] dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white font-medium placeholder:text-slate-400"
-                    id="imageInput"
-                    name="imageInput"
-                    placeholder="https://example.com/image.jpg"
-                    type="url"
-                    value={formData.imageInput}
-                    onChange={handleInputChange}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddImage();
-                      }
-                    }}
-                    disabled={formData.images.length >= 5}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddImage}
-                    disabled={!formData.imageInput.trim() || formData.images.length >= 5}
-                    className="px-6 py-4 bg-[#059467] hover:bg-[#047854] disabled:bg-slate-400 disabled:cursor-not-allowed text-white rounded-2xl font-semibold transition-colors flex items-center gap-2"
-                  >
-                    <ImagePlus className="w-5 h-5" />
-                    Add
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500 ml-1">
-                  Add image URLs one at a time. Maximum 5 images allowed.
+                <p className="text-[#059467] font-bold text-base mb-1">
+                  {uploadingImage ? 'Uploading...' : formData.images.length >= 5 ? 'Maximum 5 images reached' : 'Click to upload images'}
                 </p>
-              </div>
-
-              {/* Upload Tips */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
-                <div className="flex items-start gap-3">
-                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-800 dark:text-blue-200">
-                    <p className="font-semibold mb-1">📸 Image Upload Tips:</p>
-                    <ul className="space-y-1 text-xs">
-                      <li>• Upload up to 5 high-quality images</li>
-                      <li>• Max 5MB per image</li>
-                      <li>• Supported formats: JPG, PNG, WEBP</li>
-                      <li>• Images will be automatically cropped to 3:2 ratio</li>
-                      <li>• First image will be used as the main photo</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+                <p className="text-slate-500 text-sm">
+                  {formData.images.length < 5 
+                    ? `Select up to ${5 - formData.images.length} more ${5 - formData.images.length === 1 ? 'image' : 'images'}`
+                    : 'Remove an image to upload more'
+                  }
+                </p>
+                <p className="text-slate-400 text-xs mt-2">
+                  JPG, PNG or WEBP • Max 5MB per image
+                </p>
+              </label>
 
               {/* Image Preview Grid */}
               {formData.images.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1">
-                    Images ({formData.images.length}/5)
-                  </label>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Uploaded Images ({formData.images.length}/5)
+                    </label>
+                    {formData.images.length > 0 && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        First image will be the main photo
+                      </p>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {formData.images.map((image, index) => (
-                      <div key={index} className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900">
+                      <div key={index} className="relative group aspect-[3/2] rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-900 border-2 border-transparent hover:border-[#059467]/30 transition-all">
                         <img
                           src={image}
                           alt={`Gear image ${index + 1}`}
@@ -675,16 +779,28 @@ export default function AddGearPage() {
                             (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80';
                           }}
                         />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        
+                        {/* Main badge */}
+                        {index === 0 && (
+                          <div className="absolute top-2 left-2 px-2 py-1 bg-[#059467] text-white text-xs font-bold rounded-md shadow-lg">
+                            Main Photo
+                          </div>
+                        )}
+                        
+                        {/* Remove button */}
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(index)}
-                          className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:scale-110"
+                          title="Remove image"
                         >
                           <XIcon className="w-4 h-4" />
                         </button>
-                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                          {index === 0 ? 'Main' : `${index + 1} of ${formData.images.length}`}
+                        
+                        {/* Image number */}
+                        <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 text-white text-xs font-medium rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                          {index + 1} of {formData.images.length}
                         </div>
                       </div>
                     ))}
@@ -694,16 +810,32 @@ export default function AddGearPage() {
 
               {/* Empty State */}
               {formData.images.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-                  <Upload className="w-12 h-12 text-slate-400 mb-4" />
-                  <p className="text-slate-500 dark:text-slate-400 text-center">
-                    No images added yet
+                <div className="flex flex-col items-center justify-center py-8 px-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+                  <ImagePlus className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                    No images uploaded yet
                   </p>
-                  <p className="text-xs text-slate-400 text-center mt-1">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 text-center mt-1">
                     Add at least one image to showcase your gear
                   </p>
                 </div>
               )}
+
+              {/* Tips */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-800 dark:text-blue-200">
+                    <p className="font-semibold mb-2">📸 Photo Tips:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Use clear, well-lit photos showing the gear from different angles</li>
+                      <li>• The first image will be the main photo shown in listings</li>
+                      <li>• Include close-ups of any wear or special features</li>
+                      <li>• Maximum 5 images, 5MB each</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           </>
         );

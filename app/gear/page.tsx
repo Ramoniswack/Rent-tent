@@ -50,6 +50,8 @@ export default function GearPage() {
   const [gearItems, setGearItems] = useState<GearItem[]>([]);
   const [allGearItems, setAllGearItems] = useState<GearItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   const locationDropdownRef = useRef<HTMLDivElement>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
@@ -76,6 +78,7 @@ export default function GearPage() {
 
   useEffect(() => {
     fetchGear();
+    setCurrentPage(1); // Reset to page 1 when filters change
   }, [searchQuery, priceRange, availableOnly, selectedLocation, selectedCategory]);
 
   // Fetch all gear items once to populate location dropdown
@@ -249,6 +252,48 @@ export default function GearPage() {
       }
     }
   ];
+
+  // Pagination calculations
+  const totalPages = Math.ceil(gearItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = gearItems.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        pages.push(currentPage - 1);
+        pages.push(currentPage);
+        pages.push(currentPage + 1);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
 
   return (
     <>
@@ -436,7 +481,7 @@ export default function GearPage() {
           {/* Gear Grid */}
           {!loading && (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-16">
-              {gearItems.map((item) => (
+              {currentItems.map((item) => (
               <div
                 key={item._id || item.id}
                 className="group bg-white dark:bg-[#1a2c26] rounded-xl overflow-hidden hover:shadow-xl hover:shadow-[#059467]/5 transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 dark:border-[#059467]/5 cursor-pointer"
@@ -506,27 +551,50 @@ export default function GearPage() {
           )}
 
           {/* Pagination */}
-          <div className="flex justify-center items-center gap-2">
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <ChevronLeft className="w-5 h-5 text-gray-400" />
-            </button>
-            <button className="w-10 h-10 rounded-full bg-[#059467] text-white font-bold flex items-center justify-center shadow-md shadow-[#059467]/30">
-              1
-            </button>
-            <button className="w-10 h-10 rounded-full text-gray-500 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center">
-              2
-            </button>
-            <button className="w-10 h-10 rounded-full text-gray-500 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center">
-              3
-            </button>
-            <span className="text-gray-400 px-1">...</span>
-            <button className="w-10 h-10 rounded-full text-gray-500 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center">
-              12
-            </button>
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-            </button>
-          </div>
+          {!loading && gearItems.length > itemsPerPage && (
+            <div className="flex justify-center items-center gap-2 flex-wrap">
+              <button 
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-400" />
+              </button>
+              
+              {getPageNumbers().map((page, index) => (
+                page === '...' ? (
+                  <span key={`ellipsis-${index}`} className="text-gray-400 px-1">...</span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page as number)}
+                    className={`w-10 h-10 rounded-full font-bold flex items-center justify-center transition-all ${
+                      currentPage === page
+                        ? 'bg-[#059467] text-white shadow-md shadow-[#059467]/30'
+                        : 'text-gray-500 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              ))}
+              
+              <button 
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-300" />
+              </button>
+            </div>
+          )}
+
+          {/* Results info */}
+          {!loading && gearItems.length > 0 && (
+            <div className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
+              Showing {startIndex + 1}-{Math.min(endIndex, gearItems.length)} of {gearItems.length} items
+            </div>
+          )}
         </main>
       </div>
       {/* Footer - Hidden on mobile */}
