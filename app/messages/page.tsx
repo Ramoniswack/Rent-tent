@@ -63,7 +63,8 @@ export default function MessagesPage() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
@@ -395,19 +396,19 @@ export default function MessagesPage() {
     // Track handler for receiving remote stream
     pc.ontrack = (event) => {
       console.log('Received remote track:', event.track.kind, event.streams[0]);
-      if (remoteVideoRef.current && event.streams[0]) {
+      const remoteElement = callType === 'video' ? remoteVideoRef.current : remoteAudioRef.current;
+      
+      if (remoteElement && event.streams[0]) {
         console.log('Setting remote stream to element');
-        remoteVideoRef.current.srcObject = event.streams[0];
+        remoteElement.srcObject = event.streams[0];
         
-        // Force play for audio
-        if (remoteVideoRef.current instanceof HTMLAudioElement || remoteVideoRef.current instanceof HTMLVideoElement) {
-          remoteVideoRef.current.play().catch(err => {
-            console.error('Error playing remote stream:', err);
-            showNotification('Click to enable audio', 'info');
-          });
-        }
+        // Force play
+        remoteElement.play().catch(err => {
+          console.error('Error playing remote stream:', err);
+          showNotification('Click to enable audio', 'info');
+        });
       } else {
-        console.error('Remote video ref not available');
+        console.error('Remote element not available');
       }
     };
 
@@ -680,6 +681,9 @@ export default function MessagesPage() {
     }
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = null;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
     }
 
     // Close peer connection
@@ -958,7 +962,7 @@ export default function MessagesPage() {
                 />
               ) : (
                 <audio
-                  ref={remoteVideoRef as React.RefObject<HTMLAudioElement>}
+                  ref={remoteAudioRef}
                   autoPlay
                   onLoadedMetadata={() => console.log('Remote audio loaded')}
                   onError={(e) => console.error('Remote audio error:', e)}
