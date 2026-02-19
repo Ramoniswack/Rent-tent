@@ -4,38 +4,47 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import {
+  MapPin,
+  Backpack,
+  DollarSign,
+  Calendar,
+  WifiOff,
+  Users,
+  ArrowRight
+} from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
 
   const features = [
     {
-      icon: '🗺️',
+      icon: MapPin,
       title: 'Trip Planning',
       description: 'Visualise your route and organize stays effortlessly.'
     },
     {
-      icon: '🎒',
+      icon: Backpack,
       title: 'Gear Rental',
       description: 'Travel light and rent quality gear at your destination.'
     },
     {
-      icon: '💰',
+      icon: DollarSign,
       title: 'Budget Tracking',
       description: 'Track expenses with multi-currency support.'
     },
     {
-      icon: '📅',
+      icon: Calendar,
       title: 'Itinerary Builder',
       description: 'Create detailed day-by-day travel plans.'
     },
     {
-      icon: '📴',
+      icon: WifiOff,
       title: 'Offline Mode',
       description: 'Access maps and bookings without internet.'
     },
     {
-      icon: '👥',
+      icon: Users,
       title: 'Community Hub',
       description: 'Connect with digital nomads worldwide.'
     }
@@ -73,7 +82,7 @@ export default function Home() {
                 className="bg-[#059467] hover:bg-[#047a55] text-white text-lg font-bold px-8 py-4 rounded-full transition-all shadow-xl flex items-center gap-2 group"
               >
                 Get Started Free
-                <span className="group-hover:translate-x-1 transition-transform inline-block">→</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
               <button
                 onClick={() => router.push('/features')}
@@ -103,8 +112,8 @@ export default function Home() {
               key={index}
               className="bg-white p-8 rounded-3xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group border border-slate-100"
             >
-              <div className="size-14 rounded-2xl bg-[#059467]/10 flex items-center justify-center text-3xl mb-6 group-hover:bg-[#059467] transition-colors">
-                {feature.icon}
+              <div className="size-14 rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467] mb-6 group-hover:bg-[#059467] group-hover:text-white transition-colors">
+                <feature.icon className="w-7 h-7" />
               </div>
               <h3 className="text-[#0f231d] text-xl font-bold mb-3">{feature.title}</h3>
               <p className="text-slate-500 leading-relaxed">{feature.description}</p>
