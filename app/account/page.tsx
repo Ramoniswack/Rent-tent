@@ -1066,52 +1066,71 @@ export default function AccountPage() {
                           <MapPin className="w-4 h-4" />
                           Location
                         </label>
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <input
-                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
-                              type="text"
-                              name="location"
-                              value={formData.location}
-                              onChange={handleInputChange}
-                              placeholder="Kathmandu, Nepal"
-                            />
-                          </div>
+                        <div className="relative">
+                          <input
+                            className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 pr-12 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                            type="text"
+                            name="location"
+                            value={formData.location}
+                            onChange={async (e) => {
+                              handleInputChange(e);
+                              // Geocode on input change
+                              const destination = e.target.value;
+                              if (destination && destination.length >= 3) {
+                                try {
+                                  const response = await fetch(
+                                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`
+                                  );
+                                  const data = await response.json();
+                                  if (data && data.length > 0) {
+                                    const { lat, lon } = data[0];
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      coordinates: { lat: parseFloat(lat), lng: parseFloat(lon) }
+                                    }));
+                                  }
+                                } catch (err) {
+                                  console.error('Geocoding error:', err);
+                                }
+                              }
+                            }}
+                            placeholder="e.g. Kathmandu, Nepal"
+                          />
+                          {detectingLocation && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              <Loader2 className="w-5 h-5 text-[#059467] animate-spin" />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          Type a location or click on the map to select
+                        </p>
+                        
+                        {/* Map - Always visible with Auto Detect button overlay */}
+                        <div className="mt-2 relative">
+                          <LocationMap
+                            onLocationSelect={handleLocationSelect}
+                            initialPosition={[formData.coordinates.lat || 27.7172, formData.coordinates.lng || 85.3240]}
+                            selectedLocation={formData.coordinates.lat && formData.coordinates.lng ? formData.coordinates : null}
+                            height="200px"
+                            key={`${formData.coordinates.lat}-${formData.coordinates.lng}`}
+                          />
+                          {/* Auto Detect Button Overlay */}
                           <button
                             type="button"
                             onClick={detectCurrentLocation}
                             disabled={detectingLocation}
-                            className="px-4 py-3 bg-blue-500 text-white text-sm font-medium rounded-2xl hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                            className="absolute top-3 right-3 z-[1000] bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 p-2.5 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                            title="Auto detect my location"
                           >
                             {detectingLocation ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Detecting...
-                              </>
+                              <Loader2 className="w-5 h-5 animate-spin text-[#059467]" />
                             ) : (
-                              <>
-                                <MapPin className="w-4 h-4" />
-                                Auto Detect
-                              </>
+                              <MapPin className="w-5 h-5 group-hover:text-[#059467] transition-colors" />
                             )}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => setShowLocationPicker(!showLocationPicker)}
-                            className="px-4 py-3 bg-[#059467] text-white text-sm font-medium rounded-2xl hover:bg-[#047854] transition-colors whitespace-nowrap"
-                          >
-                            {showLocationPicker ? 'Close Map' : 'Pick on Map'}
-                          </button>
                         </div>
-                        {showLocationPicker && (
-                          <div className="mt-2">
-                            <LocationMap
-                              onLocationSelect={handleLocationSelect}
-                              initialPosition={[formData.coordinates.lat || 27.7172, formData.coordinates.lng || 85.3240]}
-                              height="300px"
-                            />
-                          </div>
-                        )}
                       </div>
 
                       {/* Travel Style */}

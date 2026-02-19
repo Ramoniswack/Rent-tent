@@ -45,6 +45,7 @@ export default function AddGearPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([27.7172, 85.3240]); // Default to Kathmandu
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: Basic Info
     title: '',
@@ -355,6 +356,78 @@ export default function AddGearPage() {
     }
   };
 
+  const detectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setDetectingLocation(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'NomadNotes/1.0'
+              }
+            }
+          );
+          
+          const data = await response.json();
+          
+          const city = data.address.city || data.address.town || data.address.village || data.address.county || '';
+          const country = data.address.country || '';
+          const locationName = city && country ? `${city}, ${country}` : data.display_name;
+          
+          setFormData(prev => ({
+            ...prev,
+            location: locationName
+          }));
+          setMapCenter([latitude, longitude]);
+          setSelectedLocation({ lat: latitude, lng: longitude });
+        } catch (err) {
+          console.error('Reverse geocoding error:', err);
+          setFormData(prev => ({
+            ...prev,
+            location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+          }));
+          setMapCenter([latitude, longitude]);
+          setSelectedLocation({ lat: latitude, lng: longitude });
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (error) => {
+        setDetectingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setError('Location access denied. Please enable location permissions.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setError('Location information is unavailable.');
+            break;
+          case error.TIMEOUT:
+            setError('Location request timed out.');
+            break;
+          default:
+            setError('An unknown error occurred while detecting location.');
+            break;
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
   const validateStep = () => {
     switch (currentStep) {
       case 1:
@@ -594,14 +667,30 @@ export default function AddGearPage() {
                   Type a location or click on the map to select
                 </p>
 
-                {/* Map Snippet */}
-                <LocationMap 
-                  onLocationSelect={handleLocationSelect}
-                  initialPosition={mapCenter}
-                  selectedLocation={selectedLocation}
-                  height="200px"
-                  key={`${mapCenter[0]}-${mapCenter[1]}`}
-                />
+                {/* Map Snippet with Auto Detect button overlay */}
+                <div className="relative">
+                  <LocationMap 
+                    onLocationSelect={handleLocationSelect}
+                    initialPosition={mapCenter}
+                    selectedLocation={selectedLocation}
+                    height="200px"
+                    key={`${mapCenter[0]}-${mapCenter[1]}`}
+                  />
+                  {/* Auto Detect Button Overlay */}
+                  <button
+                    type="button"
+                    onClick={detectCurrentLocation}
+                    disabled={detectingLocation}
+                    className="absolute top-3 right-3 z-[1000] bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 p-2.5 rounded-lg shadow-lg border border-slate-200 dark:border-slate-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
+                    title="Auto detect my location"
+                  >
+                    {detectingLocation ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-[#059467]" />
+                    ) : (
+                      <MapPin className="w-5 h-5 group-hover:text-[#059467] transition-colors" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Specifications Section */}
