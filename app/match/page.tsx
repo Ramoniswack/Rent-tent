@@ -273,7 +273,9 @@ const TravelMatch: React.FC = () => {
           </main>
         </div>
         
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </div>
     );
   }
@@ -364,7 +366,9 @@ const TravelMatch: React.FC = () => {
           </motion.div>
           </div>
         </div>
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </div>
     );
   }
@@ -468,7 +472,9 @@ const TravelMatch: React.FC = () => {
           </div>
           </div>
         </div>
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </div>
     );
   }
@@ -711,7 +717,9 @@ const TravelMatch: React.FC = () => {
         </div>
       </main>
       </div>
-      <Footer />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 };

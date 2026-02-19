@@ -744,9 +744,9 @@ export default function TripDetailsPage() {
   return (
     <>
       <Header />
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
         {/* Hero Section */}
-        <section className="relative h-[400px] w-full overflow-hidden">
+        <section className="relative h-[300px] md:h-[400px] w-full overflow-hidden">
           <img
             src={trip.imageUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80'}
             alt={trip.title}
@@ -754,18 +754,18 @@ export default function TripDetailsPage() {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
           
-          <div className="container mx-auto h-full px-4 md:px-10 relative flex flex-col justify-between py-10">
+          <div className="container mx-auto h-full px-4 md:px-10 relative flex flex-col justify-between py-6 md:py-10">
             {/* Top Actions */}
-            <div className="flex justify-end items-start gap-4">
+            <div className="flex justify-end items-start gap-2 md:gap-4">
               <div className="relative">
                 <button
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm uppercase tracking-wider backdrop-blur-md border-2 border-white/20 transition-all ${getStatusColor(trip.status)}`}
+                  className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-1.5 md:py-2 rounded-full font-bold text-xs md:text-sm uppercase tracking-wider backdrop-blur-md border-2 border-white/20 transition-all ${getStatusColor(trip.status)}`}
                 >
-                  {trip.status === 'traveling' && <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>}
+                  {trip.status === 'traveling' && <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white animate-pulse"></span>}
                   {getStatusIcon(trip.status)}
                   {trip.status}
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3 h-3 md:w-4 md:h-4" />
                 </button>
 
 
@@ -813,19 +813,19 @@ export default function TripDetailsPage() {
                   Adventure 2024
                 </span>
               </div>
-              <h1 className="text-white text-4xl md:text-6xl font-black leading-none tracking-tight">
+              <h1 className="text-white text-2xl md:text-4xl lg:text-6xl font-black leading-none tracking-tight">
                 {trip.title}
               </h1>
-              <div className="flex items-center gap-4 mt-4 text-white/80">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 md:mt-4 text-white/80">
                 <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-xs font-medium">
+                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="text-[10px] md:text-xs font-medium">
                     {formatDateShort(trip.startDate)} - {formatDateShort(trip.endDate)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  <span className="text-xs font-medium">{trip.destination}, {trip.country}</span>
+                  <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="text-[10px] md:text-xs font-medium">{trip.destination}, {trip.country}</span>
                 </div>
               </div>
             </div>
@@ -833,40 +833,41 @@ export default function TripDetailsPage() {
         </section>
 
         {/* Tab Navigation */}
-        <div className="bg-white dark:bg-slate-900 border-b border-[#059467]/5 sticky top-[73px] z-40">
-          <div className="container mx-auto px-4 md:px-10 py-4">
-            <div className="flex items-center gap-2 bg-[#f5f8f7] dark:bg-slate-800 p-1.5 rounded-full w-fit">
+        <div className="bg-white dark:bg-slate-900 border-b border-[#059467]/5 sticky top-0 md:top-[73px] z-40">
+          <div className="container mx-auto px-4 md:px-10 py-3 md:py-4">
+            <div className="flex items-center gap-1 md:gap-2 bg-[#f5f8f7] dark:bg-slate-800 p-1 md:p-1.5 rounded-full w-full md:w-fit overflow-x-auto">
               <button
                 onClick={() => setActiveTab('itinerary')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm transition-all ${
+                className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 md:flex-initial justify-center ${
                   activeTab === 'itinerary'
                     ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
                 }`}
               >
-                <MapIcon className="w-4 h-4" />
-                Itinerary
+                <MapIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="hidden sm:inline">Itinerary</span>
+                <span className="sm:hidden">Route</span>
               </button>
               <button
                 onClick={() => setActiveTab('expenses')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm transition-all ${
+                className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 md:flex-initial justify-center ${
                   activeTab === 'expenses'
                     ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
                 }`}
               >
-                <Wallet className="w-4 h-4" />
+                <Wallet className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 Expenses
               </button>
               <button
                 onClick={() => setActiveTab('packing')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-full font-bold text-sm transition-all ${
+                className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 md:flex-initial justify-center ${
                   activeTab === 'packing'
                     ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-700/50'
                 }`}
               >
-                <Package className="w-4 h-4" />
+                <Package className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 Packing
               </button>
             </div>
@@ -882,103 +883,106 @@ export default function TripDetailsPage() {
             {activeTab === 'itinerary' && (
               <>
                 {/* Filters and Add Action */}
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-10">
-                  <div className="flex items-center gap-3">
+                <div className="space-y-3 md:space-y-4 mb-6 md:mb-10">
+                  {/* Primary Actions Row */}
+                  <div className="flex gap-2">
                     <button
                       onClick={() => setShowAddStop(true)}
-                      className="flex items-center gap-2 bg-[#059467] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-[#059467]/20 hover:scale-[1.02] active:scale-95 transition-all"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-[#059467] text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold shadow-lg shadow-[#059467]/20 hover:scale-[1.02] active:scale-95 transition-all text-sm md:text-base"
                     >
-                      <Plus className="w-5 h-5" />
+                      <Plus className="w-4 h-4 md:w-5 md:h-5" />
                       Add Stop
                     </button>
                     <button
                       onClick={exportItineraryToPDF}
-                      className="flex items-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm md:text-base"
                     >
-                      <Download className="w-5 h-5" />
-                      Export PDF
+                      <Download className="w-4 h-4 md:w-5 md:h-5" />
+                      <span className="hidden sm:inline">Export PDF</span>
+                      <span className="sm:hidden">PDF</span>
                     </button>
-                    <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-2 hidden sm:block"></div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setStatusFilter('all')}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                          statusFilter === 'all'
-                            ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                            : 'bg-white dark:bg-slate-800 border border-[#059467]/10 text-slate-600 dark:text-slate-400 hover:bg-slate-50'
-                        }`}
-                      >
-                        All Stops
-                      </button>
-                      <button
-                        onClick={() => setStatusFilter('completed')}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                          statusFilter === 'completed'
-                            ? 'bg-[#059467]/10 text-[#059467] border border-[#059467]/20'
-                            : 'bg-white dark:bg-slate-800 border border-[#059467]/10 text-slate-600 dark:text-slate-400 hover:bg-[#059467]/5'
-                        }`}
-                      >
-                        Completed
-                      </button>
-                      <button
-                        onClick={() => setStatusFilter('traveling')}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                          statusFilter === 'traveling'
-                            ? 'bg-[#3b82f6]/10 text-[#3b82f6] border border-[#3b82f6]/20'
-                            : 'bg-white dark:bg-slate-800 border border-[#059467]/10 text-slate-600 dark:text-slate-400 hover:bg-[#3b82f6]/5'
-                        }`}
-                      >
-                        Traveling
-                      </button>
-                      <button
-                        onClick={() => setStatusFilter('planning')}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
-                          statusFilter === 'planning'
-                            ? 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20'
-                            : 'bg-white dark:bg-slate-800 border border-[#059467]/10 text-slate-600 dark:text-slate-400 hover:bg-[#f59e0b]/5'
-                        }`}
-                      >
-                        Planning
-                      </button>
-                    </div>
+                  </div>
+
+                  {/* Filter Buttons Row */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                        statusFilter === 'all'
+                          ? 'bg-slate-900 dark:bg-slate-700 text-white'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('completed')}
+                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                        statusFilter === 'completed'
+                          ? 'bg-[#059467] text-white'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[#059467]/10'
+                      }`}
+                    >
+                      Done
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('traveling')}
+                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                        statusFilter === 'traveling'
+                          ? 'bg-[#3b82f6] text-white'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[#3b82f6]/10'
+                      }`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('planning')}
+                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                        statusFilter === 'planning'
+                          ? 'bg-[#f59e0b] text-white'
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[#f59e0b]/10'
+                      }`}
+                    >
+                      Plan
+                    </button>
                   </div>
                 </div>
 
                 {/* Timeline with Dashed Line */}
                 <div className="relative pb-12">
-                  {/* Dashed vertical line */}
-                  <div className="absolute left-[54px] top-0 bottom-0 w-0.5 border-l-2 border-dashed border-[#cee9e0] dark:border-slate-700 z-0"></div>
+                  {/* Dashed vertical line - hidden on mobile */}
+                  <div className="hidden md:block absolute left-[54px] top-0 bottom-0 w-0.5 border-l-2 border-dashed border-[#cee9e0] dark:border-slate-700 z-0"></div>
                   
-                  <div className="relative z-10 space-y-12">
+                  <div className="relative z-10 space-y-6 md:space-y-12">
                     {filteredItinerary.length === 0 ? (
-                      <div className="bg-white dark:bg-slate-900 p-16 rounded-3xl text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
+                      <div className="bg-white dark:bg-slate-900 p-8 md:p-16 rounded-2xl md:rounded-3xl text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
                         <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">
                           No stops {statusFilter !== 'all' ? statusFilter : 'planned yet'}
                         </p>
                       </div>
                     ) : (
                       filteredItinerary.map((stop, idx) => (
-                        <div key={stop._id} className="relative flex gap-6">
+                        <div key={stop._id} className="relative flex flex-col md:flex-row gap-4 md:gap-6">
                           {/* Day Card */}
-                          <div className="flex flex-col items-center min-w-[110px]">
-                            <div className={`w-20 h-24 bg-white dark:bg-slate-900 rounded-2xl flex flex-col items-center justify-center shadow-sm border ${
+                          <div className="flex md:flex-col items-center md:items-center gap-3 md:gap-0 md:min-w-[110px]">
+                            <div className={`w-16 h-20 md:w-20 md:h-24 bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl flex flex-col items-center justify-center shadow-sm border ${
                               stop.status === 'traveling' 
                                 ? 'border-slate-100 dark:border-slate-700 ring-2 ring-[#3b82f6]/20' 
                                 : 'border-slate-100 dark:border-slate-700'
                             }`}>
-                              <span className="text-[10px] uppercase tracking-widest font-black text-slate-400">
+                              <span className="text-[9px] md:text-[10px] uppercase tracking-widest font-black text-slate-400">
                                 Day {String(idx + 1).padStart(2, '0')}
                               </span>
-                              <span className="text-2xl font-black text-slate-900 dark:text-white">
+                              <span className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
                                 {new Date(stop.time).getDate()}
                               </span>
-                              <span className="text-xs font-bold text-slate-500">
+                              <span className="text-[10px] md:text-xs font-bold text-slate-500">
                                 {new Date(stop.time).toLocaleDateString('en-US', { month: 'short' })}
                               </span>
                             </div>
                             
                             {/* Status Icon */}
-                            <div className={`mt-4 rounded-full p-1 ring-4 ring-[#f5f8f7] dark:ring-slate-900 ${
+                            <div className={`md:mt-4 rounded-full p-1 ring-4 ring-[#f5f8f7] dark:ring-slate-900 ${
                               stop.status === 'completed' 
                                 ? 'bg-[#059467]' 
                                 : stop.status === 'traveling'
@@ -986,23 +990,23 @@ export default function TripDetailsPage() {
                                 : 'bg-[#f59e0b]'
                             }`}>
                               {stop.status === 'completed' ? (
-                                <CheckCircle className="w-4 h-4 text-white" />
+                                <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
                               ) : stop.status === 'traveling' ? (
-                                <Navigation className="w-4 h-4 text-white" />
+                                <Navigation className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
                               ) : (
-                                <Clock className="w-4 h-4 text-white" />
+                                <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
                               )}
                             </div>
                           </div>
 
                           {/* Stop Card */}
-                          <div className={`flex-1 bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] shadow-sm border group hover:shadow-md transition-all ${
+                          <div className={`flex-1 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] shadow-sm border group hover:shadow-md transition-all ${
                             stop.status === 'traveling'
                               ? 'border-2 border-[#3b82f6]/30'
                               : 'border border-slate-100 dark:border-slate-800'
                           }`}>
                             <div className="flex justify-between items-start mb-2">
-                              <h3 className={`text-xl font-bold transition-colors ${
+                              <h3 className={`text-base md:text-xl font-bold transition-colors line-clamp-2 ${
                                 stop.status === 'completed'
                                   ? 'text-slate-900 dark:text-white group-hover:text-[#059467]'
                                   : stop.status === 'traveling'
@@ -1013,22 +1017,22 @@ export default function TripDetailsPage() {
                               </h3>
                               <button
                                 onClick={() => setShowStopMenu(showStopMenu === stop._id ? null : stop._id)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0 ml-2"
                               >
-                                <MoreHorizontal className="w-5 h-5" />
+                                <MoreHorizontal className="w-4 h-4 md:w-5 md:h-5" />
                               </button>
                             </div>
                             
-                            <div className="flex items-center gap-4 mb-4">
-                              <div className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                                <MapPin className={`w-4 h-4 ${
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-3 md:mb-4">
+                              <div className="flex items-center gap-1 text-[10px] md:text-xs font-medium text-slate-500">
+                                <MapPin className={`w-3 h-3 md:w-4 md:h-4 flex-shrink-0 ${
                                   stop.status === 'completed' ? 'text-[#059467]' :
                                   stop.status === 'traveling' ? 'text-[#3b82f6]' :
                                   'text-[#f59e0b]'
                                 }`} />
-                                {stop.name}
+                                <span className="truncate">{stop.name}</span>
                               </div>
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                              <span className={`px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-[9px] md:text-[10px] font-bold uppercase ${
                                 stop.status === 'completed' ? 'bg-[#059467]/10 text-[#059467]' :
                                 stop.status === 'traveling' ? 'bg-[#3b82f6]/10 text-[#3b82f6]' :
                                 'bg-[#f59e0b]/10 text-[#f59e0b]'
@@ -1038,8 +1042,8 @@ export default function TripDetailsPage() {
                             </div>
                             
                             {stop.activity && (
-                              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
-                                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed italic">
+                              <div className="bg-slate-50 dark:bg-slate-800 p-3 md:p-4 rounded-lg md:rounded-xl border border-slate-100 dark:border-slate-700">
+                                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed italic line-clamp-3">
                                   "{stop.activity}"
                                 </p>
                               </div>
@@ -1047,7 +1051,7 @@ export default function TripDetailsPage() {
                             
                             {/* Actions Menu */}
                             {showStopMenu === stop._id && (
-                              <div className="absolute right-6 top-16 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                              <div className="absolute right-4 md:right-6 top-14 md:top-16 w-52 md:w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
                                 <button
                                   onClick={() => openEditStopModal(stop)}
                                   className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
@@ -1112,20 +1116,20 @@ export default function TripDetailsPage() {
             {activeTab === 'expenses' && (
               <>
                 {/* Budget Overview Section */}
-                <section className="bg-white dark:bg-slate-900 rounded-xl p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] border border-gray-100 dark:border-slate-800">
+                <section className="bg-white dark:bg-slate-900 rounded-xl p-6 md:p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.05)] border border-gray-100 dark:border-slate-800">
                   {/* Header with Total Spent and Remaining */}
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 mb-6 md:mb-10">
                     <div>
-                      <p className="text-sm font-bold text-[#059467]/70 uppercase tracking-widest mb-1">
+                      <p className="text-xs md:text-sm font-bold text-[#059467]/70 uppercase tracking-widest mb-1">
                         Total Spent
                       </p>
-                      <h2 className="text-6xl font-black text-slate-900 dark:text-white tracking-tighter">
+                      <h2 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter">
                         ${totalExpenses.toFixed(2)}
                       </h2>
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-3 mb-1">
-                        <p className="text-sm font-bold text-gray-400 uppercase tracking-widest text-right">
+                    <div className="text-left md:text-right w-full md:w-auto">
+                      <div className="flex items-center gap-2 md:gap-3 mb-1">
+                        <p className="text-xs md:text-sm font-bold text-gray-400 uppercase tracking-widest">
                           Budget
                         </p>
                         <button
@@ -1136,21 +1140,21 @@ export default function TripDetailsPage() {
                           className="text-[#059467] hover:text-[#047854] transition-colors"
                           title="Edit budget"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
                       </div>
-                      <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">
+                      <p className="text-xl md:text-2xl font-bold text-gray-700 dark:text-gray-300">
                         {budget > 0 ? (
                           <>
                             ${(budget - totalExpenses).toFixed(2)}{' '}
-                            <span className="text-sm font-medium text-gray-400">
+                            <span className="text-xs md:text-sm font-medium text-gray-400">
                               of ${budget.toFixed(2)}
                             </span>
                           </>
                         ) : (
-                          <span className="text-sm font-medium text-gray-400">
+                          <span className="text-xs md:text-sm font-medium text-gray-400">
                             No budget set
                           </span>
                         )}
@@ -1160,27 +1164,27 @@ export default function TripDetailsPage() {
 
                   {/* Progress Bar with Percentage */}
                   {budget > 0 && (
-                    <div className="relative mb-12">
-                      <div className="h-8 w-full bg-[#f5f8f7] dark:bg-slate-800 rounded-full overflow-hidden p-1.5 shadow-inner">
+                    <div className="relative mb-8 md:mb-12">
+                      <div className="h-6 md:h-8 w-full bg-[#f5f8f7] dark:bg-slate-800 rounded-full overflow-hidden p-1 md:p-1.5 shadow-inner">
                         <div 
                           className="h-full bg-[#059467] rounded-full relative transition-all"
                           style={{ width: `${Math.min((totalExpenses / budget) * 100, 100)}%` }}
                         >
-                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white">
+                          <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-[9px] md:text-[10px] font-black text-white">
                             {Math.round((totalExpenses / budget) * 100)}%
                           </div>
                         </div>
                       </div>
-                      <div className="flex justify-between mt-3 px-1">
-                        <span className="text-xs font-bold text-[#059467]">Budget Depleted</span>
-                        <span className="text-xs font-bold text-gray-400">Safety Margin</span>
+                      <div className="flex justify-between mt-2 md:mt-3 px-1">
+                        <span className="text-[10px] md:text-xs font-bold text-[#059467]">Budget Depleted</span>
+                        <span className="text-[10px] md:text-xs font-bold text-gray-400">Safety Margin</span>
                       </div>
                     </div>
                   )}
 
                   {/* Category Breakdown Mini-Cards */}
                   {calculateCategoryBreakdown().length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                       {calculateCategoryBreakdown().slice(0, 4).map((cat) => {
                         const categoryColors: Record<string, { bg: string; border: string; icon: string; text: string }> = {
                           accommodation: { bg: 'bg-[#3b82f6]/5', border: 'border-[#3b82f6]/10', icon: 'bg-[#3b82f6]/20 text-[#3b82f6]', text: 'text-[#3b82f6]' },
@@ -1193,18 +1197,18 @@ export default function TripDetailsPage() {
                         const colors = categoryColors[cat.category] || categoryColors.other;
                         
                         return (
-                          <div key={cat.category} className={`p-4 rounded-xl ${colors.bg} border ${colors.border} flex items-center gap-3`}>
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${colors.icon}`}>
+                          <div key={cat.category} className={`p-3 md:p-4 rounded-xl ${colors.bg} border ${colors.border} flex items-center gap-2 md:gap-3`}>
+                            <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${colors.icon}`}>
                               {getCategoryIcon(cat.category)}
                             </div>
-                            <div>
-                              <p className={`text-[10px] font-bold uppercase ${colors.text}`}>
+                            <div className="min-w-0">
+                              <p className={`text-[9px] md:text-[10px] font-bold uppercase ${colors.text} truncate`}>
                                 {cat.category === 'accommodation' ? 'Stays' : 
                                  cat.category === 'food' ? 'Food' :
                                  cat.category === 'transportation' ? 'Transit' :
                                  cat.category === 'activities' ? 'Fun' : cat.category}
                               </p>
-                              <p className="text-lg font-bold text-slate-900 dark:text-white">{cat.percentage}%</p>
+                              <p className="text-base md:text-lg font-bold text-slate-900 dark:text-white">{cat.percentage}%</p>
                             </div>
                           </div>
                         );
@@ -1214,30 +1218,31 @@ export default function TripDetailsPage() {
                 </section>
 
                 {/* Action Bar */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Recent Transactions</h3>
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 md:gap-4">
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Recent Transactions</h3>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
                     <button 
                       onClick={exportExpensesToPDF}
-                      className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-all"
+                      className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 transition-all order-2 sm:order-1"
                     >
-                      <Download className="w-5 h-5" />
-                      Export PDF
+                      <Download className="w-4 h-4 md:w-5 md:h-5" />
+                      <span className="hidden sm:inline">Export PDF</span>
+                      <span className="sm:hidden">PDF</span>
                     </button>
                     <button 
                       onClick={() => setShowAddExpense(true)}
-                      className="bg-[#059467] hover:bg-[#059467]/90 text-white px-8 py-3.5 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95"
+                      className="bg-[#059467] hover:bg-[#059467]/90 text-white px-6 md:px-8 py-3 md:py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95 order-1 sm:order-2"
                     >
-                      <Plus className="w-5 h-5" />
+                      <Plus className="w-4 h-4 md:w-5 md:h-5" />
                       Add Expense
                     </button>
                   </div>
                 </div>
 
                 {/* Transaction List */}
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {expenses.length === 0 ? (
-                    <div className="bg-white dark:bg-slate-900 p-16 rounded-3xl text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
+                    <div className="bg-white dark:bg-slate-900 p-8 md:p-16 rounded-2xl md:rounded-3xl text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
                       <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">
                         No expenses recorded yet
                       </p>
@@ -1246,21 +1251,21 @@ export default function TripDetailsPage() {
                     expenses.map((expense) => (
                       <div 
                         key={expense._id}
-                        className="group bg-white dark:bg-slate-900 p-5 rounded-xl flex items-center justify-between border border-transparent hover:border-[#059467]/20 hover:shadow-xl hover:shadow-[#059467]/5 transition-all cursor-pointer"
+                        className="group bg-white dark:bg-slate-900 p-4 md:p-5 rounded-xl flex items-center justify-between border border-transparent hover:border-[#059467]/20 hover:shadow-xl hover:shadow-[#059467]/5 transition-all cursor-pointer"
                       >
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-3 md:gap-6 min-w-0 flex-1">
                           {/* Category Icon */}
-                          <div className={`w-14 h-14 rounded-full flex items-center justify-center ${getCategoryStyle(expense.category)}`}>
+                          <div className={`w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center flex-shrink-0 ${getCategoryStyle(expense.category)}`}>
                             {getCategoryIcon(expense.category)}
                           </div>
                           
                           {/* Details */}
-                          <div>
-                            <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm md:text-lg font-bold text-slate-900 dark:text-white truncate">
                               {expense.item}
                             </h4>
-                            <p className="text-sm text-gray-400 font-medium">
-                              {new Date(expense.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • Created by{' '}
+                            <p className="text-xs md:text-sm text-gray-400 font-medium truncate">
+                              {new Date(expense.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • <span className="hidden sm:inline">Created by </span>
                               <span className="text-[#059467]/70">
                                 {expense.createdBy?.name || 'You'}
                               </span>
@@ -1269,8 +1274,8 @@ export default function TripDetailsPage() {
                         </div>
 
                         {/* Amount and Delete */}
-                        <div className="flex items-center gap-8">
-                          <span className="text-2xl font-black text-[#059467]">
+                        <div className="flex items-center gap-3 md:gap-8 flex-shrink-0">
+                          <span className="text-lg md:text-2xl font-black text-[#059467]">
                             ${expense.amount.toFixed(2)}
                           </span>
                           <button 
@@ -1278,7 +1283,7 @@ export default function TripDetailsPage() {
                               e.stopPropagation();
                               handleDeleteExpense(expense._id);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all"
+                            className="hidden md:block opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all"
                           >
                             <Trash2 className="w-5 h-5" />
                           </button>
@@ -1294,19 +1299,19 @@ export default function TripDetailsPage() {
             {activeTab === 'packing' && (
               <>
                 {/* Hero Progress Card */}
-                <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-[#059467]/5 p-10 mb-10 flex flex-col md:flex-row items-center gap-12 overflow-hidden relative">
+                <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-[#059467]/5 p-6 md:p-10 mb-6 md:mb-10 flex flex-col md:flex-row items-center gap-6 md:gap-12 overflow-hidden relative">
                   {/* Background Decoration */}
                   <div className="absolute -right-16 -top-16 w-64 h-64 bg-[#059467]/5 rounded-full blur-3xl"></div>
                   
                   {/* Progress Display */}
-                  <div className="z-10 flex-shrink-0 text-center md:text-left">
-                    <p className="text-[#059467] font-bold tracking-widest uppercase text-xs mb-2">
+                  <div className="z-10 flex-shrink-0 text-center md:text-left w-full md:w-auto">
+                    <p className="text-[#059467] font-bold tracking-widest uppercase text-[10px] md:text-xs mb-2">
                       {trip.destination} Expedition
                     </p>
-                    <h2 className="text-[48px] font-black text-slate-900 dark:text-white leading-none">
+                    <h2 className="text-3xl md:text-[48px] font-black text-slate-900 dark:text-white leading-none">
                       {packingItems.length === 0 ? 'Start Packing!' : `${calculatePackingProgress().percentage}% Packed`}
                     </h2>
-                    <p className="text-slate-600 dark:text-white/60 mt-3 font-medium">
+                    <p className="text-slate-600 dark:text-white/60 mt-2 md:mt-3 font-medium text-sm md:text-base">
                       {packingItems.length === 0 
                         ? 'Add items to your packing list to get started' 
                         : calculatePackingProgress().percentage === 100
@@ -1318,18 +1323,18 @@ export default function TripDetailsPage() {
                   {/* Progress Bar */}
                   {packingItems.length > 0 && (
                     <div className="z-10 flex-grow w-full">
-                      <div className="flex justify-between items-end mb-4">
-                        <span className="text-sm font-bold text-[#059467]">Progress</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      <div className="flex justify-between items-end mb-3 md:mb-4">
+                        <span className="text-xs md:text-sm font-bold text-[#059467]">Progress</span>
+                        <span className="text-xs md:text-sm font-bold text-slate-900 dark:text-white">
                           {calculatePackingProgress().packed} / {calculatePackingProgress().total} items
                         </span>
                       </div>
-                      <div className="h-6 w-full bg-[#059467]/10 rounded-full overflow-hidden p-1 border border-[#059467]/5">
+                      <div className="h-5 md:h-6 w-full bg-[#059467]/10 rounded-full overflow-hidden p-0.5 md:p-1 border border-[#059467]/5">
                         <div 
-                          className="h-full bg-[#059467] rounded-full flex items-center justify-end px-2 transition-all"
+                          className="h-full bg-[#059467] rounded-full flex items-center justify-end px-1.5 md:px-2 transition-all"
                           style={{ width: `${calculatePackingProgress().percentage}%` }}
                         >
-                          <div className="w-2 h-2 rounded-full bg-white/50"></div>
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-white/50"></div>
                         </div>
                       </div>
                     </div>
@@ -1337,21 +1342,22 @@ export default function TripDetailsPage() {
                 </section>
 
                 {/* Action Bar */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Packing Categories</h3>
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 md:gap-4">
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Packing Categories</h3>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
                     <button 
                       onClick={exportPackingToPDF}
-                      className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 transition-all"
+                      className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 transition-all order-2 sm:order-1"
                     >
-                      <Download className="w-5 h-5" />
-                      Export PDF
+                      <Download className="w-4 h-4 md:w-5 md:h-5" />
+                      <span className="hidden sm:inline">Export PDF</span>
+                      <span className="sm:hidden">PDF</span>
                     </button>
                     <button 
                       onClick={() => setShowAddPackingItem(true)}
-                      className="bg-[#059467] hover:bg-[#059467]/90 text-white px-8 py-3.5 rounded-full font-bold flex items-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95"
+                      className="bg-[#059467] hover:bg-[#059467]/90 text-white px-6 md:px-8 py-3 md:py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95 order-1 sm:order-2"
                     >
-                      <Plus className="w-5 h-5" />
+                      <Plus className="w-4 h-4 md:w-5 md:h-5" />
                       Add Item
                     </button>
                   </div>
@@ -2546,7 +2552,10 @@ export default function TripDetailsPage() {
           </div>
         )}
       </div>
-      <Footer />
+      {/* Footer - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }

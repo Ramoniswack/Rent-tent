@@ -666,8 +666,8 @@ export default function AccountPage() {
     <>
       <Header />
       <div className="bg-[#f5f8f7] dark:bg-[#0f231d] text-slate-900 dark:text-slate-100 antialiased overflow-hidden flex min-h-screen">
-        {/* Sidebar Navigation */}
-        <aside className="w-[280px] bg-[#f8fcfb] dark:bg-[#132a24] border-r border-slate-100 dark:border-slate-800 flex flex-col h-full shrink-0 transition-all duration-300">
+        {/* Sidebar Navigation - Hidden on mobile */}
+        <aside className="hidden md:flex w-[280px] bg-[#f8fcfb] dark:bg-[#132a24] border-r border-slate-100 dark:border-slate-800 flex-col h-full shrink-0 transition-all duration-300">
           <div className="p-6">
             <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push('/dashboard')}>
               <div className="bg-[#059467]/10 p-2 rounded-xl text-[#059467]">
@@ -781,63 +781,96 @@ export default function AccountPage() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto h-full bg-white dark:bg-[#0f231d]/95 relative">
-        <div className="max-w-6xl mx-auto px-8 py-10 pb-20">
+        {/* Mobile Tab Navigation - Visible only on mobile */}
+        <div className="md:hidden sticky top-0 z-10 bg-white dark:bg-[#0f231d] border-b border-slate-200 dark:border-slate-700">
+          <div className="flex overflow-x-auto scrollbar-hide">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'profile'
+                  ? 'text-[#059467] border-b-2 border-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              <span>Profile</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('preferences')}
+              className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'preferences'
+                  ? 'text-[#059467] border-b-2 border-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Preferences</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'stats'
+                  ? 'text-[#059467] border-b-2 border-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Stats</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'billing'
+                  ? 'text-[#059467] border-b-2 border-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Billing</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 md:py-10 pb-24 md:pb-20">
           {/* Header */}
-          <header className="flex justify-between items-end mb-10">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 md:mb-10 gap-4">
             <div>
-              <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+              <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-1 md:mb-2">
                 {activeTab === 'profile' && 'Profile Settings'}
                 {activeTab === 'preferences' && 'Preferences'}
                 {activeTab === 'stats' && 'Travel Statistics'}
                 {activeTab === 'billing' && 'Billing & Plans'}
               </h2>
-              <p className="text-slate-500 dark:text-slate-400 text-lg">
+              <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg">
                 {activeTab === 'profile' && 'Manage your account details and view your travel statistics.'}
                 {activeTab === 'preferences' && 'Customize your experience and notification settings.'}
                 {activeTab === 'stats' && 'View your travel history and activity.'}
                 {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
               </p>
             </div>
-            {(activeTab === 'profile' || activeTab === 'preferences' || activeTab === 'billing') && (
-              <div className="flex gap-3">
-                <button 
-                  onClick={handleCancel}
-                  className="px-6 py-3 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-6 py-3 rounded-full bg-[#059467] text-white font-semibold shadow-lg shadow-[#059467]/30 hover:bg-[#047854] transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            )}
           </header>
 
           {/* Success/Error Messages */}
           {success && (
-            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl">
-              <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+            <div className="mb-4 md:mb-6 p-3 md:p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl md:rounded-2xl">
+              <p className="text-xs md:text-sm text-green-600 dark:text-green-400">{success}</p>
             </div>
           )}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <div className="mb-4 md:mb-6 p-3 md:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl md:rounded-2xl">
+              <p className="text-xs md:text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
-          <div className="grid grid-cols-12 gap-8">
+          <div className="grid grid-cols-12 gap-4 md:gap-8">
             {/* Profile Tab Content */}
             {activeTab === 'profile' && (
               <>
                 {/* Left Column: Profile */}
                 <div className="col-span-12 lg:col-span-7">
                   {/* Cover Photo Section */}
-                  <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm mb-6">
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Cover Photo</h3>
+                  <section className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-700/50 p-4 md:p-8 shadow-sm mb-4 md:mb-6">
+                    <h3 className="text-base md:text-lg font-bold text-slate-900 dark:text-white mb-3 md:mb-4">Cover Photo</h3>
                     <div className="relative group cursor-pointer">
                       <input
                         type="file"
@@ -848,7 +881,7 @@ export default function AccountPage() {
                         disabled={uploadingCover}
                       />
                       <label htmlFor="cover-photo-upload" className="cursor-pointer">
-                        <div className="w-full h-48 rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700">
+                        <div className="w-full h-32 md:h-48 rounded-xl md:rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700">
                           {uploadingCover ? (
                             <div className="w-full h-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
                               <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
@@ -861,25 +894,25 @@ export default function AccountPage() {
                             />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-br from-[#059467]/10 to-[#047854]/10 flex flex-col items-center justify-center">
-                              <Camera className="w-12 h-12 text-[#059467] mb-2" />
-                              <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">
+                              <Camera className="w-8 md:w-12 h-8 md:h-12 text-[#059467] mb-2" />
+                              <span className="text-slate-600 dark:text-slate-400 text-xs md:text-sm font-medium">
                                 Click to upload cover photo
                               </span>
                             </div>
                           )}
                         </div>
-                        <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute inset-0 bg-black/40 rounded-xl md:rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <div className="text-center">
-                            <Camera className="w-8 h-8 text-white mx-auto mb-2" />
-                            <span className="text-white text-sm font-medium">Change Cover Photo</span>
+                            <Camera className="w-6 md:w-8 h-6 md:h-8 text-white mx-auto mb-2" />
+                            <span className="text-white text-xs md:text-sm font-medium">Change Cover Photo</span>
                           </div>
                         </div>
                       </label>
                     </div>
                   </section>
 
-                  <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
-                    <div className="flex flex-col md:flex-row gap-8 items-start">
+                  <section className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-700/50 p-4 md:p-8 shadow-sm mb-4 md:mb-6">
+                    <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
                       {/* Profile Picture */}
                       <div className="relative group cursor-pointer shrink-0 mx-auto md:mx-0">
                         <input
@@ -891,7 +924,7 @@ export default function AccountPage() {
                           disabled={uploadingImage}
                         />
                         <label htmlFor="profile-picture-upload" className="cursor-pointer">
-                          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-xl">
+                          <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-xl">
                             {uploadingImage ? (
                               <div className="w-full h-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
                                 <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
@@ -920,12 +953,12 @@ export default function AccountPage() {
                       </div>
 
                       {/* Profile Form */}
-                      <div className="flex-1 w-full space-y-5">
+                      <div className="flex-1 w-full space-y-4 md:space-y-5">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="flex flex-col gap-2">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
+                            <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
                             <input
-                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
                               type="text"
                               name="name"
                               value={formData.name}
@@ -933,9 +966,9 @@ export default function AccountPage() {
                             />
                           </div>
                           <div className="flex flex-col gap-2">
-                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Username</label>
+                            <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Username</label>
                             <input
-                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
                               type="text"
                               name="username"
                               value={formData.username}
@@ -947,12 +980,12 @@ export default function AccountPage() {
 
                         {/* Gender Selection */}
                         <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Gender</label>
+                          <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Gender</label>
                           <select
                             name="gender"
                             value={formData.gender}
                             onChange={handleInputChange}
-                            className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                            className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
                           >
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
@@ -963,9 +996,9 @@ export default function AccountPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Bio</label>
+                          <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Bio</label>
                           <textarea
-                            className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400 h-24 resize-none"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400 h-20 md:h-24 resize-none"
                             name="bio"
                             value={formData.bio}
                             onChange={handleInputChange}
@@ -976,9 +1009,9 @@ export default function AccountPage() {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
+                          <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
                           <input
-                            className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-2xl px-4 py-3 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-500 dark:text-slate-400 cursor-not-allowed"
                             type="email"
                             value={userProfile?.email || ''}
                             disabled
@@ -990,14 +1023,14 @@ export default function AccountPage() {
                   </section>
 
                   {/* Travel Match Profile Section */}
-                  <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
-                    <div className="flex items-center gap-2 mb-6">
-                      <Heart className="w-6 h-6 text-pink-500" />
-                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Travel Match Profile</h3>
+                  <section className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-700/50 p-4 md:p-8 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4 md:mb-6">
+                      <Heart className="w-5 h-5 md:w-6 md:h-6 text-pink-500" />
+                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Travel Match Profile</h3>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6">Complete your profile to find travel buddies</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base mb-4 md:mb-6">Complete your profile to find travel buddies</p>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4 md:space-y-6">
                       {/* Date of Birth & Age */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
@@ -1202,67 +1235,67 @@ export default function AccountPage() {
                 </div>
 
                 {/* Right Column: Stats */}
-                <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white px-2">Travel Stats</h3>
+                <div className="col-span-12 lg:col-span-5 flex flex-col gap-4 md:gap-6">
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white px-2">Travel Stats</h3>
                   
                   <div className="grid grid-cols-1 gap-4">
                     {/* Stat Card 1 */}
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Trips</span>
-                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">34</span>
-                        <span className="text-xs font-semibold text-[#059467] mt-2 flex items-center gap-1">
-                          <TrendingUp className="w-4 h-4" />
+                        <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Trips</span>
+                        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">34</span>
+                        <span className="text-xs font-semibold text-[#059467] mt-1 md:mt-2 flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
                           +12% this year
                         </span>
                       </div>
-                      <div className="w-16 h-16 rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467]">
-                        <Plane className="w-8 h-8" />
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467]">
+                        <Plane className="w-6 h-6 md:w-8 md:h-8" />
                       </div>
                     </div>
 
                     {/* Stat Card 2 */}
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Expenses</span>
-                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">$12.4k</span>
-                        <span className="text-xs font-semibold text-amber-500 mt-2 flex items-center gap-1">
-                          <AlertTriangle className="w-4 h-4" />
+                        <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Expenses</span>
+                        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">$12.4k</span>
+                        <span className="text-xs font-semibold text-amber-500 mt-1 md:mt-2 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 md:w-4 md:h-4" />
                           Near budget limit
                         </span>
                       </div>
-                      <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                        <Wallet className="w-8 h-8" />
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <Wallet className="w-6 h-6 md:w-8 md:h-8" />
                       </div>
                     </div>
 
                     {/* Stat Card 3 */}
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Gear Rented</span>
-                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">8</span>
-                        <span className="text-xs font-semibold text-slate-400 mt-2">Active rentals</span>
+                        <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Gear Rented</span>
+                        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">8</span>
+                        <span className="text-xs font-semibold text-slate-400 mt-1 md:mt-2">Active rentals</span>
                       </div>
-                      <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                        <Backpack className="w-8 h-8" />
+                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <Backpack className="w-6 h-6 md:w-8 md:h-8" />
                       </div>
                     </div>
                   </div>
 
                   {/* Promo Card */}
-                  <div className="relative overflow-hidden bg-gradient-to-br from-[#059467] to-[#035e41] rounded-3xl p-6 shadow-lg text-white">
-                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                  <div className="relative overflow-hidden bg-gradient-to-br from-[#059467] to-[#035e41] rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg text-white">
+                    <div className="absolute -top-10 -right-10 w-24 h-24 md:w-32 md:h-32 bg-white/10 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 w-16 h-16 md:w-24 md:h-24 bg-white/10 rounded-full blur-xl"></div>
                     <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="bg-white/20 p-2 rounded-xl">
-                          <Diamond className="w-6 h-6" />
+                      <div className="flex items-start justify-between mb-3 md:mb-4">
+                        <div className="bg-white/20 p-1.5 md:p-2 rounded-lg md:rounded-xl">
+                          <Diamond className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
                         <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Pro</span>
                       </div>
-                      <h4 className="font-bold text-xl mb-1">Upgrade to Nomad Pro</h4>
-                      <p className="text-white/80 text-sm mb-4">Get unlimited trip tracking and offline maps.</p>
-                      <button className="w-full py-3 bg-white text-[#059467] font-bold rounded-xl hover:bg-slate-100 transition-colors">
+                      <h4 className="font-bold text-lg md:text-xl mb-1">Upgrade to Nomad Pro</h4>
+                      <p className="text-white/80 text-xs md:text-sm mb-3 md:mb-4">Get unlimited trip tracking and offline maps.</p>
+                      <button className="w-full py-2 md:py-3 bg-white text-[#059467] text-sm md:text-base font-bold rounded-lg md:rounded-xl hover:bg-slate-100 transition-colors">
                         View Plans
                       </button>
                     </div>
@@ -1274,18 +1307,18 @@ export default function AccountPage() {
             {/* Preferences Tab Content */}
             {activeTab === 'preferences' && (
               <div className="col-span-12 lg:col-span-7">
-                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Preferences</h3>
+                <section className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-700/50 p-4 md:p-8 shadow-sm">
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-4 md:mb-6">Preferences</h3>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Language</label>
+                      <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Language</label>
                       <div className="relative">
                         <select
                           name="language"
                           value={formData.language}
                           onChange={handleInputChange}
-                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
                         >
                           <option>English (US)</option>
                           <option>Spanish</option>
@@ -1296,13 +1329,13 @@ export default function AccountPage() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</label>
+                      <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</label>
                       <div className="relative">
                         <select
                           name="currency"
                           value={formData.currency}
                           onChange={handleInputChange}
-                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
                         >
                           <option>USD ($)</option>
                           <option>EUR (€)</option>
@@ -1313,11 +1346,11 @@ export default function AccountPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-4 md:space-y-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">Email Notifications</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Receive updates about your trips and deals.</p>
+                        <p className="font-semibold text-sm md:text-base text-slate-900 dark:text-white">Email Notifications</p>
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Receive updates about your trips and deals.</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -1688,10 +1721,41 @@ export default function AccountPage() {
               </div>
             )}
           </div>
+
+          {/* Action Buttons - Moved to Bottom */}
+          <div className="flex flex-col md:flex-row gap-3 md:gap-3 w-full md:w-auto md:justify-end mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
+            {(activeTab === 'profile' || activeTab === 'preferences' || activeTab === 'billing') && (
+              <>
+                <button 
+                  onClick={handleCancel}
+                  className="flex-1 md:flex-none px-4 md:px-6 py-2 md:py-3 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm md:text-base font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 md:flex-none px-4 md:px-6 py-2 md:py-3 rounded-full bg-[#059467] text-white text-sm md:text-base font-semibold shadow-lg shadow-[#059467]/30 hover:bg-[#047854] transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </>
+            )}
+            {/* Mobile Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="md:hidden w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-semibold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
+            </button>
+          </div>
         </div>
       </main>
     </div>
-    <Footer />
+    <div className="hidden md:block">
+      <Footer />
+    </div>
   </>
   );
 }

@@ -252,10 +252,9 @@ export default function GearPage() {
 
   return (
     <>
-      {/* Header - Hidden on mobile */}
-      <div className="hidden md:block">
-        <Header />
-      </div>
+      {/* Header - Now visible on mobile */}
+      <Header />
+      
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
         <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-6 lg:px-20 py-6 md:py-10">
           {/* Page Title & Primary Action */}
