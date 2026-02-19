@@ -564,11 +564,14 @@ export default function MapPage() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <Header />
+      {/* Header - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Header />
+      </div>
       
-      <main className="flex-1 relative flex flex-col md:flex-row overflow-hidden">
+      <main className="flex-1 relative flex flex-col md:flex-row overflow-hidden h-[calc(100dvh-80px)] md:h-auto">
         {/* Sidebar */}
-        <aside className="w-full md:w-[400px] h-[40vh] md:h-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-2xl flex flex-col border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-800 transition-all duration-300 ease-in-out z-10 overflow-hidden">
+        <aside className="w-full md:w-[400px] h-[45vh] md:h-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-2xl flex flex-col border-b md:border-b-0 md:border-r border-gray-100 dark:border-slate-800 transition-all duration-300 ease-in-out z-10 overflow-hidden">
           {/* Mobile handle */}
           <div className="h-1 w-12 bg-gray-300 dark:bg-slate-600 rounded-full mx-auto my-3 md:hidden"></div>
 

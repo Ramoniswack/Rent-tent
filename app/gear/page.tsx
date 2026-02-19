@@ -252,50 +252,53 @@ export default function GearPage() {
 
   return (
     <>
-      <Header />
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
-        <main className="flex-grow w-full max-w-[1440px] mx-auto px-6 lg:px-20 py-10">
+      {/* Header - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Header />
+      </div>
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
+        <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-6 lg:px-20 py-6 md:py-10">
           {/* Page Title & Primary Action */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 mb-6 md:mb-10">
             <div>
-              <h2 className="text-[#0f172a] dark:text-white text-[30px] font-black leading-tight tracking-tight">
+              <h2 className="text-[#0f172a] dark:text-white text-2xl md:text-[30px] font-black leading-tight tracking-tight">
                 Rent Gear
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm md:text-base">
                 High-quality gear from trusted nomads.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 md:gap-3 w-full md:w-auto">
               <button 
                 onClick={() => router.push('/rentals/dashboard')}
-                className="flex items-center gap-2 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 text-[#059467] border-2 border-[#059467] px-6 py-3 rounded-full font-bold transition-all transform hover:-translate-y-0.5"
+                className="flex items-center justify-center gap-2 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 text-[#059467] border-2 border-[#059467] px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold transition-all transform hover:-translate-y-0.5 text-sm md:text-base"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 My Rentals
               </button>
               <button 
                 onClick={() => router.push('/gear/add')}
-                className="flex items-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-[#059467]/25 transition-all transform hover:-translate-y-0.5"
+                className="flex items-center justify-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold shadow-lg shadow-[#059467]/25 transition-all transform hover:-translate-y-0.5 text-sm md:text-base"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4 md:w-5 md:h-5" />
                 List Your Gear
               </button>
             </div>
           </div>
 
           {/* Advanced Filter Bar */}
-          <div className="bg-white dark:bg-[#1a2c26] p-4 rounded-xl shadow-sm border border-gray-100 dark:border-[#059467]/10 mb-12">
-            <div className="flex flex-col xl:flex-row gap-4 items-center justify-between">
+          <div className="bg-white dark:bg-[#1a2c26] p-3 md:p-4 rounded-xl shadow-sm border border-gray-100 dark:border-[#059467]/10 mb-6 md:mb-12">
+            <div className="flex flex-col xl:flex-row gap-3 md:gap-4 items-center justify-between">
               {/* Search & Dropdowns Group */}
-              <div className="flex flex-col lg:flex-row gap-3 w-full xl:w-auto flex-1">
+              <div className="flex flex-col lg:flex-row gap-2 md:gap-3 w-full xl:w-auto flex-1">
                 {/* Search Input */}
-                <div className="relative flex-1 min-w-[300px]">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#059467] w-5 h-5" />
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-[#059467] w-4 h-4 md:w-5 md:h-5" />
                   <input
-                    className="w-full h-12 pl-12 pr-4 rounded-xl bg-[#f5f8f7] dark:bg-[#0f231d] border-transparent focus:border-[#059467] focus:ring-0 text-[#0f172a] dark:text-white placeholder-gray-400"
-                    placeholder="Search tents, cameras, tech..."
+                    className="w-full h-10 md:h-12 pl-10 md:pl-12 pr-3 md:pr-4 rounded-xl bg-[#f5f8f7] dark:bg-[#0f231d] border-transparent focus:border-[#059467] focus:ring-0 text-[#0f172a] dark:text-white placeholder-gray-400 text-sm md:text-base"
+                    placeholder="Search gear..."
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -303,19 +306,19 @@ export default function GearPage() {
                 </div>
 
                 {/* Location Dropdown */}
-                <div ref={locationDropdownRef} className="relative group min-w-[180px]">
+                <div ref={locationDropdownRef} className="relative group w-full lg:w-auto lg:min-w-[180px]">
                   <button 
                     onClick={() => {
                       setShowLocationDropdown(!showLocationDropdown);
                       setShowCategoryDropdown(false);
                     }}
-                    className="w-full h-12 px-4 rounded-full bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-between hover:bg-gray-100 dark:hover:bg-[#152e26] transition-colors"
+                    className="w-full h-10 md:h-12 px-3 md:px-4 rounded-full bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-between hover:bg-gray-100 dark:hover:bg-[#152e26] transition-colors"
                   >
-                    <span className="flex items-center gap-2 text-sm font-medium text-[#0f172a] dark:text-white truncate">
-                      <MapPin className="text-[#059467] w-4 h-4 flex-shrink-0" />
+                    <span className="flex items-center gap-2 text-xs md:text-sm font-medium text-[#0f172a] dark:text-white truncate">
+                      <MapPin className="text-[#059467] w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                       <span className="truncate">{selectedLocation || 'Anywhere'}</span>
                     </span>
-                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400 flex-shrink-0" />
                   </button>
                   {showLocationDropdown && (
                     <div className="absolute top-full mt-2 w-full bg-white dark:bg-[#1a2c26] rounded-xl shadow-lg border border-gray-100 dark:border-[#059467]/10 py-2 z-50 max-h-64 overflow-y-auto">
@@ -345,19 +348,19 @@ export default function GearPage() {
                 </div>
 
                 {/* Category Dropdown */}
-                <div ref={categoryDropdownRef} className="relative group min-w-[180px]">
+                <div ref={categoryDropdownRef} className="relative group w-full lg:w-auto lg:min-w-[180px]">
                   <button 
                     onClick={() => {
                       setShowCategoryDropdown(!showCategoryDropdown);
                       setShowLocationDropdown(false);
                     }}
-                    className="w-full h-12 px-4 rounded-full bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-between hover:bg-gray-100 dark:hover:bg-[#152e26] transition-colors"
+                    className="w-full h-10 md:h-12 px-3 md:px-4 rounded-full bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-between hover:bg-gray-100 dark:hover:bg-[#152e26] transition-colors"
                   >
-                    <span className="flex items-center gap-2 text-sm font-medium text-[#0f172a] dark:text-white truncate">
-                      <Tag className="text-[#059467] w-4 h-4 flex-shrink-0" />
+                    <span className="flex items-center gap-2 text-xs md:text-sm font-medium text-[#0f172a] dark:text-white truncate">
+                      <Tag className="text-[#059467] w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                       <span className="truncate">{selectedCategory || 'All Categories'}</span>
                     </span>
-                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <ChevronDown className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400 flex-shrink-0" />
                   </button>
                   {showCategoryDropdown && (
                     <div className="absolute top-full mt-2 w-full bg-white dark:bg-[#1a2c26] rounded-xl shadow-lg border border-gray-100 dark:border-[#059467]/10 py-2 z-50">
@@ -388,9 +391,9 @@ export default function GearPage() {
               </div>
 
               {/* Price & Toggle Group */}
-              <div className="flex flex-col sm:flex-row gap-6 w-full xl:w-auto items-center xl:border-l xl:border-gray-100 dark:xl:border-gray-800 xl:pl-6">
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 w-full xl:w-auto items-center xl:border-l xl:border-gray-100 dark:xl:border-gray-800 xl:pl-6">
                 {/* Price Range */}
-                <div className="flex flex-col gap-1 w-full sm:w-48">
+                <div className="flex flex-col gap-1 w-full sm:w-40 md:w-48">
                   <div className="flex justify-between text-xs font-bold text-[#0f172a] dark:text-white">
                     <span>Price</span>
                     <span className="text-[#059467]">${0} - ${priceRange}</span>
@@ -406,7 +409,7 @@ export default function GearPage() {
                 </div>
 
                 {/* Available Toggle */}
-                <label className="flex items-center gap-3 cursor-pointer group">
+                <label className="flex items-center gap-2 md:gap-3 cursor-pointer group">
                   <div className="relative">
                     <input
                       className="sr-only peer"
@@ -416,7 +419,7 @@ export default function GearPage() {
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#059467]/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#059467]" />
                   </div>
-                  <span className="text-sm font-bold text-[#0f172a] dark:text-white whitespace-nowrap group-hover:text-[#059467] transition-colors">
+                  <span className="text-xs md:text-sm font-bold text-[#0f172a] dark:text-white whitespace-nowrap group-hover:text-[#059467] transition-colors">
                     Available Now
                   </span>
                 </label>
@@ -433,68 +436,68 @@ export default function GearPage() {
 
           {/* Gear Grid */}
           {!loading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-16">
               {gearItems.map((item) => (
               <div
                 key={item._id || item.id}
                 className="group bg-white dark:bg-[#1a2c26] rounded-xl overflow-hidden hover:shadow-xl hover:shadow-[#059467]/5 transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 dark:border-[#059467]/5 cursor-pointer"
                 onClick={() => router.push(`/gear/${item._id || item.id}`)}
               >
-                <div className="p-4">
-                  <div className="relative aspect-square w-full overflow-hidden rounded-[32px]">
+                <div className="p-3 md:p-4">
+                  <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:rounded-[32px]">
                     <img
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       src={item.image}
                     />
                     {item.available && (
-                      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm">
-                        <span className="w-2 h-2 rounded-full bg-[#059467] animate-pulse" />
-                        <span className="text-xs font-bold text-[#059467]">Available</span>
+                      <div className="absolute top-2 md:top-4 right-2 md:right-4 bg-white/90 backdrop-blur-sm px-2 md:px-3 py-0.5 md:py-1 rounded-full flex items-center gap-1 md:gap-1.5 shadow-sm">
+                        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#059467] animate-pulse" />
+                        <span className="text-[10px] md:text-xs font-bold text-[#059467]">Available</span>
                       </div>
                     )}
-                    <div className="absolute bottom-4 left-4">
-                      <span className={`${item.categoryColor} px-3 py-1.5 rounded-full text-xs font-bold backdrop-blur-md border`}>
+                    <div className="absolute bottom-2 md:bottom-4 left-2 md:left-4">
+                      <span className={`${item.categoryColor} px-2 md:px-3 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs font-bold backdrop-blur-md border`}>
                         {item.category}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="px-6 pb-6 pt-2">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-bold text-[#0f172a] dark:text-white leading-tight pr-4">
+                <div className="px-4 md:px-6 pb-4 md:pb-6 pt-2">
+                  <div className="flex justify-between items-start mb-2 md:mb-3">
+                    <h3 className="text-base md:text-lg font-bold text-[#0f172a] dark:text-white leading-tight pr-2 md:pr-4">
                       {item.title}
                     </h3>
-                    <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg">
-                      <Star className="w-3.5 h-3.5 text-[#f59e0b] fill-[#f59e0b]" />
-                      <span className="text-sm font-bold text-[#0f172a]">{item.rating}</span>
+                    <div className="flex items-center gap-0.5 md:gap-1 bg-yellow-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg flex-shrink-0">
+                      <Star className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#f59e0b] fill-[#f59e0b]" />
+                      <span className="text-xs md:text-sm font-bold text-[#0f172a]">{item.rating}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-end justify-between border-t border-gray-50 dark:border-white/5 pt-4 mt-2">
-                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm font-medium">{item.location}</span>
+                  <div className="flex items-end justify-between border-t border-gray-50 dark:border-white/5 pt-3 md:pt-4 mt-2">
+                    <div className="flex items-center gap-1.5 md:gap-2 text-gray-500 dark:text-gray-400">
+                      <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                      <span className="text-xs md:text-sm font-medium truncate">{item.location}</span>
                     </div>
-                    <div className="text-right">
-                      <span className="block text-xl font-black text-[#059467]">
+                    <div className="text-right flex-shrink-0">
+                      <span className="block text-lg md:text-xl font-black text-[#059467]">
                         ${item.pricePerDay}
-                        <span className="text-sm font-medium text-gray-400 dark:text-gray-500">/day</span>
+                        <span className="text-xs md:text-sm font-medium text-gray-400 dark:text-gray-500">/day</span>
                       </span>
                     </div>
                   </div>
 
                   {/* Owner Info */}
-                  <div className="mt-4 flex items-center gap-2 pt-3">
+                  <div className="mt-3 md:mt-4 flex items-center gap-1.5 md:gap-2 pt-2 md:pt-3">
                     <img
-                      className="w-6 h-6 rounded-full border border-gray-200"
+                      className="w-5 h-5 md:w-6 md:h-6 rounded-full border border-gray-200 flex-shrink-0"
                       alt={item.owner.name}
                       src={item.owner.avatar}
                     />
-                    <span className="text-xs text-gray-400">Listed by {item.owner.name}</span>
+                    <span className="text-[10px] md:text-xs text-gray-400 truncate">Listed by {item.owner.name}</span>
                     {item.owner.verified && (
-                      <BadgeCheck className="w-3.5 h-3.5 text-blue-500" />
+                      <BadgeCheck className="w-3 h-3 md:w-3.5 md:h-3.5 text-blue-500 flex-shrink-0" />
                     )}
                   </div>
                 </div>
@@ -527,7 +530,10 @@ export default function GearPage() {
           </div>
         </main>
       </div>
-      <Footer />
+      {/* Footer - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }
