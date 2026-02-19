@@ -63,6 +63,7 @@ const TravelMatch: React.FC = () => {
   const [userProfile, setUserProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
+  const [interactedUserIds, setInteractedUserIds] = useState<string[]>([]);
   
   // Load filter preferences from user profile
   const [ageRange, setAgeRange] = useState<[number, number]>([18, 60]);
@@ -88,6 +89,21 @@ const TravelMatch: React.FC = () => {
     checkProfile();
     fetchProfiles();
     fetchMatches();
+    fetchInteractedUsers();
+  }, []);
+
+  // Reload preferences when page becomes visible (user returns from account page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        checkProfile(); // Reload profile and preferences
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const fetchProfiles = async () => {
@@ -107,6 +123,16 @@ const TravelMatch: React.FC = () => {
       setMatches(matchedUsers);
     } catch (error) {
       console.error('Failed to load matches:', error);
+    }
+  };
+
+  const fetchInteractedUsers = async () => {
+    try {
+      const result = await matchAPI.getInteractedUsers();
+      setInteractedUserIds(result.interactedUserIds || []);
+      console.log('Interacted users loaded:', result.interactedUserIds?.length || 0);
+    } catch (error) {
+      console.error('Failed to load interacted users:', error);
     }
   };
 
@@ -160,6 +186,9 @@ const TravelMatch: React.FC = () => {
     
     const likedProfile = filteredProfiles[currentIndex];
     
+    // Add to interacted users immediately to prevent re-showing
+    setInteractedUserIds(prev => [...prev, likedProfile._id]);
+    
     try {
       const result = await matchAPI.likeUser(likedProfile._id);
       
@@ -191,6 +220,9 @@ const TravelMatch: React.FC = () => {
     
     const passedProfile = filteredProfiles[currentIndex];
     
+    // Add to interacted users immediately to prevent re-showing
+    setInteractedUserIds(prev => [...prev, passedProfile._id]);
+    
     try {
       await matchAPI.passUser(passedProfile._id);
     } catch (error) {
@@ -203,6 +235,9 @@ const TravelMatch: React.FC = () => {
 
   const handleUndo = () => {
     if (currentIndex > 0) {
+      const previousProfile = filteredProfiles[currentIndex - 1];
+      // Remove from interacted users to allow re-showing
+      setInteractedUserIds(prev => prev.filter(id => id !== previousProfile._id));
       setCurrentIndex(currentIndex - 1);
       x.set(0);
     }
@@ -373,8 +408,40 @@ const TravelMatch: React.FC = () => {
     );
   }
 
+  // Count active filters
+  const getActiveFilterCount = () => {
+    let count = 0;
+    
+    // Age range filter (only if not default)
+    if (ageRange[0] !== 18 || ageRange[1] !== 60) count++;
+    
+    // Gender filter
+    if (selectedGenders.length > 0 && !selectedGenders.includes('Any')) count++;
+    
+    // Travel style filter
+    if (selectedTravelStyles.length > 0) count++;
+    
+    // Interests filter
+    if (selectedInterests.length > 0) count++;
+    
+    // Location range filter (only if not default 500km)
+    if (locationRange !== 500) count++;
+    
+    return count;
+  };
+
   // Filter profiles based on all match preferences
   const filteredProfiles = profiles.filter(profile => {
+    // 0. Exclude current user
+    if (profile._id === userProfile?._id) {
+      return false;
+    }
+
+    // 0.1. Exclude users already interacted with (liked or passed)
+    if (interactedUserIds.includes(profile._id)) {
+      return false;
+    }
+
     // 1. Age Filter
     if (profile.age) {
       const profileAge = parseInt(profile.age);
@@ -436,7 +503,16 @@ const TravelMatch: React.FC = () => {
     return true;
   });
 
+  // Log filtering results for debugging
+  console.log('Match filtering:', {
+    totalProfiles: profiles.length,
+    filteredProfiles: filteredProfiles.length,
+    interactedUsers: interactedUserIds.length,
+    activeFilters: getActiveFilterCount()
+  });
+
   const currentProfile = filteredProfiles[currentIndex];
+  const activeFilterCount = getActiveFilterCount();
 
   if (!currentProfile && currentIndex >= filteredProfiles.length) {
     return (
@@ -458,17 +534,29 @@ const TravelMatch: React.FC = () => {
             <div className="text-center">
             <Sparkles className="w-20 h-20 text-[#059467] mx-auto mb-4 animate-pulse" />
             <h3 className="text-[#0f231d] dark:text-white text-2xl font-bold mb-2">
-              That's Everyone!
+              {filteredProfiles.length === 0 ? "No Matches Found" : "That's Everyone!"}
             </h3>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">
-              Check back later for new travel buddies
+              {filteredProfiles.length === 0 
+                ? "Try adjusting your filters to see more potential matches"
+                : "Check back later for new travel buddies"
+              }
             </p>
-            <button
-              onClick={() => setCurrentIndex(0)}
-              className="h-12 px-8 bg-[#059467] hover:bg-[#047a55] text-white rounded-2xl font-bold text-base shadow-lg shadow-[#059467]/20 hover:shadow-[#059467]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-            >
-              Start Over
-            </button>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => setCurrentIndex(0)}
+                className="h-12 px-8 bg-[#059467] hover:bg-[#047a55] text-white rounded-2xl font-bold text-base shadow-lg shadow-[#059467]/20 hover:shadow-[#059467]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              >
+                Start Over
+              </button>
+              <button
+                onClick={() => router.push('/account?tab=preferences')}
+                className="h-12 px-8 bg-white dark:bg-[#152e26] hover:bg-slate-50 dark:hover:bg-[#1a3730] text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <Filter className="w-5 h-5" />
+                Adjust Filters
+              </button>
+            </div>
           </div>
           </div>
         </div>
@@ -507,10 +595,15 @@ const TravelMatch: React.FC = () => {
             </h1>
             <button 
               onClick={() => router.push('/account?tab=preferences')}
-              className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110 group"
+              className="relative w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110 group"
               title="Edit Match Filters"
             >
               <Filter className="w-4 h-4 text-slate-600 dark:text-slate-400 group-hover:text-[#059467]" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#059467] text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
           </div>
           <div className="flex items-center gap-3">
@@ -526,15 +619,57 @@ const TravelMatch: React.FC = () => {
           </div>
         </div>
 
+        {/* Active Filters Summary */}
+        {activeFilterCount > 0 && (
+          <div className="mb-4 p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Active Filters:</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {filteredProfiles.length} {filteredProfiles.length === 1 ? 'match' : 'matches'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              {(ageRange[0] !== 18 || ageRange[1] !== 60) && (
+                <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                  Age: {ageRange[0]}-{ageRange[1]}
+                </span>
+              )}
+              {selectedGenders.length > 0 && !selectedGenders.includes('Any') && (
+                <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                  Gender: {selectedGenders.join(', ')}
+                </span>
+              )}
+              {selectedTravelStyles.length > 0 && (
+                <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                  Style: {selectedTravelStyles.join(', ')}
+                </span>
+              )}
+              {selectedInterests.length > 0 && (
+                <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                  Interests: {selectedInterests.length}
+                </span>
+              )}
+              {locationRange !== 500 && (
+                <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                  Range: {locationRange === 0 ? 'Nearby' : `${locationRange}km`}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="relative h-[calc(100vh-280px)] max-h-[650px] mb-6">
           {currentIndex >= filteredProfiles.length ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-pink-50 to-orange-50 rounded-3xl border-2 border-dashed border-pink-200">
               <Sparkles className="w-20 h-20 text-pink-400 mb-4 animate-pulse" />
               <h3 className="text-3xl font-black text-slate-900 mb-2">
-                That's Everyone!
+                {filteredProfiles.length === 0 ? "No Matches Found" : "That's Everyone!"}
               </h3>
               <p className="text-slate-600 mb-6 text-center px-8">
-                Check back later for new travel buddies nearby
+                {filteredProfiles.length === 0 
+                  ? "Try adjusting your filters to see more potential matches"
+                  : "Check back later for new travel buddies nearby"
+                }
               </p>
               <button
                 onClick={() => setCurrentIndex(0)}
