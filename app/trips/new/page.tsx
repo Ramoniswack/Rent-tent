@@ -505,7 +505,9 @@ export default function CreateTripPage() {
           </div>
         </main>
       </div>
-      <Footer />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }

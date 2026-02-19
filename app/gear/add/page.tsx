@@ -1082,7 +1082,9 @@ export default function AddGearPage() {
           </form>
         </main>
       </div>
-      <Footer />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }

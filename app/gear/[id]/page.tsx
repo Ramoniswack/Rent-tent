@@ -852,7 +852,9 @@ export default function GearDetailPage() {
           </div>
         </main>
       </div>
-      <Footer />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }

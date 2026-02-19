@@ -417,7 +417,9 @@ function RentalDashboard() {
           )}
         </main>
       </div>
-      <Footer />
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }
