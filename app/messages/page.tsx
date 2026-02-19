@@ -817,7 +817,9 @@ export default function MessagesPage() {
 
   return (
     <>
-      <Header />
+      <div className="hidden md:block">
+        <Header />
+      </div>
       
       {!mounted ? (
         <div className="flex h-[calc(100vh-128px)] overflow-hidden bg-white dark:bg-[#0f231d]">
@@ -886,7 +888,7 @@ export default function MessagesPage() {
           </main>
         </div>
       ) : (
-      <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-128px)] overflow-hidden bg-white dark:bg-[#0f231d] animate-fadeInContent">
+      <div className="flex flex-col h-[calc(100dvh-80px)] md:h-[calc(100vh-128px)] overflow-hidden bg-white dark:bg-[#0f231d] animate-fadeInContent">
         {/* Connection Status */}
         {!isConnected && currentUserId && (
           <div className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center py-2.5 text-sm font-semibold shadow-lg animate-pulse">
@@ -1143,7 +1145,9 @@ export default function MessagesPage() {
         </aside>
 
         {/* Right Panel - Active Chat */}
-        <main className="flex-1 flex flex-col bg-white dark:bg-[#0b1a16] relative w-full h-full">
+        <main className={`flex-1 flex flex-col bg-white dark:bg-[#0b1a16] relative w-full h-full ${
+          showSidebar ? 'hidden md:flex' : 'flex'
+        }`}>
           {selectedMatch ? (
             <>
               {/* Chat Header */}
