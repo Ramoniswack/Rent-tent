@@ -1,0 +1,1697 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../hooks/useAuth';
+import { userAPI } from '../../services/api';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import {
+  User,
+  Settings,
+  BarChart3,
+  CreditCard,
+  LogOut,
+  Camera,
+  X,
+  Plus,
+  Loader2,
+  TrendingUp,
+  AlertTriangle,
+  Backpack,
+  Plane,
+  Wallet,
+  Diamond,
+  MapPin,
+  Calendar,
+  Globe,
+  Mountain,
+  Heart
+} from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const LocationMap = dynamic(() => import('../../components/LocationMap'), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center">Loading map...</div>
+});
+
+interface UserProfile {
+  _id: string;
+  name: string;
+  email: string;
+  username?: string;
+  profilePicture?: string;
+  coverPhoto?: string;
+  bio?: string;
+  location?: string;
+  age?: string;
+  gender?: string;
+  languages?: string[];
+  interests?: string[];
+  travelStyle?: string;
+  upcomingTrips?: string[];
+  preferences?: {
+    language?: string;
+    currency?: string;
+    emailNotifications?: boolean;
+    publicProfile?: boolean;
+    shareLocation?: boolean;
+  };
+  dateOfBirth?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  billingAddress?: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  matchPreferences?: {
+    ageRange: [number, number];
+    travelStyles: string[];
+    interests: string[];
+    locationRange: number;
+    genders: string[];
+  };
+}
+
+const TRAVEL_STYLES = ['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Travel', 'Luxury', 'Budget'];
+const COMMON_INTERESTS = ['Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 'Meditation', 'Local Cuisine', 'Mountaineering', 'Rock Climbing', 'Camping', 'Coworking', 'Cafes', 'History', 'Language Exchange'];
+const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Mandarin', 'Japanese', 'Korean', 'Hindi', 'Arabic', 'Russian', 'Nepali'];
+
+type TabType = 'profile' | 'preferences' | 'stats' | 'billing';
+
+export default function AccountPage() {
+  const router = useRouter();
+  const { logout, refreshUser } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string>('');
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [newTrip, setNewTrip] = useState('');
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    username: '',
+    bio: '',
+    gender: '',
+    interests: [] as string[],
+    language: 'English (US)',
+    currency: 'USD ($)',
+    emailNotifications: true,
+    publicProfile: true,
+    shareLocation: false,
+    location: '',
+    dateOfBirth: '',
+    age: '',
+    travelStyle: '',
+    languages: [] as string[],
+    upcomingTrips: [] as string[],
+    coordinates: { lat: 0, lng: 0 },
+    billingAddress: {
+      fullName: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: ''
+    },
+    matchPreferences: {
+      ageRange: [18, 60] as [number, number],
+      travelStyles: [] as string[],
+      interests: [] as string[],
+      locationRange: 500,
+      genders: [] as string[]
+    }
+  });
+
+  useEffect(() => {
+    fetchUserProfile();
+    
+    // Check for tab query parameter
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab');
+      if (tab && ['profile', 'preferences', 'stats', 'billing'].includes(tab)) {
+        setActiveTab(tab as TabType);
+      }
+    }
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      const profile = await userAPI.getProfile();
+      setUserProfile(profile);
+      setImagePreview(profile.profilePicture || '');
+      setCoverPreview(profile.coverPhoto || '');
+      
+      setFormData({
+        name: profile.name || '',
+        username: profile.username || '',
+        bio: profile.bio || '',
+        gender: profile.gender || '',
+        interests: profile.interests || [],
+        language: profile.preferences?.language || 'English (US)',
+        currency: profile.preferences?.currency || 'USD ($)',
+        emailNotifications: profile.preferences?.emailNotifications ?? true,
+        publicProfile: profile.preferences?.publicProfile ?? true,
+        shareLocation: profile.preferences?.shareLocation ?? false,
+        location: profile.location || '',
+        dateOfBirth: profile.dateOfBirth || '',
+        age: profile.age || '',
+        travelStyle: profile.travelStyle || '',
+        languages: profile.languages || [],
+        upcomingTrips: profile.upcomingTrips || [],
+        coordinates: profile.coordinates || { lat: 0, lng: 0 },
+        billingAddress: profile.billingAddress || {
+          fullName: '',
+          addressLine1: '',
+          addressLine2: '',
+          city: '',
+          state: '',
+          postalCode: '',
+          country: ''
+        },
+        matchPreferences: profile.matchPreferences || {
+          ageRange: [18, 60],
+          travelStyles: [],
+          interests: [],
+          locationRange: 500,
+          genders: []
+        }
+      });
+    } catch (err: any) {
+      // Silently handle profile fetch errors
+      setError('Failed to load profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setError('');
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'nomadnotes_gear');
+      formDataUpload.append('folder', 'profile_pictures');
+
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      if (!cloudName) {
+        throw new Error('Cloudinary configuration is missing');
+      }
+
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+      
+      const response = await fetch(cloudinaryUrl, {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to upload image to Cloudinary');
+      }
+      
+      const updatedProfile = await userAPI.updateProfile({
+        profilePicture: data.secure_url
+      });
+      
+      setUserProfile(updatedProfile);
+      setSuccess('Profile picture updated successfully!');
+      
+      // Refresh user in auth context to update header
+      await refreshUser();
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error uploading image:', err);
+      setError(err.message || 'Failed to upload image. Please try again.');
+      setImagePreview(userProfile?.profilePicture || '');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingCover(true);
+      setError('');
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'nomadnotes_gear');
+      formDataUpload.append('folder', 'cover_photos');
+
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      if (!cloudName) {
+        throw new Error('Cloudinary configuration is missing');
+      }
+
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+      
+      const response = await fetch(cloudinaryUrl, {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to upload image to Cloudinary');
+      }
+      
+      const updatedProfile = await userAPI.updateProfile({
+        coverPhoto: data.secure_url
+      });
+      
+      setUserProfile(updatedProfile);
+      setSuccess('Cover photo updated successfully!');
+      
+      // Refresh user in auth context to update header
+      await refreshUser();
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error uploading cover photo:', err);
+      setError(err.message || 'Failed to upload cover photo. Please try again.');
+      setCoverPreview(userProfile?.coverPhoto || '');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError('');
+      setSuccess('');
+
+      const updatedProfile = await userAPI.updateProfile({
+        name: formData.name,
+        username: formData.username,
+        bio: formData.bio,
+        gender: formData.gender,
+        interests: formData.interests,
+        location: formData.location,
+        coordinates: formData.coordinates,
+        age: formData.age,
+        travelStyle: formData.travelStyle,
+        languages: formData.languages,
+        billingAddress: formData.billingAddress,
+        matchPreferences: formData.matchPreferences,
+        preferences: {
+          language: formData.language,
+          currency: formData.currency,
+          emailNotifications: formData.emailNotifications,
+          publicProfile: formData.publicProfile,
+          shareLocation: formData.shareLocation
+        }
+      });
+      
+      setUserProfile(updatedProfile);
+      setSuccess('Profile updated successfully!');
+      
+      // Refresh user in auth context to update header
+      await refreshUser();
+      
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      setError(err.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (userProfile) {
+      setFormData({
+        name: userProfile.name || '',
+        username: userProfile.username || '',
+        bio: userProfile.bio || '',
+        gender: userProfile.gender || '',
+        interests: userProfile.interests || [],
+        language: userProfile.preferences?.language || 'English (US)',
+        currency: userProfile.preferences?.currency || 'USD ($)',
+        emailNotifications: userProfile.preferences?.emailNotifications ?? true,
+        publicProfile: userProfile.preferences?.publicProfile ?? true,
+        shareLocation: userProfile.preferences?.shareLocation ?? false,
+        location: userProfile.location || '',
+        dateOfBirth: userProfile.dateOfBirth || '',
+        age: userProfile.age || '',
+        travelStyle: userProfile.travelStyle || '',
+        languages: userProfile.languages || [],
+        upcomingTrips: userProfile.upcomingTrips || [],
+        coordinates: userProfile.coordinates || { lat: 0, lng: 0 },
+        billingAddress: userProfile.billingAddress || {
+          fullName: '',
+          addressLine1: '',
+          addressLine2: '',
+          city: '',
+          state: '',
+          postalCode: '',
+          country: ''
+        },
+        matchPreferences: userProfile.matchPreferences || {
+          ageRange: [18, 60],
+          travelStyles: [],
+          interests: [],
+          locationRange: 500,
+          genders: []
+        }
+      });
+      setImagePreview(userProfile.profilePicture || '');
+      setCoverPreview(userProfile.coverPhoto || '');
+      setError('');
+      setSuccess('');
+    }
+  };
+
+  const calculateAge = (dateOfBirth: string): string => {
+    if (!dateOfBirth) return '';
+    
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age.toString();
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    // Auto-calculate age when date of birth changes
+    if (name === 'dateOfBirth') {
+      const calculatedAge = calculateAge(value);
+      setFormData(prev => ({ 
+        ...prev, 
+        dateOfBirth: value,
+        age: calculatedAge
+      }));
+    } else if (type === 'checkbox') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: checked
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value 
+      }));
+    }
+    
+    if (error) setError('');
+  };
+
+  const handleBillingAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      billingAddress: {
+        ...prev.billingAddress,
+        [name]: value
+      }
+    }));
+    if (error) setError('');
+  };
+
+  const addInterest = () => {
+    const interest = prompt('Enter an interest:');
+    if (interest && !formData.interests.includes(interest)) {
+      setFormData(prev => ({
+        ...prev,
+        interests: [...prev.interests, interest]
+      }));
+    }
+  };
+
+  const removeInterest = (interest: string) => {
+    setFormData(prev => ({
+      ...prev,
+      interests: prev.interests.filter(i => i !== interest)
+    }));
+  };
+
+  const toggleLanguage = (language: string) => {
+    setFormData(prev => ({
+      ...prev,
+      languages: prev.languages.includes(language)
+        ? prev.languages.filter(l => l !== language)
+        : [...prev.languages, language]
+    }));
+  };
+
+  const addTrip = () => {
+    if (newTrip.trim() && !formData.upcomingTrips.includes(newTrip.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        upcomingTrips: [...prev.upcomingTrips, newTrip.trim()]
+      }));
+      setNewTrip('');
+    }
+  };
+
+  const removeTrip = (trip: string) => {
+    setFormData(prev => ({
+      ...prev,
+      upcomingTrips: prev.upcomingTrips.filter(t => t !== trip)
+    }));
+  };
+
+  const handleLocationSelect = async (lat: number, lng: number) => {
+    // Reverse geocode to get location name using Nominatim (OpenStreetMap)
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`
+      );
+      const data = await response.json();
+      
+      // Extract location name from response
+      let locationName = '';
+      if (data.address) {
+        const parts = [];
+        if (data.address.city) parts.push(data.address.city);
+        else if (data.address.town) parts.push(data.address.town);
+        else if (data.address.village) parts.push(data.address.village);
+        else if (data.address.county) parts.push(data.address.county);
+        
+        if (data.address.country) parts.push(data.address.country);
+        
+        locationName = parts.join(', ') || data.display_name;
+      } else {
+        locationName = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        location: locationName,
+        coordinates: { lat, lng }
+      }));
+    } catch (err) {
+      console.error('Reverse geocoding error:', err);
+      // Fallback to coordinates if geocoding fails
+      setFormData(prev => ({
+        ...prev,
+        location: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+        coordinates: { lat, lng }
+      }));
+    }
+    setShowLocationPicker(false);
+  };
+
+  const detectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setDetectingLocation(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Use OpenStreetMap Nominatim for reverse geocoding (free, no API key needed)
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
+            {
+              headers: {
+                'User-Agent': 'NomadNotes/1.0'
+              }
+            }
+          );
+          
+          const data = await response.json();
+          
+          // Extract city and country from the response
+          const city = data.address.city || data.address.town || data.address.village || data.address.county || '';
+          const country = data.address.country || '';
+          const locationName = city && country ? `${city}, ${country}` : data.display_name;
+          
+          setFormData(prev => ({
+            ...prev,
+            location: locationName,
+            coordinates: { lat: latitude, lng: longitude }
+          }));
+          
+          setSuccess('Location detected successfully!');
+          setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+          console.error('Reverse geocoding error:', err);
+          // Fallback to coordinates if geocoding fails
+          setFormData(prev => ({
+            ...prev,
+            location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
+            coordinates: { lat: latitude, lng: longitude }
+          }));
+          setSuccess('Location detected (coordinates only)');
+          setTimeout(() => setSuccess(''), 3000);
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (error) => {
+        setDetectingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setError('Location access denied. Please enable location permissions in your browser.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setError('Location information is unavailable.');
+            break;
+          case error.TIMEOUT:
+            setError('Location request timed out.');
+            break;
+          default:
+            setError('An unknown error occurred while detecting location.');
+            break;
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to logout?')) {
+      logout();
+      router.push('/login');
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="flex h-screen items-center justify-center bg-[#f5f8f7] dark:bg-[#0f231d]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-[#059467]" />
+            <p className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest">Loading Profile...</p>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <div className="bg-[#f5f8f7] dark:bg-[#0f231d] text-slate-900 dark:text-slate-100 antialiased overflow-hidden flex min-h-screen">
+        {/* Sidebar Navigation */}
+        <aside className="w-[280px] bg-[#f8fcfb] dark:bg-[#132a24] border-r border-slate-100 dark:border-slate-800 flex flex-col h-full shrink-0 transition-all duration-300">
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-8 cursor-pointer" onClick={() => router.push('/dashboard')}>
+              <div className="bg-[#059467]/10 p-2 rounded-xl text-[#059467]">
+                <Plane className="w-7 h-7" />
+              </div>
+              <div>
+                <h1 className="text-slate-900 dark:text-white text-lg font-bold tracking-tight">NomadNotes</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">Travel Dashboard</p>
+              </div>
+            </div>
+          
+          <nav className="flex flex-col gap-2">
+            {/* Profile Tab */}
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
+                activeTab === 'profile'
+                  ? 'bg-[#059467]/10 text-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {activeTab === 'profile' && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
+              )}
+              <User className="w-5 h-5" />
+              <span>Profile</span>
+            </button>
+
+            {/* Preferences Tab */}
+            <button
+              onClick={() => setActiveTab('preferences')}
+              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
+                activeTab === 'preferences'
+                  ? 'bg-[#059467]/10 text-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {activeTab === 'preferences' && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
+              )}
+              <Settings className="w-5 h-5" />
+              <span>Preferences</span>
+            </button>
+
+            {/* Stats Tab */}
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
+                activeTab === 'stats'
+                  ? 'bg-[#059467]/10 text-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {activeTab === 'stats' && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
+              )}
+              <BarChart3 className="w-5 h-5" />
+              <span>Stats</span>
+            </button>
+
+            {/* Billing Tab */}
+            <button
+              onClick={() => setActiveTab('billing')}
+              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
+                activeTab === 'billing'
+                  ? 'bg-[#059467]/10 text-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {activeTab === 'billing' && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
+              )}
+              <CreditCard className="w-5 h-5" />
+              <span>Billing</span>
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-4 px-4 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl font-medium transition-all hover:text-slate-900 dark:hover:text-white mt-auto"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Log Out</span>
+            </button>
+          </nav>
+        </div>
+
+        <div className="mt-auto p-6">
+          <div className="bg-[#059467]/5 dark:bg-slate-800 rounded-2xl p-4 flex items-center gap-3">
+            <div 
+              className="w-10 h-10 rounded-full bg-cover bg-center"
+              style={{
+                backgroundImage: imagePreview 
+                  ? `url('${imagePreview}')` 
+                  : 'linear-gradient(135deg, #059467 0%, #047854 100%)'
+              }}
+            >
+              {!imagePreview && (
+                <div className="w-full h-full flex items-center justify-center text-white font-bold">
+                  {formData.name.charAt(0).toUpperCase() || '?'}
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{formData.name || 'User'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Pro Nomad</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto h-full bg-white dark:bg-[#0f231d]/95 relative">
+        <div className="max-w-6xl mx-auto px-8 py-10 pb-20">
+          {/* Header */}
+          <header className="flex justify-between items-end mb-10">
+            <div>
+              <h2 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                {activeTab === 'profile' && 'Profile Settings'}
+                {activeTab === 'preferences' && 'Preferences'}
+                {activeTab === 'stats' && 'Travel Statistics'}
+                {activeTab === 'billing' && 'Billing & Plans'}
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 text-lg">
+                {activeTab === 'profile' && 'Manage your account details and view your travel statistics.'}
+                {activeTab === 'preferences' && 'Customize your experience and notification settings.'}
+                {activeTab === 'stats' && 'View your travel history and activity.'}
+                {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
+              </p>
+            </div>
+            {(activeTab === 'profile' || activeTab === 'preferences' || activeTab === 'billing') && (
+              <div className="flex gap-3">
+                <button 
+                  onClick={handleCancel}
+                  className="px-6 py-3 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-6 py-3 rounded-full bg-[#059467] text-white font-semibold shadow-lg shadow-[#059467]/30 hover:bg-[#047854] transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            )}
+          </header>
+
+          {/* Success/Error Messages */}
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl">
+              <p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+            </div>
+          )}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-12 gap-8">
+            {/* Profile Tab Content */}
+            {activeTab === 'profile' && (
+              <>
+                {/* Left Column: Profile */}
+                <div className="col-span-12 lg:col-span-7">
+                  {/* Cover Photo Section */}
+                  <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm mb-6">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Cover Photo</h3>
+                    <div className="relative group cursor-pointer">
+                      <input
+                        type="file"
+                        id="cover-photo-upload"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleCoverUpload}
+                        disabled={uploadingCover}
+                      />
+                      <label htmlFor="cover-photo-upload" className="cursor-pointer">
+                        <div className="w-full h-48 rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700">
+                          {uploadingCover ? (
+                            <div className="w-full h-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+                              <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+                            </div>
+                          ) : coverPreview ? (
+                            <img
+                              alt="Cover Photo"
+                              className="w-full h-full object-cover"
+                              src={coverPreview}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-[#059467]/10 to-[#047854]/10 flex flex-col items-center justify-center">
+                              <Camera className="w-12 h-12 text-[#059467] mb-2" />
+                              <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">
+                                Click to upload cover photo
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="text-center">
+                            <Camera className="w-8 h-8 text-white mx-auto mb-2" />
+                            <span className="text-white text-sm font-medium">Change Cover Photo</span>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
+                    <div className="flex flex-col md:flex-row gap-8 items-start">
+                      {/* Profile Picture */}
+                      <div className="relative group cursor-pointer shrink-0 mx-auto md:mx-0">
+                        <input
+                          type="file"
+                          id="profile-picture-upload"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={uploadingImage}
+                        />
+                        <label htmlFor="profile-picture-upload" className="cursor-pointer">
+                          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-xl">
+                            {uploadingImage ? (
+                              <div className="w-full h-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+                                <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+                              </div>
+                            ) : imagePreview ? (
+                              <img
+                                alt="Profile Picture"
+                                className="w-full h-full object-cover"
+                                src={imagePreview}
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-[#059467] to-[#047854] flex items-center justify-center">
+                                <span className="text-white text-4xl font-bold">
+                                  {formData.name.charAt(0).toUpperCase() || '?'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="absolute bottom-0 right-0 bg-white dark:bg-slate-600 p-2 rounded-full shadow-md border border-slate-100 dark:border-slate-500">
+                            <Camera className="w-4 h-4 text-[#059467]" />
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Profile Form */}
+                      <div className="flex-1 w-full space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
+                            <input
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                              type="text"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Username</label>
+                            <input
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                              type="text"
+                              name="username"
+                              value={formData.username}
+                              onChange={handleInputChange}
+                              placeholder="@username"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Gender Selection */}
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Gender</label>
+                          <select
+                            name="gender"
+                            value={formData.gender}
+                            onChange={handleInputChange}
+                            className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                          >
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Non-binary">Non-binary</option>
+                            <option value="Prefer not to say">Prefer not to say</option>
+                          </select>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Bio</label>
+                          <textarea
+                            className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400 h-24 resize-none"
+                            name="bio"
+                            value={formData.bio}
+                            onChange={handleInputChange}
+                            placeholder="Tell us about yourself..."
+                            maxLength={300}
+                          />
+                          <p className="text-xs text-slate-400 dark:text-slate-500">{formData.bio.length}/300 characters</p>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Email Address</label>
+                          <input
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-2xl px-4 py-3 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                            type="email"
+                            value={userProfile?.email || ''}
+                            disabled
+                          />
+                          <p className="text-xs text-slate-400 dark:text-slate-500">Email cannot be changed</p>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Travel Match Profile Section */}
+                  <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
+                    <div className="flex items-center gap-2 mb-6">
+                      <Heart className="w-6 h-6 text-pink-500" />
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white">Travel Match Profile</h3>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6">Complete your profile to find travel buddies</p>
+
+                    <div className="space-y-6">
+                      {/* Date of Birth & Age */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            Date of Birth
+                          </label>
+                          <input
+                            className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                            type="date"
+                            name="dateOfBirth"
+                            value={formData.dateOfBirth}
+                            onChange={handleInputChange}
+                          />
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Age</label>
+                          <input
+                            className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white placeholder:text-slate-400 cursor-not-allowed"
+                            type="text"
+                            name="age"
+                            value={formData.age || 'Auto-calculated'}
+                            readOnly
+                            placeholder="Auto-calculated from DOB"
+                          />
+                          <p className="text-xs text-slate-400 dark:text-slate-500">Automatically calculated from date of birth</p>
+                        </div>
+                      </div>
+
+                      {/* Location with Map Picker */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          Location
+                        </label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                              type="text"
+                              name="location"
+                              value={formData.location}
+                              onChange={handleInputChange}
+                              placeholder="Kathmandu, Nepal"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={detectCurrentLocation}
+                            disabled={detectingLocation}
+                            className="px-4 py-3 bg-blue-500 text-white text-sm font-medium rounded-2xl hover:bg-blue-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          >
+                            {detectingLocation ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Detecting...
+                              </>
+                            ) : (
+                              <>
+                                <MapPin className="w-4 h-4" />
+                                Auto Detect
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowLocationPicker(!showLocationPicker)}
+                            className="px-4 py-3 bg-[#059467] text-white text-sm font-medium rounded-2xl hover:bg-[#047854] transition-colors whitespace-nowrap"
+                          >
+                            {showLocationPicker ? 'Close Map' : 'Pick on Map'}
+                          </button>
+                        </div>
+                        {showLocationPicker && (
+                          <div className="mt-2">
+                            <LocationMap
+                              onLocationSelect={handleLocationSelect}
+                              initialPosition={[formData.coordinates.lat || 27.7172, formData.coordinates.lng || 85.3240]}
+                              height="300px"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Travel Style */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                          <Mountain className="w-4 h-4" />
+                          Travel Style
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {TRAVEL_STYLES.map(style => (
+                            <button
+                              key={style}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, travelStyle: style }))}
+                              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                                formData.travelStyle === style
+                                  ? 'bg-[#059467] text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                              }`}
+                            >
+                              {style}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Languages */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                          <Globe className="w-4 h-4" />
+                          Languages
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {COMMON_LANGUAGES.map(language => (
+                            <button
+                              key={language}
+                              type="button"
+                              onClick={() => toggleLanguage(language)}
+                              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                                formData.languages.includes(language)
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                              }`}
+                            >
+                              {language}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Hobbies/Interests for Travel Match */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Travel Interests</label>
+                        <div className="flex flex-wrap gap-2">
+                          {COMMON_INTERESTS.map(interest => (
+                            <button
+                              key={interest}
+                              type="button"
+                              onClick={() => {
+                                if (formData.interests.includes(interest)) {
+                                  removeInterest(interest);
+                                } else {
+                                  setFormData(prev => ({ ...prev, interests: [...prev.interests, interest] }));
+                                }
+                              }}
+                              className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                                formData.interests.includes(interest)
+                                  ? 'bg-pink-500 text-white'
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                              }`}
+                            >
+                              {interest}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Upcoming Trips */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                          <Mountain className="w-4 h-4" />
+                          Upcoming Trips
+                        </label>
+                        <div className="flex gap-2 mb-3">
+                          <input
+                            type="text"
+                            value={newTrip}
+                            onChange={(e) => setNewTrip(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTrip())}
+                            className="flex-1 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                            placeholder="e.g., Everest Base Camp"
+                          />
+                          <button
+                            type="button"
+                            onClick={addTrip}
+                            className="px-6 py-3 bg-[#059467] text-white rounded-2xl font-bold hover:bg-[#047854] transition-all flex items-center gap-2"
+                          >
+                            <Plus size={20} /> Add
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.upcomingTrips.map(trip => (
+                            <div
+                              key={trip}
+                              className="flex items-center gap-2 px-4 py-2 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-sm font-bold"
+                            >
+                              {trip}
+                              <button
+                                type="button"
+                                onClick={() => removeTrip(trip)}
+                                className="hover:bg-orange-200 dark:hover:bg-orange-800/50 rounded-full p-1 transition-all"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Right Column: Stats */}
+                <div className="col-span-12 lg:col-span-5 flex flex-col gap-6">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white px-2">Travel Stats</h3>
+                  
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Stat Card 1 */}
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Trips</span>
+                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">34</span>
+                        <span className="text-xs font-semibold text-[#059467] mt-2 flex items-center gap-1">
+                          <TrendingUp className="w-4 h-4" />
+                          +12% this year
+                        </span>
+                      </div>
+                      <div className="w-16 h-16 rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467]">
+                        <Plane className="w-8 h-8" />
+                      </div>
+                    </div>
+
+                    {/* Stat Card 2 */}
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Expenses</span>
+                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">$12.4k</span>
+                        <span className="text-xs font-semibold text-amber-500 mt-2 flex items-center gap-1">
+                          <AlertTriangle className="w-4 h-4" />
+                          Near budget limit
+                        </span>
+                      </div>
+                      <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                        <Wallet className="w-8 h-8" />
+                      </div>
+                    </div>
+
+                    {/* Stat Card 3 */}
+                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Gear Rented</span>
+                        <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">8</span>
+                        <span className="text-xs font-semibold text-slate-400 mt-2">Active rentals</span>
+                      </div>
+                      <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                        <Backpack className="w-8 h-8" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Promo Card */}
+                  <div className="relative overflow-hidden bg-gradient-to-br from-[#059467] to-[#035e41] rounded-3xl p-6 shadow-lg text-white">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="bg-white/20 p-2 rounded-xl">
+                          <Diamond className="w-6 h-6" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Pro</span>
+                      </div>
+                      <h4 className="font-bold text-xl mb-1">Upgrade to Nomad Pro</h4>
+                      <p className="text-white/80 text-sm mb-4">Get unlimited trip tracking and offline maps.</p>
+                      <button className="w-full py-3 bg-white text-[#059467] font-bold rounded-xl hover:bg-slate-100 transition-colors">
+                        View Plans
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Preferences Tab Content */}
+            {activeTab === 'preferences' && (
+              <div className="col-span-12 lg:col-span-7">
+                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Preferences</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Language</label>
+                      <div className="relative">
+                        <select
+                          name="language"
+                          value={formData.language}
+                          onChange={handleInputChange}
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                        >
+                          <option>English (US)</option>
+                          <option>Spanish</option>
+                          <option>French</option>
+                          <option>German</option>
+                          <option>Italian</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</label>
+                      <div className="relative">
+                        <select
+                          name="currency"
+                          value={formData.currency}
+                          onChange={handleInputChange}
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                        >
+                          <option>USD ($)</option>
+                          <option>EUR (€)</option>
+                          <option>GBP (£)</option>
+                          <option>JPY (¥)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-900 dark:text-white">Email Notifications</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Receive updates about your trips and deals.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="emailNotifications"
+                          checked={formData.emailNotifications}
+                          onChange={handleInputChange}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
+                      </label>
+                    </div>
+
+                    <hr className="border-slate-100 dark:border-slate-700" />
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-900 dark:text-white">Public Profile</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Allow other nomads to see your current location.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="publicProfile"
+                          checked={formData.publicProfile}
+                          onChange={handleInputChange}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
+                      </label>
+                    </div>
+
+                    <hr className="border-slate-100 dark:border-slate-700" />
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-900 dark:text-white">Share Location</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Automatically update location based on IP.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="shareLocation"
+                          checked={formData.shareLocation}
+                          onChange={handleInputChange}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
+                      </label>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Travel Match Filters Section */}
+                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm mt-6">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Travel Match Filters</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Set your default preferences for finding travel buddies</p>
+                  
+                  <div className="space-y-6">
+                    {/* Age Range */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                        Age Range: {formData.matchPreferences.ageRange[0]} - {formData.matchPreferences.ageRange[1]}
+                      </label>
+                      <div className="flex gap-4">
+                        <input
+                          type="range"
+                          min="18"
+                          max="60"
+                          value={formData.matchPreferences.ageRange[0]}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            matchPreferences: {
+                              ...formData.matchPreferences,
+                              ageRange: [parseInt(e.target.value), formData.matchPreferences.ageRange[1]]
+                            }
+                          })}
+                          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#059467]"
+                        />
+                        <input
+                          type="range"
+                          min="18"
+                          max="60"
+                          value={formData.matchPreferences.ageRange[1]}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            matchPreferences: {
+                              ...formData.matchPreferences,
+                              ageRange: [formData.matchPreferences.ageRange[0], parseInt(e.target.value)]
+                            }
+                          })}
+                          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#059467]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Travel Style */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                        Preferred Travel Styles
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Luxury', 'Budget'].map(style => (
+                          <button
+                            key={style}
+                            type="button"
+                            onClick={() => {
+                              const styles = formData.matchPreferences.travelStyles;
+                              setFormData({
+                                ...formData,
+                                matchPreferences: {
+                                  ...formData.matchPreferences,
+                                  travelStyles: styles.includes(style)
+                                    ? styles.filter(s => s !== style)
+                                    : [...styles, style]
+                                }
+                              });
+                            }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                              formData.matchPreferences.travelStyles.includes(style)
+                                ? 'bg-[#059467] text-white'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
+                          >
+                            {style}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Interests */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                        Preferred Interests
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {['Trekking', 'Photography', 'Food', 'Culture', 'Yoga', 'Adventure', 'History', 'Art'].map(interest => (
+                          <button
+                            key={interest}
+                            type="button"
+                            onClick={() => {
+                              const interests = formData.matchPreferences.interests;
+                              setFormData({
+                                ...formData,
+                                matchPreferences: {
+                                  ...formData.matchPreferences,
+                                  interests: interests.includes(interest)
+                                    ? interests.filter(i => i !== interest)
+                                    : [...interests, interest]
+                                }
+                              });
+                            }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                              formData.matchPreferences.interests.includes(interest)
+                                ? 'bg-[#059467] text-white'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
+                          >
+                            {interest}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Gender Preference */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                        Preferred Gender
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {['Male', 'Female', 'Non-binary', 'Any'].map(gender => (
+                          <button
+                            key={gender}
+                            type="button"
+                            onClick={() => {
+                              const genders = formData.matchPreferences.genders;
+                              setFormData({
+                                ...formData,
+                                matchPreferences: {
+                                  ...formData.matchPreferences,
+                                  genders: genders.includes(gender)
+                                    ? genders.filter(g => g !== gender)
+                                    : [...genders, gender]
+                                }
+                              });
+                            }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                              formData.matchPreferences.genders.includes(gender)
+                                ? 'bg-[#059467] text-white'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
+                          >
+                            {gender}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Location Range */}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Location Range: {formData.matchPreferences.locationRange === 0 ? 'Nearby only' : formData.matchPreferences.locationRange === 500 ? '500+ km' : `${formData.matchPreferences.locationRange} km`}
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="500"
+                        step="10"
+                        value={formData.matchPreferences.locationRange}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          matchPreferences: {
+                            ...formData.matchPreferences,
+                            locationRange: parseInt(e.target.value)
+                          }
+                        })}
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#059467]"
+                      />
+                      <div className="flex justify-between text-xs text-slate-500 mt-2">
+                        <span>0 km</span>
+                        <span>250 km</span>
+                        <span>500 km</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {/* Stats Tab Content */}
+            {activeTab === 'stats' && (
+              <div className="col-span-12">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Coming Soon</h3>
+                  <p className="text-slate-500 dark:text-slate-400">Detailed travel statistics and analytics will be available here.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Billing Tab Content */}
+            {activeTab === 'billing' && (
+              <div className="col-span-12 lg:col-span-7">
+                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Billing Address</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">Manage your billing information for payments and subscriptions.</p>
+                  
+                  <div className="space-y-6">
+                    {/* Full Name */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Full Name</label>
+                      <input
+                        className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                        type="text"
+                        name="fullName"
+                        value={formData.billingAddress.fullName}
+                        onChange={handleBillingAddressChange}
+                        placeholder="John Doe"
+                      />
+                    </div>
+
+                    {/* Address Line 1 */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Address Line 1</label>
+                      <input
+                        className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                        type="text"
+                        name="addressLine1"
+                        value={formData.billingAddress.addressLine1}
+                        onChange={handleBillingAddressChange}
+                        placeholder="123 Main Street"
+                      />
+                    </div>
+
+                    {/* Address Line 2 */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Address Line 2 (Optional)</label>
+                      <input
+                        className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                        type="text"
+                        name="addressLine2"
+                        value={formData.billingAddress.addressLine2}
+                        onChange={handleBillingAddressChange}
+                        placeholder="Apartment, suite, etc."
+                      />
+                    </div>
+
+                    {/* City & State */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">City</label>
+                        <input
+                          className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                          type="text"
+                          name="city"
+                          value={formData.billingAddress.city}
+                          onChange={handleBillingAddressChange}
+                          placeholder="New York"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">State / Province</label>
+                        <input
+                          className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                          type="text"
+                          name="state"
+                          value={formData.billingAddress.state}
+                          onChange={handleBillingAddressChange}
+                          placeholder="NY"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Postal Code & Country */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Postal Code</label>
+                        <input
+                          className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                          type="text"
+                          name="postalCode"
+                          value={formData.billingAddress.postalCode}
+                          onChange={handleBillingAddressChange}
+                          placeholder="10001"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Country</label>
+                        <select
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                          name="country"
+                          value={formData.billingAddress.country}
+                          onChange={handleBillingAddressChange}
+                        >
+                          <option value="">Select Country</option>
+                          <option value="United States">United States</option>
+                          <option value="Canada">Canada</option>
+                          <option value="United Kingdom">United Kingdom</option>
+                          <option value="Australia">Australia</option>
+                          <option value="Germany">Germany</option>
+                          <option value="France">France</option>
+                          <option value="Italy">Italy</option>
+                          <option value="Spain">Spain</option>
+                          <option value="Netherlands">Netherlands</option>
+                          <option value="Switzerland">Switzerland</option>
+                          <option value="Japan">Japan</option>
+                          <option value="South Korea">South Korea</option>
+                          <option value="Singapore">Singapore</option>
+                          <option value="India">India</option>
+                          <option value="Nepal">Nepal</option>
+                          <option value="Thailand">Thailand</option>
+                          <option value="Indonesia">Indonesia</option>
+                          <option value="Mexico">Mexico</option>
+                          <option value="Brazil">Brazil</option>
+                          <option value="Argentina">Argentina</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Info Box */}
+                    <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl">
+                      <p className="text-sm text-blue-600 dark:text-blue-400">
+                        <strong>Note:</strong> Your billing address is used for payment processing and invoicing. This information is kept secure and private.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+    <Footer />
+  </>
+  );
+}
