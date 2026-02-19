@@ -5,6 +5,7 @@ import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence } from '
 import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import { 
   Heart, 
   X, 
@@ -859,4 +860,10 @@ const TravelMatch: React.FC = () => {
   );
 };
 
-export default TravelMatch;
+export default function ProtectedTravelMatch() {
+  return (
+    <ProtectedRoute>
+      <TravelMatch />
+    </ProtectedRoute>
+  );
+}

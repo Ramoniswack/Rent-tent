@@ -41,8 +41,14 @@ export default function LoginPage() {
       // Update auth context
       login(response.token, response.user);
       
-      // Redirect to dashboard
-      router.push('/dashboard');
+      // Redirect to stored path or dashboard
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin');
+        router.push(redirectPath);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
       console.error('Login error:', err);

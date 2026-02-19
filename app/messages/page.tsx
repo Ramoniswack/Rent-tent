@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import { messageAPI } from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import { 
@@ -37,7 +38,7 @@ interface Message {
   read: boolean;
 }
 
-export default function MessagesPage() {
+function MessagesPage() {
   const router = useRouter();
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -1433,5 +1434,14 @@ export default function MessagesPage() {
       </div>
       )}
     </>
+  );
+}
+
+
+export default function ProtectedMessagesPage() {
+  return (
+    <ProtectedRoute>
+      <MessagesPage />
+    </ProtectedRoute>
   );
 }

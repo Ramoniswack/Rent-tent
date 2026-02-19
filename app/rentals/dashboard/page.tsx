@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import ProtectedRoute from '../../../components/ProtectedRoute';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import {
@@ -18,7 +19,7 @@ import {
 
 type BookingStatus = 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
 
-export default function RentalDashboard() {
+function RentalDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'rentals' | 'requests'>('rentals');
@@ -418,5 +419,14 @@ export default function RentalDashboard() {
       </div>
       <Footer />
     </>
+  );
+}
+
+
+export default function ProtectedRentalDashboard() {
+  return (
+    <ProtectedRoute>
+      <RentalDashboard />
+    </ProtectedRoute>
   );
 }

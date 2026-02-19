@@ -6,6 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { tripAPI } from '../../services/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import { 
   Calendar, 
   Search, 
@@ -42,7 +43,7 @@ interface Trip {
   };
 }
 
-export default function DashboardPage() {
+function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('all');
@@ -565,5 +566,14 @@ export default function DashboardPage() {
       <Footer />
     </div>
   </>
+  );
+}
+
+
+export default function ProtectedDashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardPage />
+    </ProtectedRoute>
   );
 }

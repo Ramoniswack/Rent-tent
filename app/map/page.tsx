@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import { tripAPI, userAPI, matchAPI } from '../../services/api';
 import { MapPin, Search, Plus, Minus, Navigation, Layers, Loader2 } from 'lucide-react';
 
@@ -19,7 +20,7 @@ interface Trip {
   status?: string;
 }
 
-export default function MapPage() {
+function MapPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All Trips');
@@ -1022,5 +1023,14 @@ export default function MapPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+
+export default function ProtectedMapPage() {
+  return (
+    <ProtectedRoute>
+      <MapPage />
+    </ProtectedRoute>
   );
 }
