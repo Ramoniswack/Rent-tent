@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
 import {
   MapPin,
   Backpack,
@@ -50,31 +52,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f5f8f7]">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="size-10 bg-[#059467] rounded-lg flex items-center justify-center text-white">
-              <MapPin className="w-6 h-6" />
-            </div>
-            <span className="text-xl font-bold text-[#0f231d]">NomadNotes</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/login')}
-              className="text-slate-600 hover:text-[#059467] font-medium transition-colors"
-            >
-              Login
-            </button>
-            <button
-              onClick={() => router.push('/register')}
-              className="bg-[#059467] hover:bg-[#047a55] text-white font-bold px-6 py-2 rounded-full transition-colors"
-            >
-              Get Started
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="relative w-full min-h-[600px] flex items-center pt-20 overflow-hidden">
@@ -162,12 +140,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-12">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-slate-500">© 2024 NomadNotes. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
