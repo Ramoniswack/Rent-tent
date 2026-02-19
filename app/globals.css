@@ -139,3 +139,77 @@ body {
     display: none;
   }
 }
+
+
+/* PWA Install Prompt Animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* PWA Standalone Mode Styles */
+@media (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Hide elements that shouldn't appear in standalone mode */
+  .hide-in-standalone {
+    display: none !important;
+  }
+}
+
+/* iOS PWA Status Bar */
+@supports (-webkit-touch-callout: none) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Splash Screen Styles */
+@media (display-mode: standalone) {
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #0f231d 0%, #05100d 100%);
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+  }
+  
+  body.loading::before {
+    opacity: 1;
+  }
+}
+
+/* Pull to Refresh Prevention */
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* Smooth scrolling for PWA */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Touch feedback */
+button, a {
+  -webkit-tap-highlight-color: rgba(5, 148, 103, 0.1);
+}
