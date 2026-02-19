@@ -46,4 +46,8 @@ export default withPWA({
       }
     }
   ]
-})(nextConfig);
+})({
+  ...nextConfig,
+  // Add empty turbopack config to silence the warning
+  turbopack: {}
+});
