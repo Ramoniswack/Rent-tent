@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Home, Users, MessageCircle, Package, Map, Plus, X } from 'lucide-react';
+import { Home, Users, MessageCircle, Package, Map } from 'lucide-react';
 
 export default function MobileNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
     { icon: Home, label: 'Dashboard', path: '/dashboard' },
@@ -19,74 +17,43 @@ export default function MobileNav() {
 
   const handleNavigate = (path: string) => {
     router.push(path);
-    setIsOpen(false);
   };
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
+
+  // Don't show on login/register pages
+  if (pathname === '/login' || pathname === '/register' || pathname === '/') {
+    return null;
+  }
 
   return (
-    <>
-      {/* Floating Action Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
-        aria-label="Navigation menu"
-      >
-        {isOpen ? (
-          <X className="w-6 h-6" />
-        ) : (
-          <Plus className="w-6 h-6" />
-        )}
-      </button>
-
-      {/* Backdrop */}
-      {isOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Navigation Menu */}
-      <div
-        className={`md:hidden fixed bottom-24 right-6 z-50 transition-all duration-300 ${
-          isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
-        }`}
-      >
-        <div className="flex flex-col gap-3">
-          {navItems.map((item, index) => (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg">
+      <div className="flex items-center justify-around px-2 py-2 safe-area-bottom">
+        {navItems.map((item) => {
+          const active = isActive(item.path);
+          return (
             <button
               key={item.path}
               onClick={() => handleNavigate(item.path)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
-                isActive(item.path)
-                  ? 'bg-gradient-to-r from-[#059467] to-[#047854] text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-50'
+              className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 min-w-[60px] ${
+                active
+                  ? 'text-[#059467]'
+                  : 'text-slate-500 hover:text-slate-700 active:scale-95'
               }`}
-              style={{
-                animationDelay: `${index * 50}ms`,
-                animation: isOpen ? 'slideIn 0.3s ease-out forwards' : 'none'
-              }}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="font-semibold text-sm whitespace-nowrap">{item.label}</span>
+              <div className={`relative ${active ? 'scale-110' : ''}`}>
+                <item.icon className="w-6 h-6" strokeWidth={active ? 2.5 : 2} />
+                {active && (
+                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-[#059467] rounded-full" />
+                )}
+              </div>
+              <span className={`text-xs font-semibold ${active ? 'text-[#059467]' : ''}`}>
+                {item.label}
+              </span>
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
-
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-      `}</style>
-    </>
+    </nav>
   );
 }
