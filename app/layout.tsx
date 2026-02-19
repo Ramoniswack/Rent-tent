@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../hooks/useAuth";
+import MobileNav from "../components/MobileNav";
 import Script from "next/script";
 
 const inter = Inter({
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
           {children}
+          <MobileNav />
         </AuthProvider>
         <Script
           src="https://upload-widget.cloudinary.com/global/all.js"
