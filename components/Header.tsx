@@ -60,6 +60,11 @@ const Header: React.FC = () => {
   };
 
   const navItems: NavItem[] = [
+    { icon: <Home className="w-4 h-4" />, label: 'Home', path: '/', private: false },
+    { icon: <Backpack className="w-4 h-4" />, label: 'Gear Rental', path: '/gear', private: false },
+  ];
+
+  const privateNavItems: NavItem[] = [
     { icon: <Home className="w-4 h-4" />, label: 'Dashboard', path: '/dashboard', private: true },
     { icon: <Compass className="w-4 h-4" />, label: 'Match', path: '/match', private: true },
     { icon: <Mail className="w-4 h-4" />, label: 'Messages', path: '/messages', private: true },
@@ -72,10 +77,10 @@ const Header: React.FC = () => {
     ? [{ icon: <Shield className="w-4 h-4" />, label: 'Admin', path: '/admin', private: true }]
     : [];
 
-  const allNavItems = [...navItems, ...adminNavItems];
-
-  // Filter nav items based on authentication
-  const visibleNavItems = allNavItems.filter(item => !item.private || (item.private && user));
+  // Show different nav items based on authentication
+  const displayNavItems = user 
+    ? [...privateNavItems, ...adminNavItems]
+    : navItems;
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -98,7 +103,7 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <button
-            onClick={() => router.push(user ? '/dashboard' : '/features')}
+            onClick={() => router.push(user ? '/dashboard' : '/')}
             className="flex items-center gap-3 group"
           >
             <div className="size-8 bg-[#059467] rounded-lg flex items-center justify-center text-white group-hover:scale-110 transition-transform">
@@ -111,7 +116,7 @@ const Header: React.FC = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-1">
-            {visibleNavItems.map((item) => (
+            {displayNavItems.map((item) => (
               <button
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
@@ -218,7 +223,7 @@ const Header: React.FC = () => {
         {mobileMenuOpen && (
           <div className="lg:hidden mt-4 pb-4 border-t border-slate-200 dark:border-slate-800 pt-4">
             <nav className="flex flex-col gap-2">
-              {visibleNavItems.map((item) => (
+              {displayNavItems.map((item) => (
                 <button
                   key={item.path}
                   onClick={() => handleNavigation(item.path)}
