@@ -363,8 +363,12 @@ function MessagesPage() {
         });
         
         setMessages(formattedMessages);
-        // Auto-scroll to latest message after loading
-        setTimeout(() => scrollToBottom(false), 100);
+        // Auto-scroll to latest message after loading - use requestAnimationFrame for immediate scroll
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            scrollToBottom(false);
+          });
+        });
       } catch (err: any) {
         console.error('Error fetching messages:', err);
         setError(err.message || 'Failed to load messages');
@@ -378,15 +382,21 @@ function MessagesPage() {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messages.length > 0) {
-      scrollToBottom(true);
+      // Use requestAnimationFrame to ensure DOM is updated before scrolling
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
     }
   }, [messages.length]);
 
   // Scroll to bottom of messages
-  const scrollToBottom = (smooth: boolean = true) => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
-    }, 100);
+  const scrollToBottom = (smooth: boolean = false) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end'
+      });
+    }
   };
 
   // Handle typing indicator
