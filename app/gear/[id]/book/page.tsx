@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../../components/Header';
 import Footer from '../../../../components/Footer';
+import Toast from '../../../../components/Toast';
 import { gearAPI, bookingAPI } from '../../../../services/api';
 import { useAuth } from '../../../../hooks/useAuth';
 import {
@@ -36,6 +37,7 @@ export default function BookGearPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bookedDates, setBookedDates] = useState<{start: Date, end: Date}[]>([]);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -124,13 +126,13 @@ export default function BookGearPage() {
     
     // Prevent selecting past dates
     if (isPastDate(day)) {
-      alert('Cannot select past dates');
+      setToast({ message: 'Cannot select past dates', type: 'warning' });
       return;
     }
 
     // Prevent selecting booked dates
     if (isDateBooked(day)) {
-      alert('This date is already booked');
+      setToast({ message: 'This date is already booked', type: 'warning' });
       return;
     }
     
@@ -155,7 +157,7 @@ export default function BookGearPage() {
       }
       
       if (hasBookedDate) {
-        alert('Selected range contains booked dates');
+        setToast({ message: 'Selected range contains booked dates', type: 'warning' });
         return;
       }
       
@@ -224,7 +226,7 @@ export default function BookGearPage() {
     }
     
     if (hasBookedDate) {
-      alert('Selected range contains booked dates. Please select dates manually.');
+      setToast({ message: 'Selected range contains booked dates. Please select dates manually.', type: 'warning' });
       return;
     }
     
@@ -234,13 +236,13 @@ export default function BookGearPage() {
 
   const handleBooking = async () => {
     if (!startDate || !endDate || !agreedToTerms) {
-      alert('Please select dates and agree to terms');
+      setToast({ message: 'Please select dates and agree to terms', type: 'warning' });
       return;
     }
 
     const days = getRentalDays();
     if (days < (gear.minimumRentalDays || 1)) {
-      alert(`Minimum rental period is ${gear.minimumRentalDays || 1} days`);
+      setToast({ message: `Minimum rental period is ${gear.minimumRentalDays || 1} days`, type: 'warning' });
       return;
     }
 
@@ -254,11 +256,13 @@ export default function BookGearPage() {
         notes: ''
       });
       
-      alert('Booking request submitted successfully!');
-      router.push('/rentals/dashboard?tab=requests');
+      setToast({ message: 'Booking request submitted successfully!', type: 'success' });
+      setTimeout(() => {
+        router.push('/rentals/dashboard?tab=requests');
+      }, 1500);
     } catch (error: any) {
       console.error('Booking error:', error);
-      alert(error.message || 'Failed to create booking');
+      setToast({ message: error.message || 'Failed to create booking', type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -304,6 +308,13 @@ export default function BookGearPage() {
   return (
     <>
       <Header />
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
         <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 md:py-10 lg:px-20">
           {/* Breadcrumbs */}
