@@ -443,8 +443,8 @@ const TravelMatch: React.FC = () => {
       return false;
     }
 
-    // 1. Age Filter
-    if (profile.age) {
+    // 1. Age Filter (only if age is set on profile and filter is not default)
+    if (profile.age && (ageRange[0] !== 18 || ageRange[1] !== 60)) {
       const profileAge = parseInt(profile.age);
       if (!isNaN(profileAge)) {
         if (profileAge < ageRange[0] || profileAge > ageRange[1]) {
@@ -453,52 +453,52 @@ const TravelMatch: React.FC = () => {
       }
     }
 
-    // 2. Gender Filter
+    // 2. Gender Filter (only if specific genders selected, not 'Any')
     if (selectedGenders.length > 0 && !selectedGenders.includes('Any')) {
-      if (!profile.gender || !selectedGenders.includes(profile.gender)) {
+      if (profile.gender && !selectedGenders.includes(profile.gender)) {
         return false;
       }
+      // If profile has no gender set, still show them
     }
 
-    // 3. Travel Style Filter
+    // 3. Travel Style Filter (only if styles selected)
     if (selectedTravelStyles.length > 0) {
-      if (!profile.travelStyle || !selectedTravelStyles.includes(profile.travelStyle)) {
+      if (profile.travelStyle && !selectedTravelStyles.includes(profile.travelStyle)) {
         return false;
       }
+      // If profile has no travel style set, still show them
     }
 
-    // 4. Interests Filter (at least one common interest)
+    // 4. Interests Filter (at least one common interest, only if interests selected)
     if (selectedInterests.length > 0) {
-      if (!profile.interests || profile.interests.length === 0) {
-        return false;
+      if (profile.interests && profile.interests.length > 0) {
+        const hasCommonInterest = profile.interests.some(interest => 
+          selectedInterests.includes(interest)
+        );
+        if (!hasCommonInterest) {
+          return false;
+        }
       }
-      const hasCommonInterest = profile.interests.some(interest => 
-        selectedInterests.includes(interest)
-      );
-      if (!hasCommonInterest) {
-        return false;
-      }
+      // If profile has no interests set, still show them
     }
 
-    // 5. Location Range Filter
-    if (userProfile?.coordinates?.lat && userProfile?.coordinates?.lng) {
-      // Skip if profile doesn't have coordinates
-      if (!profile.coordinates?.lat || !profile.coordinates?.lng) {
-        return false; // Don't show profiles without location
+    // 5. Location Range Filter (only if both users have coordinates and range is not max)
+    if (locationRange < 500 && userProfile?.coordinates?.lat && userProfile?.coordinates?.lng) {
+      if (profile.coordinates?.lat && profile.coordinates?.lng) {
+        // Calculate distance
+        const distance = calculateDistance(
+          userProfile.coordinates.lat,
+          userProfile.coordinates.lng,
+          profile.coordinates.lat,
+          profile.coordinates.lng
+        );
+        
+        // Filter by location range
+        if (distance > locationRange) {
+          return false;
+        }
       }
-      
-      // Calculate distance
-      const distance = calculateDistance(
-        userProfile.coordinates.lat,
-        userProfile.coordinates.lng,
-        profile.coordinates.lat,
-        profile.coordinates.lng
-      );
-      
-      // Filter by location range
-      if (distance > locationRange) {
-        return false;
-      }
+      // If profile has no coordinates, still show them (they might be new users)
     }
 
     return true;
@@ -509,7 +509,15 @@ const TravelMatch: React.FC = () => {
     totalProfiles: profiles.length,
     filteredProfiles: filteredProfiles.length,
     interactedUsers: interactedUserIds.length,
-    activeFilters: getActiveFilterCount()
+    activeFilters: getActiveFilterCount(),
+    filters: {
+      ageRange,
+      selectedGenders,
+      selectedTravelStyles,
+      selectedInterests,
+      locationRange
+    },
+    userHasLocation: !!(userProfile?.coordinates?.lat && userProfile?.coordinates?.lng)
   });
 
   const currentProfile = filteredProfiles[currentIndex];
