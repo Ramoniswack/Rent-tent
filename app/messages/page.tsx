@@ -38,6 +38,21 @@ interface Message {
   timestamp: string;
   createdAt: string;
   read: boolean;
+  replyTo?: {
+    id: string;
+    text: string;
+    image?: string;
+    senderId: string;
+  } | null;
+  reactions: Array<{
+    user: {
+      id: string;
+      name: string;
+      profilePicture?: string;
+    };
+    emoji: string;
+    createdAt: string;
+  }>;
 }
 
 function MessagesPage() {
@@ -71,6 +86,8 @@ function MessagesPage() {
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -138,7 +155,9 @@ function MessagesPage() {
           image: message.image,
           timestamp: message.createdAt,
           createdAt: message.createdAt,
-          read: message.read
+          read: message.read,
+          replyTo: message.replyTo || null,
+          reactions: message.reactions || []
         };
         
         setMessages(prev => [...prev, formattedMessage]);
@@ -314,6 +333,14 @@ function MessagesPage() {
       try {
         const data = await messageAPI.getMessages(matchId);
         
+        // Clear notifications for this conversation
+        try {
+          await messageAPI.clearMessageNotifications(matchId);
+        } catch (notifError) {
+          console.error('Error clearing notifications:', notifError);
+          // Don't fail message loading if notification clearing fails
+        }
+        
         // Format messages with safe access
         const formattedMessages = data.map((msg: any) => {
           const senderId = msg.senderId || 
@@ -329,7 +356,9 @@ function MessagesPage() {
             image: msg.image,
             timestamp: msg.createdAt || msg.timestamp || new Date().toISOString(),
             createdAt: msg.createdAt || msg.timestamp || new Date().toISOString(),
-            read: msg.read || false
+            read: msg.read || false,
+            replyTo: msg.replyTo || null,
+            reactions: msg.reactions || []
           };
         });
         
@@ -921,6 +950,75 @@ function MessagesPage() {
     }
   };
 
+  // Handle reply to message
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+  };
+
+  // Handle cancel reply
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Handle add reaction
+  const handleAddReaction = async (messageId: string, emoji: string) => {
+    try {
+      await messageAPI.addReaction(messageId, emoji);
+      
+      // Update local state
+      setMessages(prev => prev.map(msg => {
+        if (msg._id === messageId || msg.id === messageId) {
+          const existingReaction = msg.reactions.find(r => r.emoji === emoji);
+          if (existingReaction) {
+            // Increment count
+            return msg;
+          } else {
+            // Add new reaction
+            return {
+              ...msg,
+              reactions: [...msg.reactions, {
+                user: {
+                  id: currentUserId,
+                  name: 'You',
+                  profilePicture: ''
+                },
+                emoji,
+                createdAt: new Date().toISOString()
+              }]
+            };
+          }
+        }
+        return msg;
+      }));
+      
+      setShowReactionPicker(null);
+    } catch (err: any) {
+      console.error('Error adding reaction:', err);
+      showNotification(err.message || 'Failed to add reaction', 'error');
+    }
+  };
+
+  // Handle remove reaction
+  const handleRemoveReaction = async (messageId: string, emoji: string) => {
+    try {
+      await messageAPI.removeReaction(messageId, emoji);
+      
+      // Update local state
+      setMessages(prev => prev.map(msg => {
+        if (msg._id === messageId || msg.id === messageId) {
+          return {
+            ...msg,
+            reactions: msg.reactions.filter(r => !(r.user.id === currentUserId && r.emoji === emoji))
+          };
+        }
+        return msg;
+      }));
+    } catch (err: any) {
+      console.error('Error removing reaction:', err);
+      showNotification(err.message || 'Failed to remove reaction', 'error');
+    }
+  };
+
   // Send message via WebSocket
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -951,12 +1049,13 @@ function MessagesPage() {
         }
       }
       
-      // Send via WebSocket
+      // Send via WebSocket with replyToId if replying
       socket.emit('message:send', {
         senderId: currentUserId,
         receiverId: selectedMatch._id || selectedMatch.id,
         text: newMessage.trim(),
-        image: imageUrl
+        image: imageUrl,
+        replyToId: replyingTo?._id || replyingTo?.id
       });
 
       // Optimistically add message to UI
@@ -969,11 +1068,19 @@ function MessagesPage() {
         image: imageUrl,
         timestamp: new Date().toISOString(),
         createdAt: new Date().toISOString(),
-        read: false
+        read: false,
+        replyTo: replyingTo ? {
+          id: replyingTo._id || replyingTo.id,
+          text: replyingTo.text,
+          image: replyingTo.image,
+          senderId: replyingTo.senderId
+        } : null,
+        reactions: []
       };
       
       setMessages(prev => [...prev, optimisticMessage]);
       setNewMessage('');
+      setReplyingTo(null);
       handleRemoveImage();
       scrollToBottom();
       
@@ -1669,6 +1776,15 @@ function MessagesPage() {
                 {messages.map((message, index) => {
                   const isOwn = message.senderId === currentUserId;
                   const showAvatar = !isOwn && (index === 0 || messages[index - 1].senderId !== message.senderId);
+                  
+                  // Group reactions by emoji
+                  const reactionGroups = message.reactions.reduce((acc, reaction) => {
+                    if (!acc[reaction.emoji]) {
+                      acc[reaction.emoji] = [];
+                    }
+                    acc[reaction.emoji].push(reaction);
+                    return acc;
+                  }, {} as Record<string, typeof message.reactions>);
 
                   return (
                     <div
@@ -1693,6 +1809,20 @@ function MessagesPage() {
                             ? 'bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-br-md'
                             : 'bg-white dark:bg-[#1f3630] text-[#0d1c17] dark:text-slate-200 rounded-bl-md border border-slate-100 dark:border-slate-700'
                         }`}>
+                          {/* Reply indicator */}
+                          {message.replyTo && (
+                            <div className={`px-4 pt-3 pb-2 border-l-2 ${
+                              isOwn ? 'border-white/30' : 'border-[#059467]/30'
+                            }`}>
+                              <div className={`text-xs ${isOwn ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'} mb-1`}>
+                                Replying to {message.replyTo.senderId === currentUserId ? 'yourself' : selectedMatch.name}
+                              </div>
+                              <div className={`text-xs ${isOwn ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'} truncate`}>
+                                {message.replyTo.image ? '📷 Image' : message.replyTo.text}
+                              </div>
+                            </div>
+                          )}
+                          
                           {message.image && (
                             <div className="relative">
                               <img 
@@ -1704,20 +1834,91 @@ function MessagesPage() {
                             </div>
                           )}
                           {message.text && (
-                            <p className={`leading-relaxed ${message.image ? 'p-4 pt-3' : 'p-4'}`}>{message.text}</p>
+                            <p className={`leading-relaxed ${message.image ? 'p-4 pt-3' : message.replyTo ? 'px-4 pb-4' : 'p-4'}`}>{message.text}</p>
                           )}
                           
-                          {/* Delete button for own messages */}
-                          {isOwn && (
+                          {/* Action buttons (Reply, React, Delete) */}
+                          <div className={`absolute ${isOwn ? '-left-20' : '-right-20'} top-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                            {/* Reply button */}
                             <button
-                              onClick={() => setMessageToDelete(message._id || message.id)}
-                              className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
-                              title="Delete message"
+                              onClick={() => handleReply(message)}
+                              className="p-1.5 bg-white dark:bg-[#1f3630] text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 shadow-lg transition-colors"
+                              title="Reply"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                              </svg>
                             </button>
-                          )}
+                            
+                            {/* Reaction button */}
+                            <div className="relative">
+                              <button
+                                onClick={() => setShowReactionPicker(showReactionPicker === (message._id || message.id) ? null : (message._id || message.id))}
+                                className="p-1.5 bg-white dark:bg-[#1f3630] text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 shadow-lg transition-colors"
+                                title="React"
+                              >
+                                <Smile className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {/* Reaction picker */}
+                              {showReactionPicker === (message._id || message.id) && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setShowReactionPicker(null)}
+                                  />
+                                  <div className={`absolute ${isOwn ? 'right-0' : 'left-0'} mt-2 bg-white dark:bg-[#1f3630] rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 p-2 flex gap-1 z-50`}>
+                                    {['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) => (
+                                      <button
+                                        key={emoji}
+                                        onClick={() => handleAddReaction(message._id || message.id, emoji)}
+                                        className="text-xl hover:scale-125 transition-transform p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                                      >
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            
+                            {/* Delete button for own messages */}
+                            {isOwn && (
+                              <button
+                                onClick={() => setMessageToDelete(message._id || message.id)}
+                                className="p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-lg transition-colors"
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
+                        
+                        {/* Reactions display */}
+                        {Object.keys(reactionGroups).length > 0 && (
+                          <div className={`flex flex-wrap gap-1 ${isOwn ? 'justify-end mr-1' : 'ml-1'}`}>
+                            {Object.entries(reactionGroups).map(([emoji, reactions]) => {
+                              const hasUserReacted = reactions.some(r => r.user.id === currentUserId);
+                              return (
+                                <button
+                                  key={emoji}
+                                  onClick={() => hasUserReacted ? handleRemoveReaction(message._id || message.id, emoji) : handleAddReaction(message._id || message.id, emoji)}
+                                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all ${
+                                    hasUserReacted
+                                      ? 'bg-[#059467]/20 border border-[#059467] text-[#059467]'
+                                      : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                  }`}
+                                  title={reactions.map(r => r.user.name).join(', ')}
+                                >
+                                  <span>{emoji}</span>
+                                  <span className="font-semibold">{reactions.length}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
                         <div className={`flex items-center gap-1.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>
                           <span className="text-xs text-slate-400 font-medium">
                             {formatTime(message.timestamp || message.createdAt)}
@@ -1738,6 +1939,27 @@ function MessagesPage() {
 
               {/* Input Area */}
               <div className="flex-none p-4 md:p-6 bg-white dark:bg-[#132a24] border-t border-slate-200 dark:border-slate-800 shadow-lg">
+                {/* Reply Preview */}
+                {replyingTo && (
+                  <div className="mb-3 p-3 bg-slate-50 dark:bg-[#1a2c26] rounded-lg border-l-4 border-[#059467] flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs text-[#059467] font-semibold mb-1">
+                        Replying to {replyingTo.senderId === currentUserId ? 'yourself' : selectedMatch.name}
+                      </div>
+                      <div className="text-sm text-slate-600 dark:text-slate-300 truncate">
+                        {replyingTo.image ? '📷 Image' : replyingTo.text}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleCancelReply}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                      type="button"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                
                 {/* Image Preview */}
                 {imagePreview && (
                   <div className="mb-3 relative inline-block">
@@ -1792,7 +2014,7 @@ function MessagesPage() {
                   <div className="flex-1 bg-slate-50 dark:bg-[#1a2c26] rounded-[24px] flex items-center px-5 py-3.5 focus-within:ring-2 focus-within:ring-[#059467]/30 transition-all shadow-sm hover:shadow-md">
                     <input
                       className="flex-1 bg-transparent border-none focus:ring-0 focus:outline-none p-0 text-[#0d1c17] dark:text-white placeholder:text-slate-400 text-sm"
-                      placeholder="Type your message..."
+                      placeholder={replyingTo ? `Replying to ${replyingTo.senderId === currentUserId ? 'yourself' : selectedMatch.name}...` : "Type your message..."}
                       type="text"
                       value={newMessage}
                       onChange={(e) => {

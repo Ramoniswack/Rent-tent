@@ -526,10 +526,10 @@ export const messageAPI = {
   },
 
   // Send a message
-  sendMessage: async (receiverId: string, text: string) => {
+  sendMessage: async (receiverId: string, text: string, replyToId?: string) => {
     return apiRequest('/messages', {
       method: 'POST',
-      body: JSON.stringify({ receiverId, text }),
+      body: JSON.stringify({ receiverId, text, replyToId }),
     });
   },
 
@@ -626,6 +626,29 @@ export const messageAPI = {
   unmatchUser: async (otherUserId: string) => {
     return apiRequest(`/messages/unmatch/${otherUserId}`, {
       method: 'DELETE',
+    });
+  },
+
+  // Add reaction to message
+  addReaction: async (messageId: string, emoji: string) => {
+    return apiRequest(`/messages/reaction/${messageId}`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji }),
+    });
+  },
+
+  // Remove reaction from message
+  removeReaction: async (messageId: string, emoji: string) => {
+    return apiRequest(`/messages/reaction/${messageId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ emoji }),
+    });
+  },
+
+  // Clear message notifications
+  clearMessageNotifications: async (otherUserId: string) => {
+    return apiRequest(`/messages/notifications/clear/${otherUserId}`, {
+      method: 'POST',
     });
   },
 };
