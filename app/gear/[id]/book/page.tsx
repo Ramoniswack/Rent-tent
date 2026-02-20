@@ -255,7 +255,7 @@ export default function BookGearPage() {
       });
       
       alert('Booking request submitted successfully!');
-      router.push('/rentals/dashboard');
+      router.push('/rentals/dashboard?tab=requests');
     } catch (error: any) {
       console.error('Booking error:', error);
       alert(error.message || 'Failed to create booking');
