@@ -24,12 +24,24 @@ export const useNotifications = () => {
 
   const subscribe = async () => {
     try {
+      // Request permission first
+      if (!supported) {
+        throw new Error('Notifications not supported');
+      }
+
+      const permissionResult = await Notification.requestPermission();
+      setPermission(permissionResult);
+
+      if (permissionResult !== 'granted') {
+        throw new Error('Notification permission denied');
+      }
+
       // Register service worker
       const registration = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
 
       // Get VAPID public key
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/vapid-public-key`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/vapid-public-key`);
       const { publicKey } = await response.json();
 
       // Subscribe to push
@@ -40,7 +52,7 @@ export const useNotifications = () => {
 
       // Send subscription to backend
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/notifications/register-web`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/register-web`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
