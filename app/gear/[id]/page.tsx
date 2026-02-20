@@ -6,6 +6,8 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { gearAPI, bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatNPR } from '../../../lib/currency';
+import { getCityName } from '../../../lib/location';
 import {
   Heart,
   Star,
@@ -670,7 +672,7 @@ export default function GearDetailPage() {
 
                     <div className="flex items-baseline gap-2">
                       <span className="text-3xl font-bold text-[#059467]">
-                        ${gearItem.pricePerDay}
+                        {formatNPR(gearItem.pricePerDay, false)}
                       </span>
                       <span className="text-lg text-[#0d1c17]/60 dark:text-white/60">
                         per day
@@ -695,7 +697,7 @@ export default function GearDetailPage() {
                         title="Open in Google Maps"
                       >
                         <MapPin className="w-4 h-4 text-[#059467] group-hover:animate-bounce" />
-                        {gearItem.location}
+                        {getCityName(gearItem.location)}
                         <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </button>
                     </div>
@@ -705,7 +707,7 @@ export default function GearDetailPage() {
                   <div className="flex items-center justify-between p-4 bg-[#f8fcfb] dark:bg-white/5 rounded-2xl mb-6 hover:bg-[#e7f4f0] dark:hover:bg-white/10 transition-colors group cursor-pointer"
                     onClick={() => {
                       if (owner.username) {
-                        router.push(`/profile/${owner.username}`);
+                        router.push(`/seller/${owner.username}`);
                       }
                     }}
                   >
@@ -774,7 +776,7 @@ export default function GearDetailPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (owner.username) {
-                          router.push(`/profile/${owner.username}`);
+                          router.push(`/seller/${owner.username}`);
                         } else {
                           alert('Owner profile not available');
                         }

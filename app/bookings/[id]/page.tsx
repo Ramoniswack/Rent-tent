@@ -9,6 +9,7 @@ import Toast from '../../../components/Toast';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatNPR } from '../../../lib/currency';
+import { getCityName } from '../../../lib/location';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import {
@@ -227,7 +228,7 @@ function BookingDetailsPage() {
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const locationLines = doc.splitTextToSize(booking.pickupLocation, 170);
+      const locationLines = doc.splitTextToSize(getCityName(booking.pickupLocation), 170);
       doc.text(locationLines, 20, yPos);
       yPos += (locationLines.length * 6) + 10;
       

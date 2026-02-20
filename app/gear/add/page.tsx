@@ -7,6 +7,7 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import { gearAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatNPR } from '../../../lib/currency';
 import {
   Check,
   Info,
@@ -1104,7 +1105,7 @@ export default function AddGearPage() {
                       {formData.category} • {formData.condition}
                     </p>
                     <p className="text-2xl font-bold text-[#059467]">
-                      ${formData.pricePerDay} <span className="text-sm font-normal text-slate-500">/ day</span>
+                      {formData.pricePerDay ? formatNPR(Number(formData.pricePerDay), false) : 'Rs. 0'} <span className="text-sm font-normal text-slate-500">/ day</span>
                     </p>
                   </div>
                 </div>

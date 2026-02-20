@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { gearAPI } from '../../services/api';
+import { formatNPR } from '../../lib/currency';
+import { getCityName } from '../../lib/location';
 import { GearCardSkeleton } from '../../components/SkeletonCard';
 import {
   Search,
@@ -526,11 +528,11 @@ export default function GearPage() {
                   <div className="flex items-end justify-between border-t border-gray-50 dark:border-white/5 pt-3 md:pt-4 mt-2">
                     <div className="flex items-center gap-1.5 md:gap-2 text-gray-500 dark:text-gray-400">
                       <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                      <span className="text-xs md:text-sm font-medium truncate">{item.location}</span>
+                      <span className="text-xs md:text-sm font-medium truncate">{getCityName(item.location)}</span>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <span className="block text-lg md:text-xl font-black text-[#059467]">
-                        ${item.pricePerDay}
+                        {formatNPR(item.pricePerDay, false)}
                         <span className="text-xs md:text-sm font-medium text-gray-400 dark:text-gray-500">/day</span>
                       </span>
                     </div>

@@ -157,6 +157,11 @@ export const gearAPI = {
     return apiRequest('/gear/my-gear');
   },
 
+  // Get gear by specific user (public)
+  getGearByUser: async (username: string) => {
+    return apiRequest(`/gear/user/${username}`);
+  },
+
   // Create new gear listing
   create: async (gearData: {
     title: string;
