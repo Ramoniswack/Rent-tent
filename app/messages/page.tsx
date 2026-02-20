@@ -302,7 +302,8 @@ function MessagesPage() {
         });
         
         setMessages(formattedMessages);
-        // Don't auto-scroll on initial load - let user see the conversation naturally
+        // Auto-scroll to latest message after loading
+        setTimeout(() => scrollToBottom(false), 100);
       } catch (err: any) {
         console.error('Error fetching messages:', err);
         setError(err.message || 'Failed to load messages');
@@ -311,6 +312,13 @@ function MessagesPage() {
 
     fetchMessages();
   }, [selectedMatch]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom(true);
+    }
+  }, [messages.length]);
 
   // Scroll to bottom of messages
   const scrollToBottom = (smooth: boolean = true) => {
