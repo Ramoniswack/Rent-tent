@@ -72,6 +72,7 @@ function MessagesPage() {
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedMatchIdRef = useRef<string>('');
 
   // Handle client-side mounting
   useEffect(() => {
@@ -259,7 +260,7 @@ function MessagesPage() {
         
         setMatches(formattedMatches);
         
-        // Select first match by default
+        // Select first match by default only if no match is selected
         if (formattedMatches.length > 0 && !selectedMatch) {
           setSelectedMatch(formattedMatches[0]);
         }
@@ -271,16 +272,28 @@ function MessagesPage() {
       }
     };
 
-    fetchMatches();
-  }, [onlineUsers, selectedMatch]);
+    // Only fetch once on mount
+    if (matches.length === 0) {
+      fetchMatches();
+    }
+  }, []); // Remove dependencies to prevent refetch
 
   // Fetch messages when match is selected
   useEffect(() => {
     if (!selectedMatch) return;
 
+    const matchId = selectedMatch._id || selectedMatch.id;
+    
+    // Skip if we're already viewing this match
+    if (selectedMatchIdRef.current === matchId) {
+      return;
+    }
+
+    selectedMatchIdRef.current = matchId;
+
     const fetchMessages = async () => {
       try {
-        const data = await messageAPI.getMessages(selectedMatch._id || selectedMatch.id);
+        const data = await messageAPI.getMessages(matchId);
         
         // Format messages with safe access
         const formattedMessages = data.map((msg: any) => {
@@ -310,6 +323,7 @@ function MessagesPage() {
       }
     };
 
+    // Only fetch messages once when match changes, then rely on WebSocket for updates
     fetchMessages();
   }, [selectedMatch]);
 
