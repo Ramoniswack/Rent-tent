@@ -35,6 +35,7 @@ export default function BookGearPage() {
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bookedDates, setBookedDates] = useState<{start: Date, end: Date}[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -55,10 +56,35 @@ export default function BookGearPage() {
         router.push(`/gear/${params.id}`);
         return;
       }
+
+      // Fetch unavailable dates
+      await fetchUnavailableDates(params.id as string);
     } catch (error) {
       console.error('Error fetching gear:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUnavailableDates = async (gearId: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/gear/${gearId}/unavailable-dates`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Convert date strings to Date objects
+        const dates = data.map((range: any) => ({
+          start: new Date(range.startDate),
+          end: new Date(range.endDate)
+        }));
+        setBookedDates(dates);
+      }
+    } catch (error) {
+      console.error('Error fetching unavailable dates:', error);
     }
   };
 
@@ -73,13 +99,66 @@ export default function BookGearPage() {
     return { daysInMonth, startingDayOfWeek, year, month };
   };
 
+  const isPastDate = (day: number) => {
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+  };
+
+  const isDateBooked = (day: number) => {
+    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    date.setHours(0, 0, 0, 0);
+    
+    return bookedDates.some(range => {
+      const start = new Date(range.start);
+      const end = new Date(range.end);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+      return date >= start && date <= end;
+    });
+  };
+
   const handleDateClick = (day: number) => {
     const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    
+    // Prevent selecting past dates
+    if (isPastDate(day)) {
+      alert('Cannot select past dates');
+      return;
+    }
+
+    // Prevent selecting booked dates
+    if (isDateBooked(day)) {
+      alert('This date is already booked');
+      return;
+    }
     
     if (!startDate || (startDate && endDate)) {
       setStartDate(clickedDate);
       setEndDate(null);
     } else if (clickedDate > startDate) {
+      // Check if any date in the range is booked
+      const tempDate = new Date(startDate);
+      let hasBookedDate = false;
+      while (tempDate <= clickedDate) {
+        const checkDay = tempDate.getDate();
+        const checkMonth = tempDate.getMonth();
+        const checkYear = tempDate.getFullYear();
+        if (checkMonth === currentMonth.getMonth() && checkYear === currentMonth.getFullYear()) {
+          if (isDateBooked(checkDay)) {
+            hasBookedDate = true;
+            break;
+          }
+        }
+        tempDate.setDate(tempDate.getDate() + 1);
+      }
+      
+      if (hasBookedDate) {
+        alert('Selected range contains booked dates');
+        return;
+      }
+      
       setEndDate(clickedDate);
     } else {
       setStartDate(clickedDate);
@@ -131,6 +210,23 @@ export default function BookGearPage() {
     start.setHours(0, 0, 0, 0);
     const end = new Date(start);
     end.setDate(end.getDate() + days);
+    
+    // Check if any date in the range is booked
+    let hasBookedDate = false;
+    const tempDate = new Date(start);
+    while (tempDate <= end) {
+      const checkDay = tempDate.getDate();
+      if (isDateBooked(checkDay)) {
+        hasBookedDate = true;
+        break;
+      }
+      tempDate.setDate(tempDate.getDate() + 1);
+    }
+    
+    if (hasBookedDate) {
+      alert('Selected range contains booked dates. Please select dates manually.');
+      return;
+    }
     
     setStartDate(start);
     setEndDate(end);
@@ -304,13 +400,20 @@ export default function BookGearPage() {
                     const inRange = isDateInRange(day);
                     const isStart = isStartDate(day);
                     const isEnd = isEndDate(day);
+                    const isPast = isPastDate(day);
+                    const isBooked = isDateBooked(day);
+                    const isDisabled = isPast || isBooked;
                     
                     return (
                       <button
                         key={day}
                         onClick={() => handleDateClick(day)}
+                        disabled={isDisabled}
+                        title={isPast ? 'Past date' : isBooked ? 'Already booked' : ''}
                         className={`flex h-10 sm:h-12 items-center justify-center text-xs sm:text-sm font-semibold transition-all ${
-                          isStart || isEnd
+                          isDisabled
+                            ? 'bg-[#fee2e2] dark:bg-red-900/20 text-[#ef4444]/50 dark:text-red-400/50 cursor-not-allowed line-through'
+                            : isStart || isEnd
                             ? 'bg-[#059467] text-white shadow-lg ' + (isStart ? 'rounded-l-full' : '') + (isEnd ? 'rounded-r-full' : '')
                             : inRange
                             ? 'bg-[#059467]/20 text-[#059467]'
@@ -331,7 +434,7 @@ export default function BookGearPage() {
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#fee2e2] border border-red-200" />
-                    <span>Unavailable</span>
+                    <span>Booked/Past</span>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#059467]/10" />
