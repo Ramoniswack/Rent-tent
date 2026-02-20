@@ -11,7 +11,8 @@ import { useSocket } from '../../hooks/useSocket';
 import { 
   Search, Send, Plus, Phone, Video, Info, 
   ArrowLeft, Smile, Loader2, Image as ImageIcon, X,
-  PhoneOff, VideoOff, Mic, MicOff
+  PhoneOff, VideoOff, Mic, MicOff, MoreVertical, Pin, 
+  Trash2, UserX, Volume2, VolumeX, Edit3, PinOff
 } from 'lucide-react';
 
 interface Match {
@@ -63,6 +64,12 @@ function MessagesPage() {
   const [incomingCall, setIncomingCall] = useState<{ from: string; type: 'audio' | 'video'; offer?: RTCSessionDescriptionInit } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [showNicknameModal, setShowNicknameModal] = useState(false);
+  const [nicknameInput, setNicknameInput] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -755,6 +762,130 @@ function MessagesPage() {
     }
   };
 
+  // Delete single message
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await messageAPI.deleteMessage(messageId);
+      setMessages(prev => prev.filter(m => m._id !== messageId && m.id !== messageId));
+      showNotification('Message deleted', 'success');
+      setMessageToDelete(null);
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to delete message', 'error');
+    }
+  };
+
+  // Delete conversation
+  const handleDeleteConversation = async () => {
+    if (!selectedMatch) return;
+    
+    try {
+      await messageAPI.deleteConversation(selectedMatch._id || selectedMatch.id);
+      setMessages([]);
+      setMatches(prev => prev.filter(m => m._id !== selectedMatch._id && m.id !== selectedMatch.id));
+      setSelectedMatch(null);
+      showNotification('Conversation deleted', 'success');
+      setShowDeleteConfirm(false);
+      setShowOptionsMenu(false);
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to delete conversation', 'error');
+    }
+  };
+
+  // Block user
+  const handleBlockUser = async () => {
+    if (!selectedMatch) return;
+    
+    try {
+      await messageAPI.blockUser(selectedMatch._id || selectedMatch.id);
+      showNotification(`${selectedMatch.name} blocked`, 'success');
+      setShowBlockConfirm(false);
+      setShowOptionsMenu(false);
+      // Optionally remove from matches list or mark as blocked
+      setMatches(prev => prev.filter(m => m._id !== selectedMatch._id && m.id !== selectedMatch.id));
+      setSelectedMatch(null);
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to block user', 'error');
+    }
+  };
+
+  // Pin/Unpin conversation
+  const handleTogglePin = async () => {
+    if (!selectedMatch) return;
+    
+    try {
+      const isPinned = (selectedMatch as any).isPinned;
+      if (isPinned) {
+        await messageAPI.unpinConversation(selectedMatch._id || selectedMatch.id);
+        showNotification('Conversation unpinned', 'success');
+      } else {
+        await messageAPI.pinConversation(selectedMatch._id || selectedMatch.id);
+        showNotification('Conversation pinned', 'success');
+      }
+      
+      // Update local state
+      setMatches(prev => prev.map(m => 
+        (m._id === selectedMatch._id || m.id === selectedMatch.id)
+          ? { ...m, isPinned: !isPinned } as any
+          : m
+      ));
+      setSelectedMatch(prev => prev ? { ...prev, isPinned: !isPinned } as any : null);
+      setShowOptionsMenu(false);
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to update pin status', 'error');
+    }
+  };
+
+  // Mute/Unmute conversation
+  const handleToggleMute = async () => {
+    if (!selectedMatch) return;
+    
+    try {
+      const isMuted = (selectedMatch as any).isMuted;
+      if (isMuted) {
+        await messageAPI.unmuteConversation(selectedMatch._id || selectedMatch.id);
+        showNotification('Conversation unmuted', 'success');
+      } else {
+        await messageAPI.muteConversation(selectedMatch._id || selectedMatch.id);
+        showNotification('Conversation muted', 'success');
+      }
+      
+      // Update local state
+      setMatches(prev => prev.map(m => 
+        (m._id === selectedMatch._id || m.id === selectedMatch.id)
+          ? { ...m, isMuted: !isMuted } as any
+          : m
+      ));
+      setSelectedMatch(prev => prev ? { ...prev, isMuted: !isMuted } as any : null);
+      setShowOptionsMenu(false);
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to update mute status', 'error');
+    }
+  };
+
+  // Set nickname
+  const handleSetNickname = async () => {
+    if (!selectedMatch) return;
+    
+    try {
+      await messageAPI.setNickname(selectedMatch._id || selectedMatch.id, nicknameInput);
+      
+      // Update local state
+      setMatches(prev => prev.map(m => 
+        (m._id === selectedMatch._id || m.id === selectedMatch.id)
+          ? { ...m, name: nicknameInput || selectedMatch.name } as any
+          : m
+      ));
+      setSelectedMatch(prev => prev ? { ...prev, name: nicknameInput || selectedMatch.name } as any : null);
+      
+      showNotification('Nickname updated', 'success');
+      setShowNicknameModal(false);
+      setShowOptionsMenu(false);
+      setNicknameInput('');
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to set nickname', 'error');
+    }
+  };
+
   // Send message via WebSocket
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -979,6 +1110,129 @@ function MessagesPage() {
               )}
               {notification.type === 'info' && <Info className="w-5 h-5" />}
               <p className="font-medium">{notification.message}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Nickname Modal */}
+        {showNicknameModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl p-6 max-w-md w-full mx-4 animate-fadeIn">
+              <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white mb-4">
+                Set Nickname
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                Set a custom nickname for {selectedMatch?.name}
+              </p>
+              <input
+                type="text"
+                value={nicknameInput}
+                onChange={(e) => setNicknameInput(e.target.value)}
+                placeholder="Enter nickname"
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-[#1a2c26] border border-slate-200 dark:border-slate-700 rounded-xl text-[#0d1c17] dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#059467]/30 mb-6"
+                autoFocus
+              />
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowNicknameModal(false);
+                    setNicknameInput('');
+                  }}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSetNickname}
+                  className="px-4 py-2 bg-[#059467] hover:bg-[#047854] text-white rounded-lg transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Conversation Confirmation */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl p-6 max-w-md w-full mx-4 animate-fadeIn">
+              <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white mb-4">
+                Delete Conversation
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Are you sure you want to delete this conversation with {selectedMatch?.name}? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConversation}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Block User Confirmation */}
+        {showBlockConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl p-6 max-w-md w-full mx-4 animate-fadeIn">
+              <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white mb-4">
+                Block User
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Are you sure you want to block {selectedMatch?.name}? They will no longer be able to message you.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowBlockConfirm(false)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBlockUser}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                >
+                  Block
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Message Confirmation */}
+        {messageToDelete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl p-6 max-w-md w-full mx-4 animate-fadeIn">
+              <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white mb-4">
+                Delete Message
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Are you sure you want to delete this message? This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setMessageToDelete(null)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteMessage(messageToDelete)}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -1227,9 +1481,94 @@ function MessagesPage() {
                   >
                     <Video className="w-5 h-5" />
                   </button>
-                  <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all hover:scale-110 text-slate-500 dark:text-slate-400">
-                    <Info className="w-5 h-5" />
-                  </button>
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                      className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all hover:scale-110 text-slate-500 dark:text-slate-400"
+                    >
+                      <MoreVertical className="w-5 h-5" />
+                    </button>
+                    
+                    {/* Options Menu */}
+                    {showOptionsMenu && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowOptionsMenu(false)}
+                        />
+                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#132a24] rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-fadeIn">
+                          <button
+                            onClick={handleTogglePin}
+                            className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                          >
+                            {(selectedMatch as any)?.isPinned ? (
+                              <>
+                                <PinOff className="w-4 h-4" />
+                                Unpin conversation
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="w-4 h-4" />
+                                Pin conversation
+                              </>
+                            )}
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setShowNicknameModal(true);
+                              setShowOptionsMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                            Set nickname
+                          </button>
+                          
+                          <button
+                            onClick={handleToggleMute}
+                            className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                          >
+                            {(selectedMatch as any)?.isMuted ? (
+                              <>
+                                <Volume2 className="w-4 h-4" />
+                                Unmute conversation
+                              </>
+                            ) : (
+                              <>
+                                <VolumeX className="w-4 h-4" />
+                                Mute conversation
+                              </>
+                            )}
+                          </button>
+                          
+                          <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
+                          
+                          <button
+                            onClick={() => {
+                              setShowDeleteConfirm(true);
+                              setShowOptionsMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete conversation
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setShowBlockConfirm(true);
+                              setShowOptionsMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"
+                          >
+                            <UserX className="w-4 h-4" />
+                            Block user
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1242,7 +1581,7 @@ function MessagesPage() {
                   return (
                     <div
                       key={message._id || message.id}
-                      className={`flex gap-3 animate-fadeIn ${isOwn ? 'max-w-[85%] md:max-w-[70%] self-end justify-end' : 'max-w-[85%] md:max-w-[70%]'}`}
+                      className={`flex gap-3 animate-fadeIn group ${isOwn ? 'max-w-[85%] md:max-w-[70%] self-end justify-end' : 'max-w-[85%] md:max-w-[70%]'}`}
                     >
                       {!isOwn && (
                         <div className="flex-none self-end mb-1">
@@ -1257,7 +1596,7 @@ function MessagesPage() {
                         </div>
                       )}
                       <div className={`flex flex-col gap-1 ${isOwn ? 'items-end' : ''}`}>
-                        <div className={`rounded-2xl text-sm shadow-md transition-all hover:shadow-lg ${
+                        <div className={`rounded-2xl text-sm shadow-md transition-all hover:shadow-lg relative ${
                           isOwn
                             ? 'bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-br-md'
                             : 'bg-white dark:bg-[#1f3630] text-[#0d1c17] dark:text-slate-200 rounded-bl-md border border-slate-100 dark:border-slate-700'
@@ -1274,6 +1613,17 @@ function MessagesPage() {
                           )}
                           {message.text && (
                             <p className={`leading-relaxed ${message.image ? 'p-4 pt-3' : 'p-4'}`}>{message.text}</p>
+                          )}
+                          
+                          {/* Delete button for own messages */}
+                          {isOwn && (
+                            <button
+                              onClick={() => setMessageToDelete(message._id || message.id)}
+                              className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-lg"
+                              title="Delete message"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           )}
                         </div>
                         <div className={`flex items-center gap-1.5 ${isOwn ? 'mr-1' : 'ml-1'}`}>

@@ -552,6 +552,70 @@ export const messageAPI = {
   getUnreadCount: async () => {
     return apiRequest('/messages/unread/count');
   },
+
+  // Delete single message
+  deleteMessage: async (messageId: string) => {
+    return apiRequest(`/messages/message/${messageId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Delete entire conversation
+  deleteConversation: async (otherUserId: string) => {
+    return apiRequest(`/messages/conversation/${otherUserId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Block user
+  blockUser: async (otherUserId: string) => {
+    return apiRequest(`/messages/block/${otherUserId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Unblock user
+  unblockUser: async (otherUserId: string) => {
+    return apiRequest(`/messages/unblock/${otherUserId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Pin conversation
+  pinConversation: async (otherUserId: string) => {
+    return apiRequest(`/messages/pin/${otherUserId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Unpin conversation
+  unpinConversation: async (otherUserId: string) => {
+    return apiRequest(`/messages/unpin/${otherUserId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Set nickname
+  setNickname: async (otherUserId: string, nickname: string) => {
+    return apiRequest(`/messages/nickname/${otherUserId}`, {
+      method: 'POST',
+      body: JSON.stringify({ nickname }),
+    });
+  },
+
+  // Mute conversation
+  muteConversation: async (otherUserId: string) => {
+    return apiRequest(`/messages/mute/${otherUserId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Unmute conversation
+  unmuteConversation: async (otherUserId: string) => {
+    return apiRequest(`/messages/unmute/${otherUserId}`, {
+      method: 'POST',
+    });
+  },
 };
 
 // Admin API
