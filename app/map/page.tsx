@@ -24,7 +24,12 @@ function MapPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All Trips');
-  const [activeTab, setActiveTab] = useState<'trips' | 'friends'>('trips');
+  
+  // Get initial tab from URL or default to 'trips'
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const initialTab = (searchParams.get('tab') as 'trips' | 'friends') || 'trips';
+  
+  const [activeTab, setActiveTab] = useState<'trips' | 'friends'>(initialTab);
   const [selectedTrip, setSelectedTrip] = useState<string | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<string | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -86,6 +91,15 @@ function MapPage() {
     };
     loadUserProfile();
   }, []);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: 'trips' | 'friends') => {
+    setActiveTab(tab);
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.pushState({}, '', url.toString());
+  };
 
   // Handle zoom in
   const handleZoomIn = () => {
@@ -582,7 +596,7 @@ function MapPage() {
             <div className="flex gap-2 mb-3 md:mb-4">
               <button
                 onClick={() => {
-                  setActiveTab('trips');
+                  handleTabChange('trips');
                   setSelectedFriend(null);
                 }}
                 className={`flex-1 px-3 md:px-4 py-2 rounded-xl text-sm md:text-base font-bold transition-all ${
@@ -595,7 +609,7 @@ function MapPage() {
               </button>
               <button
                 onClick={() => {
-                  setActiveTab('friends');
+                  handleTabChange('friends');
                   setSelectedTrip(null);
                 }}
                 className={`flex-1 px-3 md:px-4 py-2 rounded-xl text-sm md:text-base font-bold transition-all ${

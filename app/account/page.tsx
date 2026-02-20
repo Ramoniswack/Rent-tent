@@ -91,7 +91,12 @@ type TabType = 'profile' | 'filters' | 'settings' | 'stats' | 'billing' | 'block
 export default function AccountPage() {
   const router = useRouter();
   const { logout, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>('profile');
+  
+  // Get initial tab from URL or default to 'profile'
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const initialTab = (searchParams.get('tab') as TabType) || 'profile';
+  
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -240,6 +245,15 @@ export default function AccountPage() {
       fetchBlockedUsers();
     }
   }, [activeTab]);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab);
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.pushState({}, '', url.toString());
+  };
 
   const fetchBlockedUsers = async () => {
     try {
@@ -745,7 +759,7 @@ export default function AccountPage() {
           <nav className="flex flex-col gap-2">
             {/* Profile Tab */}
             <button
-              onClick={() => setActiveTab('profile')}
+              onClick={() => handleTabChange('profile')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
                 activeTab === 'profile'
                   ? 'bg-[#059467]/10 text-[#059467]'
@@ -761,7 +775,7 @@ export default function AccountPage() {
 
             {/* Filters Tab */}
             <button
-              onClick={() => setActiveTab('filters')}
+              onClick={() => handleTabChange('filters')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
                 activeTab === 'filters'
                   ? 'bg-[#059467]/10 text-[#059467]'
@@ -777,7 +791,7 @@ export default function AccountPage() {
 
             {/* Settings Tab */}
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => handleTabChange('settings')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
                 activeTab === 'settings'
                   ? 'bg-[#059467]/10 text-[#059467]'
@@ -793,7 +807,7 @@ export default function AccountPage() {
 
             {/* Stats Tab */}
             <button
-              onClick={() => setActiveTab('stats')}
+              onClick={() => handleTabChange('stats')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
                 activeTab === 'stats'
                   ? 'bg-[#059467]/10 text-[#059467]'
@@ -809,7 +823,7 @@ export default function AccountPage() {
 
             {/* Billing Tab */}
             <button
-              onClick={() => setActiveTab('billing')}
+              onClick={() => handleTabChange('billing')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
                 activeTab === 'billing'
                   ? 'bg-[#059467]/10 text-[#059467]'
@@ -825,7 +839,7 @@ export default function AccountPage() {
 
             {/* Blocked Users Tab */}
             <button
-              onClick={() => setActiveTab('blocked')}
+              onClick={() => handleTabChange('blocked')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
                 activeTab === 'blocked'
                   ? 'bg-[#059467]/10 text-[#059467]'
@@ -880,7 +894,7 @@ export default function AccountPage() {
         <div className="md:hidden sticky top-0 z-10 bg-white dark:bg-[#0f231d] border-b border-slate-200 dark:border-slate-700">
           <div className="flex overflow-x-auto scrollbar-hide">
             <button
-              onClick={() => setActiveTab('profile')}
+              onClick={() => handleTabChange('profile')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'profile'
                   ? 'text-[#059467] border-b-2 border-[#059467]'
@@ -891,7 +905,7 @@ export default function AccountPage() {
               <span>Profile</span>
             </button>
             <button
-              onClick={() => setActiveTab('filters')}
+              onClick={() => handleTabChange('filters')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'filters'
                   ? 'text-[#059467] border-b-2 border-[#059467]'
@@ -902,7 +916,7 @@ export default function AccountPage() {
               <span>Filters</span>
             </button>
             <button
-              onClick={() => setActiveTab('settings')}
+              onClick={() => handleTabChange('settings')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'settings'
                   ? 'text-[#059467] border-b-2 border-[#059467]'
@@ -913,7 +927,7 @@ export default function AccountPage() {
               <span>Settings</span>
             </button>
             <button
-              onClick={() => setActiveTab('stats')}
+              onClick={() => handleTabChange('stats')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'stats'
                   ? 'text-[#059467] border-b-2 border-[#059467]'
@@ -924,7 +938,7 @@ export default function AccountPage() {
               <span>Stats</span>
             </button>
             <button
-              onClick={() => setActiveTab('billing')}
+              onClick={() => handleTabChange('billing')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'billing'
                   ? 'text-[#059467] border-b-2 border-[#059467]'
@@ -935,7 +949,7 @@ export default function AccountPage() {
               <span>Billing</span>
             </button>
             <button
-              onClick={() => setActiveTab('blocked')}
+              onClick={() => handleTabChange('blocked')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'blocked'
                   ? 'text-[#059467] border-b-2 border-[#059467]'

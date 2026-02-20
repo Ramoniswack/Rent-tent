@@ -23,7 +23,12 @@ type BookingStatus = 'pending' | 'confirmed' | 'active' | 'completed' | 'cancell
 function RentalDashboard() {
   const router = useRouter();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'rentals' | 'requests'>('rentals');
+  
+  // Get initial tab from URL or default to 'rentals'
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const initialTab = (searchParams.get('tab') as 'rentals' | 'requests') || 'rentals';
+  
+  const [activeTab, setActiveTab] = useState<'rentals' | 'requests'>(initialTab);
   const [filterStatus, setFilterStatus] = useState<'all' | BookingStatus>('all');
   const [myRentals, setMyRentals] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
@@ -38,6 +43,15 @@ function RentalDashboard() {
     }
     fetchBookings();
   }, [user]);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: 'rentals' | 'requests') => {
+    setActiveTab(tab);
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.pushState({}, '', url.toString());
+  };
 
   const fetchBookings = async () => {
     try {
@@ -200,7 +214,7 @@ function RentalDashboard() {
             {/* Segment Controller - Mobile Optimized */}
             <div className="bg-[#e7f4f0] dark:bg-white/10 p-1 rounded-full flex relative">
               <button
-                onClick={() => setActiveTab('rentals')}
+                onClick={() => handleTabChange('rentals')}
                 className={`relative z-10 flex-1 px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 text-center ${
                   activeTab === 'rentals'
                     ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
@@ -211,7 +225,7 @@ function RentalDashboard() {
                 <span className="sm:hidden">Rentals</span>
               </button>
               <button
-                onClick={() => setActiveTab('requests')}
+                onClick={() => handleTabChange('requests')}
                 className={`relative z-10 flex-1 px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${
                   activeTab === 'requests'
                     ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'

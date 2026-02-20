@@ -111,7 +111,11 @@ export default function TripDetailsPage() {
   const { user } = useAuth();
   const tripId = params.id as string;
 
-  const [activeTab, setActiveTab] = useState<Tab>('itinerary');
+  // Get initial tab from URL or default to 'itinerary'
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const initialTab = (searchParams.get('tab') as Tab) || 'itinerary';
+  
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [itinerary, setItinerary] = useState<ItineraryStop[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -144,6 +148,15 @@ export default function TripDetailsPage() {
   useEffect(() => {
     fetchTripData();
   }, [tripId]);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    // Update URL without page reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.pushState({}, '', url.toString());
+  };
 
   const fetchTripData = async () => {
     try {
@@ -837,7 +850,7 @@ export default function TripDetailsPage() {
           <div className="container mx-auto px-4 md:px-10 py-3 md:py-4">
             <div className="flex items-center gap-1 md:gap-2 bg-[#f5f8f7] dark:bg-slate-800 p-1 md:p-1.5 rounded-full w-full md:w-fit overflow-x-auto">
               <button
-                onClick={() => setActiveTab('itinerary')}
+                onClick={() => handleTabChange('itinerary')}
                 className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 md:flex-initial justify-center ${
                   activeTab === 'itinerary'
                     ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
@@ -849,7 +862,7 @@ export default function TripDetailsPage() {
                 <span className="sm:hidden">Route</span>
               </button>
               <button
-                onClick={() => setActiveTab('expenses')}
+                onClick={() => handleTabChange('expenses')}
                 className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 md:flex-initial justify-center ${
                   activeTab === 'expenses'
                     ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
@@ -860,7 +873,7 @@ export default function TripDetailsPage() {
                 Expenses
               </button>
               <button
-                onClick={() => setActiveTab('packing')}
+                onClick={() => handleTabChange('packing')}
                 className={`flex items-center gap-1.5 md:gap-2 px-4 md:px-6 py-2 rounded-full font-bold text-xs md:text-sm transition-all whitespace-nowrap flex-1 md:flex-initial justify-center ${
                   activeTab === 'packing'
                     ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
@@ -884,8 +897,8 @@ export default function TripDetailsPage() {
               <>
                 {/* Filters and Add Action */}
                 <div className="space-y-3 md:space-y-4 mb-6 md:mb-10">
-                  {/* Primary Actions Row */}
-                  <div className="flex gap-2">
+                  {/* Primary Actions Row - Desktop only */}
+                  <div className="hidden md:flex gap-2">
                     <button
                       onClick={() => setShowAddStop(true)}
                       className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-[#059467] text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold shadow-lg shadow-[#059467]/20 hover:scale-[1.02] active:scale-95 transition-all text-sm md:text-base"
@@ -898,8 +911,7 @@ export default function TripDetailsPage() {
                       className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm md:text-base"
                     >
                       <Download className="w-4 h-4 md:w-5 md:h-5" />
-                      <span className="hidden sm:inline">Export PDF</span>
-                      <span className="sm:hidden">PDF</span>
+                      Export PDF
                     </button>
                   </div>
 
@@ -1108,6 +1120,28 @@ export default function TripDetailsPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Export PDF Button - Below all stops - Mobile Only */}
+                {filteredItinerary.length > 0 && (
+                  <div className="md:hidden flex justify-center mt-8">
+                    <button
+                      onClick={exportItineraryToPDF}
+                      className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-[#059467] hover:text-[#059467] transition-all text-sm shadow-sm w-full"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Itinerary as PDF
+                    </button>
+                  </div>
+                )}
+
+                {/* Floating Add Stop Button - Mobile Only */}
+                <button
+                  onClick={() => setShowAddStop(true)}
+                  className="md:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-full shadow-2xl shadow-[#059467]/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                  aria-label="Add Stop"
+                >
+                  <Plus className="w-6 h-6" />
+                </button>
               </>
             )}
 
@@ -1221,17 +1255,17 @@ export default function TripDetailsPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 md:gap-4">
                   <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Recent Transactions</h3>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
+                    {/* Desktop: Show both buttons */}
                     <button 
                       onClick={exportExpensesToPDF}
-                      className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 transition-all order-2 sm:order-1"
+                      className="hidden md:flex bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 items-center justify-center gap-2 transition-all"
                     >
                       <Download className="w-4 h-4 md:w-5 md:h-5" />
-                      <span className="hidden sm:inline">Export PDF</span>
-                      <span className="sm:hidden">PDF</span>
+                      Export PDF
                     </button>
                     <button 
                       onClick={() => setShowAddExpense(true)}
-                      className="bg-[#059467] hover:bg-[#059467]/90 text-white px-6 md:px-8 py-3 md:py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95 order-1 sm:order-2"
+                      className="hidden md:flex bg-[#059467] hover:bg-[#059467]/90 text-white px-6 md:px-8 py-3 md:py-3.5 rounded-full font-bold items-center justify-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95"
                     >
                       <Plus className="w-4 h-4 md:w-5 md:h-5" />
                       Add Expense
@@ -1292,6 +1326,28 @@ export default function TripDetailsPage() {
                     ))
                   )}
                 </div>
+
+                {/* Export PDF Button - Below transactions - Mobile Only */}
+                {expenses.length > 0 && (
+                  <div className="md:hidden flex justify-center mt-6">
+                    <button
+                      onClick={exportExpensesToPDF}
+                      className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-[#059467] hover:text-[#059467] transition-all text-sm shadow-sm w-full"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export Expenses as PDF
+                    </button>
+                  </div>
+                )}
+
+                {/* Floating Add Expense Button - Mobile Only */}
+                <button
+                  onClick={() => setShowAddExpense(true)}
+                  className="md:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-full shadow-2xl shadow-[#059467]/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                  aria-label="Add Expense"
+                >
+                  <Plus className="w-6 h-6" />
+                </button>
               </>
             )}
 
@@ -1345,17 +1401,17 @@ export default function TripDetailsPage() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 md:gap-4">
                   <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Packing Categories</h3>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 md:gap-3">
+                    {/* Desktop: Both buttons */}
                     <button 
                       onClick={exportPackingToPDF}
-                      className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 transition-all order-2 sm:order-1"
+                      className="hidden md:flex bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 items-center justify-center gap-2 transition-all order-2 sm:order-1"
                     >
                       <Download className="w-4 h-4 md:w-5 md:h-5" />
-                      <span className="hidden sm:inline">Export PDF</span>
-                      <span className="sm:hidden">PDF</span>
+                      Export PDF
                     </button>
                     <button 
                       onClick={() => setShowAddPackingItem(true)}
-                      className="bg-[#059467] hover:bg-[#059467]/90 text-white px-6 md:px-8 py-3 md:py-3.5 rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95 order-1 sm:order-2"
+                      className="hidden md:flex bg-[#059467] hover:bg-[#059467]/90 text-white px-6 md:px-8 py-3 md:py-3.5 rounded-full font-bold items-center justify-center gap-2 transition-all shadow-lg shadow-[#059467]/20 active:scale-95 order-1 sm:order-2"
                     >
                       <Plus className="w-4 h-4 md:w-5 md:h-5" />
                       Add Item
@@ -1377,17 +1433,30 @@ export default function TripDetailsPage() {
                   // Combine: show all standard categories + any additional ones
                   const allCategories = [...standardCategories, ...additionalCategories];
                   
-                  // Sort categories: ones with items first, then empty ones
-                  const sortedCategories = allCategories.sort((a, b) => {
+                  // Filter to only show categories that have items
+                  const categoriesWithItems = allCategories.filter(category => {
+                    return packingItems.filter(item => item.category === category.toLowerCase()).length > 0;
+                  });
+                  
+                  // If no items at all, show empty state
+                  if (categoriesWithItems.length === 0) {
+                    return (
+                      <div className="bg-white dark:bg-slate-900 p-8 md:p-16 rounded-2xl md:rounded-3xl text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
+                        <Package className="w-12 h-12 md:w-16 md:h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs md:text-sm mb-2">
+                          No packing items yet
+                        </p>
+                        <p className="text-slate-400 dark:text-slate-500 text-xs md:text-sm">
+                          Click the + button to add items to your packing list
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  // Sort categories by number of items (most items first)
+                  const sortedCategories = categoriesWithItems.sort((a, b) => {
                     const aItems = packingItems.filter(item => item.category === a.toLowerCase()).length;
                     const bItems = packingItems.filter(item => item.category === b.toLowerCase()).length;
-                    
-                    // If both have items or both are empty, maintain original order
-                    if ((aItems > 0 && bItems > 0) || (aItems === 0 && bItems === 0)) {
-                      return allCategories.indexOf(a) - allCategories.indexOf(b);
-                    }
-                    
-                    // Categories with items come first
                     return bItems - aItems;
                   });
                   
@@ -1415,8 +1484,7 @@ export default function TripDetailsPage() {
                       </div>
 
                       {/* Checklist Items */}
-                      {categoryItems.length > 0 ? (
-                        <div className="space-y-4">
+                      <div className="space-y-4">
                         {categoryItems.map((item) => (
                           <div 
                             key={item._id}
@@ -1541,16 +1609,30 @@ export default function TripDetailsPage() {
                           </div>
                         ))}
                       </div>
-                      ) : (
-                        <div className="text-center py-8 text-slate-400 dark:text-slate-500">
-                          <p className="text-sm font-medium">No items in this category yet</p>
-                          <p className="text-xs mt-1">Click "Add Item" button above to add items</p>
-                        </div>
-                      )}
                     </div>
                   );
                   });
                 })()}
+
+                {/* Export PDF Button - Below categories - Mobile Only */}
+                <div className="md:hidden flex justify-center mt-8">
+                  <button
+                    onClick={exportPackingToPDF}
+                    className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-[#059467] hover:text-[#059467] transition-all text-sm shadow-sm w-full"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export Packing List as PDF
+                  </button>
+                </div>
+
+                {/* Floating Add Item Button - Mobile Only */}
+                <button
+                  onClick={() => setShowAddPackingItem(true)}
+                  className="md:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-full shadow-2xl shadow-[#059467]/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                  aria-label="Add Packing Item"
+                >
+                  <Plus className="w-6 h-6" />
+                </button>
               </>
             )}
           </div>
@@ -1711,59 +1793,6 @@ export default function TripDetailsPage() {
             {/* Packing Tab Sidebar */}
             {activeTab === 'packing' && (
               <>
-                Gear Suggestions
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-[#059467]/5 p-6">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Lightbulb className="w-5 h-5 text-[#f59e0b]" />
-                    <h4 className="font-bold text-slate-900 dark:text-white">
-                      Don't Forget ({trip.destination})
-                    </h4>
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Priority Suggestion */}
-                    <div className="flex items-start gap-4 p-3 bg-[#f59e0b]/5 rounded-2xl border border-[#f59e0b]/10">
-                      <CloudRain className="w-5 h-5 text-[#f59e0b] mt-1" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">
-                          Weather-Appropriate Gear
-                        </p>
-                        <p className="text-xs text-slate-600 dark:text-white/60">
-                          Check local weather conditions before departure.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Regular Suggestions */}
-                    <div className="flex items-start gap-4 p-3 hover:bg-[#059467]/5 rounded-2xl transition-colors cursor-pointer group">
-                      <Droplet className="w-5 h-5 text-[#059467]/40 group-hover:text-[#059467] mt-1" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">
-                          Water Bottle
-                        </p>
-                        <p className="text-xs text-slate-600 dark:text-white/60">
-                          Stay hydrated during your adventure.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-4 p-3 hover:bg-[#059467]/5 rounded-2xl transition-colors cursor-pointer group">
-                      <Zap className="w-5 h-5 text-[#059467]/40 group-hover:text-[#059467] mt-1" />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white">
-                          Power Bank
-                        </p>
-                        <p className="text-xs text-slate-600 dark:text-white/60">
-                          Keep your devices charged on the go.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button className="w-full mt-6 py-3 border-2 border-[#059467]/20 text-[#059467] rounded-xl text-sm font-bold hover:bg-[#059467] hover:text-white transition-all">
-                    View Full Gear Guide
-                  </button>
-                </div>
 {/* 
                 Weight Tracker
                 <div className="bg-slate-900 text-white rounded-2xl shadow-lg p-6 relative overflow-hidden">
@@ -1802,48 +1831,6 @@ export default function TripDetailsPage() {
                     </p>
                   </div>
                 </div> */}
-
-                {/* Pack Buddies */}
-                {trip.collaborators && trip.collaborators.filter(c => c.status === 'accepted').length > 0 && (
-                  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-[#059467]/5 p-6">
-                    <h4 className="font-bold text-slate-900 dark:text-white mb-4">
-                      Pack Buddies
-                    </h4>
-                    
-                    <div className="flex -space-x-3 overflow-hidden">
-                      {trip.collaborators.filter(c => c.status === 'accepted').slice(0, 3).map((collab, index) => (
-                        <div key={`pack-buddy-${collab.userId._id}-${index}`}>
-                          {collab.userId.profilePicture ? (
-                            <img
-                              className="inline-block h-10 w-10 rounded-full ring-4 ring-white dark:ring-slate-900"
-                              src={collab.userId.profilePicture}
-                              alt={collab.userId.name}
-                            />
-                          ) : (
-                            <div
-                              className="inline-block h-10 w-10 rounded-full ring-4 ring-white dark:ring-slate-900 bg-gradient-to-br from-[#059467] to-[#047854] flex items-center justify-center"
-                            >
-                              <span className="text-white font-bold text-xs">
-                                {collab.userId.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {trip.collaborators.filter(c => c.status === 'accepted').length > 3 && (
-                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-[#059467]/10 ring-4 ring-white dark:ring-slate-900">
-                          <span className="text-xs font-bold text-[#059467]">
-                            +{trip.collaborators.filter(c => c.status === 'accepted').length - 3}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-slate-500 dark:text-white/50 mt-4">
-                      {trip.collaborators.filter(c => c.status === 'accepted').length} collaborator{trip.collaborators.filter(c => c.status === 'accepted').length !== 1 ? 's' : ''} on this trip.
-                    </p>
-                  </div>
-                )}
               </>
             )}
 
