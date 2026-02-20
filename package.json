@@ -14,6 +14,7 @@
     "@cloudinary/react": "^1.14.4",
     "@cloudinary/url-gen": "^1.22.0",
     "@types/leaflet": "^1.9.21",
+    "firebase": "^12.9.0",
     "framer-motion": "^12.34.1",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",

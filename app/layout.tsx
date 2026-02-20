@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "../hooks/useAuth";
 import MobileNav from "../components/MobileNav";
 import InstallPWA from "../components/InstallPWA";
+import NotificationPrompt from "../components/NotificationPrompt";
 import Script from "next/script";
 
 const inter = Inter({
@@ -63,6 +64,7 @@ export default function RootLayout({
           {children}
           <MobileNav />
           <InstallPWA />
+          <NotificationPrompt />
         </AuthProvider>
         <Script
           src="https://upload-widget.cloudinary.com/global/all.js"
