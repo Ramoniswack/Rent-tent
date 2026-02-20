@@ -236,8 +236,8 @@ function DashboardPage() {
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
         {/* Main Layout Container */}
         <main className="mx-auto w-full max-w-[1440px] px-4 md:px-6 lg:px-20 py-6 md:py-12">
-          {/* Hero Title Section */}
-          <div className="mb-6 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
+          {/* Hero Title Section - Hidden on Mobile */}
+          <div className="hidden md:flex mb-6 md:mb-12 flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
             <div>
               <h1 className="text-3xl md:text-5xl lg:text-[48px] font-black text-[#0f172a] dark:text-white mb-1 md:mb-2">
                 Your Journeys.
@@ -584,6 +584,16 @@ function DashboardPage() {
           </div>
       </main>
     </div>
+    
+    {/* Floating Action Button - Mobile Only */}
+    <button
+      onClick={() => router.push('/trips/new')}
+      className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 bg-[#059467] hover:bg-[#047854] text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+      aria-label="Create new trip"
+    >
+      <Plus className="w-7 h-7" strokeWidth={2.5} />
+    </button>
+    
     {/* Footer - Hidden on mobile */}
     <div className="hidden md:block">
       <Footer />

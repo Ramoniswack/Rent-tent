@@ -8,9 +8,10 @@ export default function MobileNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { icon: Home, label: 'Dashboard', path: '/dashboard' },
+   
     { icon: Users, label: 'Match', path: '/match' },
     { icon: MessageCircle, label: 'Messages', path: '/messages' },
+     { icon: Home, label: 'Dashboard', path: '/dashboard' },
     { icon: Package, label: 'Gear', path: '/gear' },
     { icon: Map, label: 'Map', path: '/map' }
   ];
@@ -27,7 +28,7 @@ export default function MobileNav() {
   }
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-[#0f231d] border-t border-slate-200 dark:border-slate-800 shadow-lg">
       <div className="flex items-center justify-around px-2 py-2 safe-area-bottom">
         {navItems.map((item) => {
           const active = isActive(item.path);
@@ -38,7 +39,7 @@ export default function MobileNav() {
               className={`flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 min-w-[60px] ${
                 active
                   ? 'text-[#059467]'
-                  : 'text-slate-500 hover:text-slate-700 active:scale-95'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 active:scale-95'
               }`}
             >
               <div className={`relative ${active ? 'scale-110' : ''}`}>

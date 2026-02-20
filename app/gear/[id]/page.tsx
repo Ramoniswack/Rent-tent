@@ -158,7 +158,9 @@ export default function GearDetailPage() {
             <p className="text-[#0d1c17]/60 dark:text-white/60">Loading gear details...</p>
           </div>
         </div>
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </>
     );
   }
@@ -199,7 +201,9 @@ export default function GearDetailPage() {
             </p>
           </div>
         </div>
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </>
     );
   }
@@ -213,6 +217,9 @@ export default function GearDetailPage() {
   const owner = gearItem.owner || {};
   const reviewCount = reviews.length || 0;
   const avgRating = gearItem.rating || 0;
+  
+  // Check if current user is the owner
+  const isOwner = user && owner && (owner._id === user._id || owner === user._id);
 
   // Generate fallback profile picture if none exists
   const ownerProfilePic = owner.profilePicture || 
@@ -814,12 +821,18 @@ export default function GearDetailPage() {
 
                   {/* CTAs */}
                   <div className="flex flex-col gap-3">
-                    <button 
-                      onClick={() => router.push(`/gear/${gearItem._id}/book`)}
-                      className="w-full h-12 rounded-full bg-[#059467] hover:bg-[#059467]/90 text-white font-bold text-base shadow-lg shadow-[#059467]/20 transition-all active:scale-[0.98]"
-                    >
-                      Book Now
-                    </button>
+                    {isOwner ? (
+                      <div className="w-full h-12 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold text-base flex items-center justify-center cursor-not-allowed">
+                        Your Listing
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => router.push(`/gear/${gearItem._id}/book`)}
+                        className="w-full h-12 rounded-full bg-[#059467] hover:bg-[#059467]/90 text-white font-bold text-base shadow-lg shadow-[#059467]/20 transition-all active:scale-[0.98]"
+                      >
+                        Book Now
+                      </button>
+                    )}
                     <button className="w-full h-12 rounded-full border border-[#059467] text-[#059467] font-bold text-sm hover:bg-[#059467]/5 transition-colors">
                       Contact Owner
                     </button>

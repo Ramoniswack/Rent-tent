@@ -627,20 +627,22 @@ function MapPage() {
 
           {/* Filters - Only for Trips */}
           {activeTab === 'trips' && (
-            <div className="px-4 md:px-6 py-3 md:py-4 overflow-x-auto hide-scrollbar flex gap-2 shrink-0">
-              {filters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
-                  className={`px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-semibold rounded-full shadow-md whitespace-nowrap transition-all ${
-                    activeFilter === filter
-                      ? 'bg-[#059467] text-white scale-105'
-                      : 'bg-white dark:bg-slate-800 text-[#0d1c17] dark:text-white border border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
+            <div className="px-4 md:px-6 py-2 md:py-4 overflow-x-auto hide-scrollbar shrink-0">
+              <div className="flex gap-2 min-w-max md:min-w-0">
+                {filters.map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md whitespace-nowrap transition-all flex-shrink-0 ${
+                      activeFilter === filter
+                        ? 'bg-[#059467] text-white scale-105'
+                        : 'bg-white dark:bg-slate-800 text-[#0d1c17] dark:text-white border border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

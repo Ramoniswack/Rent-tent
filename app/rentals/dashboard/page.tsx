@@ -170,66 +170,78 @@ function RentalDashboard() {
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
           {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#0d1c17] dark:text-white mb-2">
-                Dashboard
-              </h1>
-              <p className="text-[#0d1c17]/60 dark:text-white/60 text-sm md:text-base">
-                Manage your gear rentals and requests in one place.
-              </p>
-              {error && (
-                <p className="text-red-500 text-sm mt-2">
-                  {error} - <button onClick={handleRefresh} className="underline">Try again</button>
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl md:text-4xl font-black tracking-tight text-[#0d1c17] dark:text-white mb-1">
+                  Dashboard
+                </h1>
+                <p className="text-[#0d1c17]/60 dark:text-white/60 text-xs md:text-base hidden md:block">
+                  Manage your gear rentals and requests in one place.
                 </p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-3 w-full md:w-auto">
-              {/* Refresh Button */}
+              </div>
+              {/* Refresh Button - Desktop */}
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="md:self-end px-4 py-2 bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                className="hidden md:flex px-4 py-2 bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors items-center gap-2"
               >
                 <Loader2 className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                 {refreshing ? 'Refreshing...' : 'Refresh'}
               </button>
-
-              {/* Segment Controller */}
-              <div className="bg-[#e7f4f0] dark:bg-white/10 p-1.5 rounded-full flex relative">
-                <button
-                  onClick={() => setActiveTab('rentals')}
-                  className={`relative z-10 flex-1 md:flex-none px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 text-center min-w-[140px] ${
-                    activeTab === 'rentals'
-                      ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
-                      : 'text-[#0d1c17]/70 dark:text-white/70 hover:text-[#0d1c17] dark:hover:text-white'
-                  }`}
-                >
-                  My Rentals
-                </button>
-                <button
-                  onClick={() => setActiveTab('requests')}
-                  className={`relative z-10 flex-1 md:flex-none px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 min-w-[160px] ${
-                    activeTab === 'requests'
-                      ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
-                      : 'text-[#0d1c17]/70 dark:text-white/70 hover:text-[#0d1c17] dark:hover:text-white'
-                  }`}
-                >
-                  My Gear Requests
-                  {myRequests.filter(r => r.status === 'pending').length > 0 && (
-                    <span className="size-2 bg-[#ef4444] rounded-full animate-pulse"></span>
-                  )}
-                </button>
-              </div>
             </div>
+
+            {error && (
+              <p className="text-red-500 text-sm">
+                {error} - <button onClick={handleRefresh} className="underline">Try again</button>
+              </p>
+            )}
+
+            {/* Segment Controller - Mobile Optimized */}
+            <div className="bg-[#e7f4f0] dark:bg-white/10 p-1 rounded-full flex relative">
+              <button
+                onClick={() => setActiveTab('rentals')}
+                className={`relative z-10 flex-1 px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 text-center ${
+                  activeTab === 'rentals'
+                    ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
+                    : 'text-[#0d1c17]/70 dark:text-white/70 hover:text-[#0d1c17] dark:hover:text-white'
+                }`}
+              >
+                <span className="hidden sm:inline">My Rentals</span>
+                <span className="sm:hidden">Rentals</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('requests')}
+                className={`relative z-10 flex-1 px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${
+                  activeTab === 'requests'
+                    ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
+                    : 'text-[#0d1c17]/70 dark:text-white/70 hover:text-[#0d1c17] dark:hover:text-white'
+                }`}
+              >
+                <span className="hidden sm:inline">My Gear Requests</span>
+                <span className="sm:hidden">Requests</span>
+                {myRequests.filter(r => r.status === 'pending').length > 0 && (
+                  <span className="size-1.5 sm:size-2 bg-[#ef4444] rounded-full animate-pulse"></span>
+                )}
+              </button>
+            </div>
+
+            {/* Refresh Button - Mobile */}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="md:hidden w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+            >
+              <Loader2 className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3 mb-8">
+          {/* Filters - Mobile Optimized */}
+          <div className="flex flex-wrap gap-2 mb-6">
             <button
               onClick={() => setFilterStatus('all')}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-transform active:scale-95 ${
+              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-transform active:scale-95 ${
                 filterStatus === 'all'
                   ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
                   : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
@@ -239,7 +251,7 @@ function RentalDashboard() {
             </button>
             <button
               onClick={() => setFilterStatus('pending')}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2 ${
+              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2 ${
                 filterStatus === 'pending'
                   ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
                   : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
@@ -247,14 +259,14 @@ function RentalDashboard() {
             >
               Pending
               {pendingCount > 0 && (
-                <span className="bg-[#f59e0b] text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                <span className="bg-[#f59e0b] text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full min-w-[16px] sm:min-w-[18px] text-center">
                   {pendingCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => setFilterStatus('confirmed')}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                 filterStatus === 'confirmed'
                   ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
                   : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
@@ -264,7 +276,7 @@ function RentalDashboard() {
             </button>
             <button
               onClick={() => setFilterStatus('completed')}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-colors ${
+              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
                 filterStatus === 'completed'
                   ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
                   : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
@@ -275,13 +287,13 @@ function RentalDashboard() {
           </div>
 
           {/* Booking Cards Container */}
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 pb-20 md:pb-0">
             {filteredBookings.length === 0 ? (
-              <div className="text-center py-16 bg-white dark:bg-white/5 rounded-[24px] border border-[#e7f4f0] dark:border-white/5">
-                <p className="text-[#0d1c17]/60 dark:text-white/60 font-medium mb-2">
+              <div className="text-center py-12 md:py-16 bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] border border-[#e7f4f0] dark:border-white/5">
+                <p className="text-[#0d1c17]/60 dark:text-white/60 font-medium mb-2 text-sm md:text-base">
                   No {filterStatus !== 'all' ? filterStatus : ''} bookings found
                 </p>
-                <p className="text-sm text-[#0d1c17]/40 dark:text-white/40">
+                <p className="text-xs md:text-sm text-[#0d1c17]/40 dark:text-white/40 px-4">
                   {activeTab === 'rentals' 
                     ? 'Start listing your gear to receive rental requests'
                     : 'Browse available gear to make your first rental request'}
@@ -294,120 +306,237 @@ function RentalDashboard() {
                 const otherUser = isOwner ? booking.renter : booking.owner;
                 const gear = booking.gear;
                 
+                // Skip if gear is null or undefined
+                if (!gear) {
+                  return null;
+                }
+                
                 return (
                   <article
                     key={booking._id}
-                    className={`bg-white dark:bg-white/5 rounded-[24px] p-5 shadow-sm border border-[#e7f4f0]/60 dark:border-white/5 hover:shadow-md transition-shadow duration-300 flex flex-col md:flex-row gap-6 items-start md:items-center group ${
+                    className={`bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] p-4 md:p-5 shadow-sm border border-[#e7f4f0]/60 dark:border-white/5 hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 group ${
                       booking.status === 'completed' ? 'opacity-80 hover:opacity-100' : ''
                     }`}
                   >
-                    {/* Thumbnail */}
-                    <div
-                      className={`shrink-0 relative w-full md:w-[120px] aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 cursor-pointer ${
-                        booking.status === 'completed' ? 'grayscale-[0.5] group-hover:grayscale-0' : ''
-                      } ${booking.status === 'cancelled' ? 'grayscale' : ''}`}
-                      onClick={() => router.push(`/gear/${gear._id}`)}
-                    >
-                      <img
-                        alt={gear.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        src={gear.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400'}
-                      />
+                    {/* Mobile Layout */}
+                    <div className="flex gap-3 md:hidden">
+                      {/* Thumbnail */}
+                      <div
+                        className={`shrink-0 relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 cursor-pointer ${
+                          booking.status === 'completed' ? 'grayscale-[0.5] group-hover:grayscale-0' : ''
+                        } ${booking.status === 'cancelled' ? 'grayscale' : ''}`}
+                        onClick={() => router.push(`/gear/${gear._id}`)}
+                      >
+                        <img
+                          alt={gear.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          src={gear.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400'}
+                        />
+                        {booking.status === 'cancelled' && (
+                          <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]"></div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start gap-2 mb-1">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${badge.bg} ${badge.text} text-[10px] font-bold uppercase tracking-wider`}>
+                            {booking.status === 'completed' && <Check className="w-2.5 h-2.5" />}
+                            {booking.status === 'cancelled' && <X className="w-2.5 h-2.5" />}
+                            {booking.status === 'pending' && <span className="size-1 rounded-full bg-current"></span>}
+                            {booking.status === 'confirmed' && <span className="size-1 rounded-full bg-current"></span>}
+                            {badge.label}
+                          </span>
+                        </div>
+                        <h3
+                          className={`text-sm font-bold leading-tight line-clamp-1 cursor-pointer hover:text-[#059467] transition-colors mb-1 ${
+                            booking.status === 'cancelled' ? 'text-[#0d1c17]/80 dark:text-white/80' : 'text-[#0d1c17] dark:text-white'
+                          }`}
+                          onClick={() => router.push(`/gear/${gear._id}`)}
+                        >
+                          {gear.title}
+                        </h3>
+                        <div className={`text-right ${booking.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                          <p className="text-[10px] text-[#0d1c17]/50 dark:text-white/50 font-medium uppercase tracking-wide">
+                            {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Earnings' : 'Cost'}
+                          </p>
+                          <p className={`text-base font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
+                            ${booking.totalPrice.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile Details */}
+                    <div className="flex flex-col gap-2 text-xs text-[#0d1c17]/60 dark:text-white/60 md:hidden">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>{formatDate(booking.startDate, booking.endDate)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <User className="w-3.5 h-3.5" />
+                        <span>
+                          {isOwner ? 'From: ' : 'Renter: '}
+                          <span className="text-[#0d1c17] dark:text-white font-medium">
+                            {otherUser?.name || 'Unknown'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Mobile Actions */}
+                    <div className="flex gap-2 md:hidden">
+                      {booking.status === 'pending' && isOwner && (
+                        <>
+                          <button
+                            onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                            className="flex-1 h-9 px-3 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                          >
+                            Decline
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                            className="flex-1 h-9 px-4 rounded-full bg-[#059467] text-white font-bold text-xs hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
+                          >
+                            Accept
+                          </button>
+                        </>
+                      )}
+                      {booking.status === 'confirmed' && (
+                        <button
+                          onClick={() => router.push('/messages')}
+                          className="flex-1 h-9 px-4 rounded-full bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17] dark:text-white font-bold text-xs hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          Message
+                        </button>
+                      )}
+                      {booking.status === 'completed' && !booking.rating && (
+                        <button
+                          onClick={() => router.push(`/gear/${gear._id}`)}
+                          className="flex-1 h-9 px-4 rounded-full bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] dark:text-[#059467] font-bold text-xs hover:bg-[#dbece6] dark:hover:bg-[#059467]/30 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          Review
+                        </button>
+                      )}
                       {booking.status === 'cancelled' && (
-                        <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]"></div>
+                        <button className="flex-1 h-9 px-3 rounded-full text-[#0d1c17]/40 dark:text-white/40 font-medium text-xs hover:text-[#0d1c17] dark:hover:text-white transition-colors">
+                          Archive
+                        </button>
                       )}
                     </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 flex flex-col gap-2 w-full">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full ${badge.bg} ${badge.text} text-xs font-bold uppercase tracking-wider`}>
-                          {booking.status === 'completed' && <Check className="w-3.5 h-3.5" />}
-                          {booking.status === 'cancelled' && <X className="w-3.5 h-3.5" />}
-                          {booking.status === 'pending' && <span className="size-1.5 rounded-full bg-current"></span>}
-                          {booking.status === 'confirmed' && <span className="size-1.5 rounded-full bg-current"></span>}
-                          {badge.label}
-                        </span>
-                        <span className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium">
-                          Request #{booking._id.slice(-6).toUpperCase()}
-                        </span>
-                      </div>
-                      <h3
-                        className={`text-[18px] font-bold leading-tight truncate cursor-pointer hover:text-[#059467] transition-colors ${
-                          booking.status === 'cancelled' ? 'text-[#0d1c17]/80 dark:text-white/80' : 'text-[#0d1c17] dark:text-white'
-                        }`}
+                    {/* Desktop Layout */}
+                    <div className="hidden md:flex gap-6 items-center">
+                      {/* Thumbnail */}
+                      <div
+                        className={`shrink-0 relative w-[120px] aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 cursor-pointer ${
+                          booking.status === 'completed' ? 'grayscale-[0.5] group-hover:grayscale-0' : ''
+                        } ${booking.status === 'cancelled' ? 'grayscale' : ''}`}
                         onClick={() => router.push(`/gear/${gear._id}`)}
                       >
-                        {gear.title}
-                      </h3>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-y-1 gap-x-4 text-sm text-[#0d1c17]/60 dark:text-white/60 mt-1">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(booking.startDate, booking.endDate)}</span>
-                        </div>
-                        <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-4 h-4" />
-                          <span>
-                            {isOwner ? 'Request from: ' : 'Renter: '}
-                            <span className="text-[#0d1c17] dark:text-white font-medium">
-                              {otherUser?.name || 'Unknown'}
-                            </span>
+                        <img
+                          alt={gear.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          src={gear.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400'}
+                        />
+                        {booking.status === 'cancelled' && (
+                          <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]"></div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-2">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full ${badge.bg} ${badge.text} text-xs font-bold uppercase tracking-wider`}>
+                            {booking.status === 'completed' && <Check className="w-3.5 h-3.5" />}
+                            {booking.status === 'cancelled' && <X className="w-3.5 h-3.5" />}
+                            {booking.status === 'pending' && <span className="size-1.5 rounded-full bg-current"></span>}
+                            {booking.status === 'confirmed' && <span className="size-1.5 rounded-full bg-current"></span>}
+                            {badge.label}
+                          </span>
+                          <span className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium">
+                            Request #{booking._id.slice(-6).toUpperCase()}
                           </span>
                         </div>
+                        <h3
+                          className={`text-[18px] font-bold leading-tight truncate cursor-pointer hover:text-[#059467] transition-colors ${
+                            booking.status === 'cancelled' ? 'text-[#0d1c17]/80 dark:text-white/80' : 'text-[#0d1c17] dark:text-white'
+                          }`}
+                          onClick={() => router.push(`/gear/${gear._id}`)}
+                        >
+                          {gear.title}
+                        </h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-y-1 gap-x-4 text-sm text-[#0d1c17]/60 dark:text-white/60 mt-1">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-4 h-4" />
+                            <span>{formatDate(booking.startDate, booking.endDate)}</span>
+                          </div>
+                          <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-4 h-4" />
+                            <span>
+                              {isOwner ? 'Request from: ' : 'Renter: '}
+                              <span className="text-[#0d1c17] dark:text-white font-medium">
+                                {otherUser?.name || 'Unknown'}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Action Side */}
-                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-4 md:gap-2 pl-0 md:pl-4 md:border-l md:border-[#f0f7f5] dark:md:border-white/10 min-w-[160px]">
-                      <div className={`text-right ${booking.status === 'cancelled' ? 'opacity-50' : ''}`}>
-                        <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium mb-0.5 uppercase tracking-wide">
-                          {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Total Earnings' : 'Total Cost'}
-                        </p>
-                        <p className={`text-[20px] font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
-                          ${booking.totalPrice.toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 w-full md:w-auto">
-                        {booking.status === 'pending' && isOwner && (
-                          <>
+                      {/* Action Side */}
+                      <div className="flex flex-col items-end gap-2 pl-4 border-l border-[#f0f7f5] dark:border-white/10 min-w-[160px]">
+                        <div className={`text-right ${booking.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                          <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium mb-0.5 uppercase tracking-wide">
+                            {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Total Earnings' : 'Total Cost'}
+                          </p>
+                          <p className={`text-[20px] font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
+                            ${booking.totalPrice.toFixed(2)}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {booking.status === 'pending' && isOwner && (
+                            <>
+                              <button
+                                onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                                className="h-10 px-4 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                              >
+                                Decline
+                              </button>
+                              <button
+                                onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                                className="h-10 px-5 rounded-full bg-[#059467] text-white font-bold text-sm hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
+                              >
+                                Accept
+                              </button>
+                            </>
+                          )}
+                          {booking.status === 'confirmed' && (
                             <button
-                              onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
-                              className="flex-1 md:flex-none h-10 px-4 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center"
+                              onClick={() => router.push('/messages')}
+                              className="h-10 px-5 rounded-full bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17] dark:text-white font-bold text-sm hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center gap-2"
                             >
-                              Decline
+                              <MessageCircle className="w-4 h-4" />
+                              Message
                             </button>
+                          )}
+                          {booking.status === 'completed' && !booking.rating && (
                             <button
-                              onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
-                              className="flex-1 md:flex-none h-10 px-5 rounded-full bg-[#059467] text-white font-bold text-sm hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20 flex items-center justify-center gap-1"
+                              onClick={() => router.push(`/gear/${gear._id}`)}
+                              className="h-10 px-5 rounded-full bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] dark:text-[#059467] font-bold text-sm hover:bg-[#dbece6] dark:hover:bg-[#059467]/30 transition-colors flex items-center gap-1"
                             >
-                              Accept
+                              <Star className="w-4 h-4" />
+                              Leave Review
                             </button>
-                          </>
-                        )}
-                        {booking.status === 'confirmed' && (
-                          <button
-                            onClick={() => router.push('/messages')}
-                            className="flex-1 md:flex-none h-10 px-5 rounded-full bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17] dark:text-white font-bold text-sm hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            Message
-                          </button>
-                        )}
-                        {booking.status === 'completed' && !booking.rating && (
-                          <button
-                            onClick={() => router.push(`/gear/${gear._id}`)}
-                            className="flex-1 md:flex-none h-10 px-5 rounded-full bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] dark:text-[#059467] font-bold text-sm hover:bg-[#dbece6] dark:hover:bg-[#059467]/30 transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Star className="w-4 h-4" />
-                            Leave Review
-                          </button>
-                        )}
-                        {booking.status === 'cancelled' && (
-                          <button className="flex-1 md:flex-none h-10 px-4 rounded-full text-[#0d1c17]/40 dark:text-white/40 font-medium text-sm hover:text-[#0d1c17] dark:hover:text-white transition-colors flex items-center justify-center">
-                            Archive
-                          </button>
-                        )}
+                          )}
+                          {booking.status === 'cancelled' && (
+                            <button className="h-10 px-4 rounded-full text-[#0d1c17]/40 dark:text-white/40 font-medium text-sm hover:text-[#0d1c17] dark:hover:text-white transition-colors">
+                              Archive
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -418,13 +547,13 @@ function RentalDashboard() {
 
           {/* Footer Call to action */}
           {filteredBookings.length > 0 && (
-            <div className="mt-12 text-center pb-12">
-              <p className="text-[#0d1c17]/50 dark:text-white/50 text-sm mb-4">
+            <div className="mt-8 md:mt-12 text-center pb-20 md:pb-12">
+              <p className="text-[#0d1c17]/50 dark:text-white/50 text-xs md:text-sm mb-3 md:mb-4">
                 You've reached the end of your {activeTab === 'rentals' ? 'rentals' : 'requests'} list.
               </p>
               <button
                 onClick={() => router.push('/gear')}
-                className="inline-flex items-center gap-2 text-[#059467] font-bold hover:underline cursor-pointer"
+                className="inline-flex items-center gap-2 text-[#059467] font-bold hover:underline cursor-pointer text-sm md:text-base"
               >
                 <span>Browse available gear</span>
                 <span className="text-sm">→</span>

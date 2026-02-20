@@ -303,8 +303,8 @@ export default function GearPage() {
       
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
         <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 md:px-6 lg:px-20 py-6 md:py-10">
-          {/* Page Title & Primary Action */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 mb-6 md:mb-10">
+          {/* Page Title & Primary Action - Hidden on Mobile */}
+          <div className="hidden md:flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-6 mb-6 md:mb-10">
             <div>
               <h2 className="text-[#0f172a] dark:text-white text-2xl md:text-[30px] font-black leading-tight tracking-tight">
                 Rent Gear
@@ -600,7 +600,30 @@ export default function GearPage() {
             </div>
           )}
         </main>
+        
+        {/* My Rentals Button - Mobile Only */}
+        <div className="md:hidden px-4 pb-24">
+          <button 
+            onClick={() => router.push('/rentals/dashboard')}
+            className="w-full flex items-center justify-center gap-2 bg-white dark:bg-white/5 hover:bg-gray-50 dark:hover:bg-white/10 text-[#059467] border-2 border-[#059467] px-6 py-3 rounded-full font-bold transition-all active:scale-95"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            My Rentals
+          </button>
+        </div>
       </div>
+      
+      {/* Floating Action Button - Mobile Only */}
+      <button
+        onClick={() => router.push('/gear/add')}
+        className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 bg-[#059467] hover:bg-[#047854] text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+        aria-label="List your gear"
+      >
+        <Plus className="w-7 h-7" strokeWidth={2.5} />
+      </button>
+      
       {/* Footer - Hidden on mobile */}
       <div className="hidden md:block">
         <Footer />
