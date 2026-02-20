@@ -110,27 +110,38 @@ function MessagesPage() {
     // Receive new message
     socket.on('message:receive', (message: any) => {
       console.log('Received message:', message);
-      const formattedMessage = {
-        _id: message._id,
-        id: message._id,
-        sender: message.sender,
-        senderId: typeof message.sender === 'string' ? message.sender : message.sender._id,
-        text: message.text || '',
-        image: message.image,
-        timestamp: message.createdAt,
-        createdAt: message.createdAt,
-        read: message.read
-      };
       
-      setMessages(prev => [...prev, formattedMessage]);
-      scrollToBottom();
-      
-      // Update last message in matches
       const senderId = typeof message.sender === 'string' ? message.sender : message.sender._id;
+      const receiverId = typeof message.receiver === 'string' ? message.receiver : message.receiver?._id;
+      
+      // Only add message to chat if it's part of the current conversation
+      const isCurrentConversation = selectedMatch && (
+        (senderId === (selectedMatch._id || selectedMatch.id)) || 
+        (receiverId === (selectedMatch._id || selectedMatch.id))
+      );
+      
+      if (isCurrentConversation) {
+        const formattedMessage = {
+          _id: message._id,
+          id: message._id,
+          sender: message.sender,
+          senderId: senderId,
+          text: message.text || '',
+          image: message.image,
+          timestamp: message.createdAt,
+          createdAt: message.createdAt,
+          read: message.read
+        };
+        
+        setMessages(prev => [...prev, formattedMessage]);
+        scrollToBottom();
+      }
+      
+      // Always update last message in matches list
       const lastMessageText = message.image ? '📷 Image' : message.text;
       setMatches(prev => prev.map(m => 
         m.id === senderId || m._id === senderId
-          ? { ...m, lastMessage: lastMessageText, timestamp: message.createdAt }
+          ? { ...m, lastMessage: lastMessageText, timestamp: message.createdAt, unread: isCurrentConversation ? m.unread : m.unread + 1 }
           : m
       ));
     });
