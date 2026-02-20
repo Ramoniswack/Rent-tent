@@ -246,12 +246,24 @@ function MapPage() {
           // Set all friends (even without coordinates) so they show in the list
           setFriends(allFriends);
           
-          // Select first friend with coordinates by default
-          const firstFriendWithCoords = allFriends.find(
-            (friend: any) => friend.coordinates?.lat && friend.coordinates?.lng
-          );
-          if (firstFriendWithCoords && !selectedFriend) {
-            setSelectedFriend(firstFriendWithCoords._id);
+          // Check if there's a user parameter in URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const userIdFromUrl = urlParams.get('user');
+          
+          if (userIdFromUrl) {
+            // Find and select the friend from URL parameter
+            const friendFromUrl = allFriends.find((f: any) => f._id === userIdFromUrl || f.id === userIdFromUrl);
+            if (friendFromUrl) {
+              setSelectedFriend(friendFromUrl._id || friendFromUrl.id);
+            }
+          } else if (!selectedFriend) {
+            // Select first friend with coordinates by default only if no friend is selected
+            const firstFriendWithCoords = allFriends.find(
+              (friend: any) => friend.coordinates?.lat && friend.coordinates?.lng
+            );
+            if (firstFriendWithCoords) {
+              setSelectedFriend(firstFriendWithCoords._id);
+            }
           }
         }
       } catch (err: any) {

@@ -937,8 +937,9 @@ function MessagesPage() {
   // Show on map
   const handleShowOnMap = () => {
     if (!selectedMatch) return;
-    // Navigate to map page with user location
-    router.push(`/map?user=${selectedMatch._id || selectedMatch.id}`);
+    // Open map page in new tab with user location and friends tab
+    const userId = selectedMatch._id || selectedMatch.id;
+    window.open(`/map?user=${userId}&tab=friends`, '_blank');
     setShowOptionsMenu(false);
   };
 
