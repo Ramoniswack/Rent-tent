@@ -12,7 +12,7 @@ import {
   Search, Send, Plus, Phone, Video, Info, 
   ArrowLeft, Smile, Loader2, Image as ImageIcon, X,
   PhoneOff, VideoOff, Mic, MicOff, MoreVertical, Pin, 
-  Trash2, UserX, Volume2, VolumeX, Edit3, PinOff, User, MapPin
+  Trash2, UserX, Volume2, VolumeX, Edit3, PinOff, User, MapPin, UserMinus
 } from 'lucide-react';
 
 interface Match {
@@ -69,6 +69,7 @@ function MessagesPage() {
   const [nicknameInput, setNicknameInput] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -902,6 +903,24 @@ function MessagesPage() {
     setShowOptionsMenu(false);
   };
 
+  // Unmatch user
+  const handleUnmatchUser = async () => {
+    if (!selectedMatch) return;
+    
+    try {
+      await messageAPI.unmatchUser(selectedMatch._id || selectedMatch.id);
+      showNotification('Unmatched successfully', 'success');
+      setShowUnmatchConfirm(false);
+      setShowOptionsMenu(false);
+      // Remove from matches list and clear selection
+      setMatches(prev => prev.filter(m => m._id !== selectedMatch._id && m.id !== selectedMatch.id));
+      setSelectedMatch(null);
+      setMessages([]);
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to unmatch user', 'error');
+    }
+  };
+
   // Send message via WebSocket
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1219,6 +1238,34 @@ function MessagesPage() {
                   className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
                 >
                   Block
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Unmatch Confirmation */}
+        {showUnmatchConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl p-6 max-w-md w-full mx-4 animate-fadeIn">
+              <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white mb-4">
+                Unmatch User
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                Are you sure you want to unmatch with {selectedMatch?.name}? This will delete all messages and remove the match. This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowUnmatchConfirm(false)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUnmatchUser}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                >
+                  Unmatch
                 </button>
               </div>
             </div>
@@ -1587,6 +1634,17 @@ function MessagesPage() {
                           >
                             <Trash2 className="w-4 h-4" />
                             Delete conversation
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              setShowUnmatchConfirm(true);
+                              setShowOptionsMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3 transition-colors"
+                          >
+                            <UserMinus className="w-4 h-4" />
+                            Unmatch
                           </button>
                           
                           <button

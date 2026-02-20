@@ -621,6 +621,13 @@ export const messageAPI = {
   getBlockedUsers: async () => {
     return apiRequest('/messages/blocked');
   },
+
+  // Unmatch user
+  unmatchUser: async (otherUserId: string) => {
+    return apiRequest(`/messages/unmatch/${otherUserId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // Admin API
