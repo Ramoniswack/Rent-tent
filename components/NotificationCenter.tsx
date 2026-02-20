@@ -211,19 +211,20 @@ export default function NotificationCenter() {
           />
 
           {/* Dropdown Panel */}
-          <div className="absolute right-0 mt-2 w-96 max-h-[600px] bg-white dark:bg-[#132a24] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden flex flex-col">
+          <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-md max-h-[70vh] sm:max-h-[600px] bg-white dark:bg-[#132a24] rounded-xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-lg font-bold text-[#0d1c17] dark:text-white">
+            <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-200 dark:border-slate-800">
+              <h3 className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">
                 Notifications
               </h3>
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="flex items-center gap-1 text-sm text-[#059467] hover:text-[#047854] transition-colors"
+                  className="flex items-center gap-1 text-xs sm:text-sm text-[#059467] hover:text-[#047854] transition-colors"
                 >
-                  <CheckCheck className="w-4 h-4" />
-                  Mark all read
+                  <CheckCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden xs:inline">Mark all read</span>
+                  <span className="xs:hidden">Read all</span>
                 </button>
               )}
             </div>
@@ -231,13 +232,13 @@ export default function NotificationCenter() {
             {/* Notifications List */}
             <div className="flex-1 overflow-y-auto">
               {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-[#059467] border-t-transparent rounded-full animate-spin" />
+                <div className="flex items-center justify-center py-8 sm:py-12">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 border-4 border-[#059467] border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 px-4">
-                  <Bell className="w-16 h-16 text-slate-300 dark:text-slate-700 mb-4" />
-                  <p className="text-slate-500 dark:text-slate-400 text-center">
+                <div className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                  <Bell className="w-12 h-12 sm:w-16 sm:h-16 text-slate-300 dark:text-slate-700 mb-3 sm:mb-4" />
+                  <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 text-center">
                     No notifications yet
                   </p>
                 </div>
@@ -246,7 +247,7 @@ export default function NotificationCenter() {
                   <div
                     key={notification._id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 cursor-pointer transition-colors ${
+                    className={`flex items-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-b border-slate-100 dark:border-slate-800 cursor-pointer transition-colors ${
                       notification.read
                         ? 'bg-white dark:bg-[#132a24] hover:bg-slate-50 dark:hover:bg-[#1a2c26]'
                         : 'bg-[#059467]/5 dark:bg-[#059467]/10 hover:bg-[#059467]/10 dark:hover:bg-[#059467]/15'
@@ -257,44 +258,44 @@ export default function NotificationCenter() {
                       <img
                         src={notification.sender.profilePicture}
                         alt={notification.sender.name}
-                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getIconColor(notification.type)} bg-current/10`}>
-                        <Bell className="w-5 h-5" />
+                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getIconColor(notification.type)} bg-current/10`}>
+                        <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                     )}
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0d1c17] dark:text-white mb-1">
+                      <p className="text-xs sm:text-sm font-semibold text-[#0d1c17] dark:text-white mb-0.5 sm:mb-1 line-clamp-1">
                         {notification.title}
                       </p>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-1">
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-2 mb-0.5 sm:mb-1">
                         {notification.message}
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-500">
+                      <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-500">
                         {formatTime(notification.createdAt)}
                       </p>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                       {!notification.read && (
                         <button
                           onClick={(e) => handleMarkAsRead(notification._id, e)}
-                          className="p-1.5 text-[#059467] hover:bg-[#059467]/10 rounded-lg transition-colors"
+                          className="p-1 sm:p-1.5 text-[#059467] hover:bg-[#059467]/10 rounded-lg transition-colors"
                           title="Mark as read"
                         >
-                          <Check className="w-4 h-4" />
+                          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       )}
                       <button
                         onClick={(e) => handleDelete(notification._id, e)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        className="p-1 sm:p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="Delete"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </button>
                     </div>
                   </div>
@@ -304,13 +305,13 @@ export default function NotificationCenter() {
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   onClick={() => {
                     router.push('/notifications');
                     setIsOpen(false);
                   }}
-                  className="w-full text-sm text-[#059467] hover:text-[#047854] font-medium transition-colors"
+                  className="w-full text-xs sm:text-sm text-[#059467] hover:text-[#047854] font-medium transition-colors"
                 >
                   View all notifications
                 </button>
