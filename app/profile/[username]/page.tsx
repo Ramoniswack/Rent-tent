@@ -394,7 +394,7 @@ export default function PublicProfilePage() {
               )}
             </section>
           </div>
-        </div>
+p        </div>
       </main>
 
       <div className="hidden md:block">
