@@ -7,6 +7,7 @@ import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Toast from '../../../components/Toast';
 import ConfirmModal from '../../../components/ConfirmModal';
+import BookingDetailsModal from '../../../components/BookingDetailsModal';
 import { BookingCardSkeleton } from '../../../components/SkeletonCard';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
@@ -43,6 +44,7 @@ function RentalDashboard() {
     status: string;
     type: 'confirm' | 'decline';
   } | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -212,6 +214,13 @@ function RentalDashboard() {
           onCancel={() => setConfirmModal(null)}
         />
       )}
+      {selectedBooking && (
+        <BookingDetailsModal
+          booking={selectedBooking}
+          isOwner={activeTab === 'rentals'}
+          onClose={() => setSelectedBooking(null)}
+        />
+      )}
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
           {/* Header Section */}
@@ -359,7 +368,8 @@ function RentalDashboard() {
                 return (
                   <article
                     key={booking._id}
-                    className={`bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] p-4 md:p-5 shadow-sm border border-[#e7f4f0]/60 dark:border-white/5 hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 group ${
+                    onClick={() => setSelectedBooking(booking)}
+                    className={`bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] p-4 md:p-5 shadow-sm border border-[#e7f4f0]/60 dark:border-white/5 hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 group cursor-pointer ${
                       booking.status === 'completed' ? 'opacity-80 hover:opacity-100' : ''
                     }`}
                   >
@@ -430,7 +440,7 @@ function RentalDashboard() {
                     </div>
 
                     {/* Mobile Actions */}
-                    <div className="flex gap-2 md:hidden">
+                    <div className="flex gap-2 md:hidden" onClick={(e) => e.stopPropagation()}>
                       {booking.status === 'pending' && isOwner && (
                         <>
                           <button
@@ -532,7 +542,7 @@ function RentalDashboard() {
                       </div>
 
                       {/* Action Side */}
-                      <div className="flex flex-col items-end gap-2 pl-4 border-l border-[#f0f7f5] dark:border-white/10 min-w-[160px]">
+                      <div className="flex flex-col items-end gap-2 pl-4 border-l border-[#f0f7f5] dark:border-white/10 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
                         <div className={`text-right ${booking.status === 'cancelled' ? 'opacity-50' : ''}`}>
                           <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium mb-0.5 uppercase tracking-wide">
                             {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Total Earnings' : 'Total Cost'}
