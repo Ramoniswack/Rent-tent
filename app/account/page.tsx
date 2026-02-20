@@ -95,6 +95,14 @@ export default function AccountPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userStats, setUserStats] = useState({
+    totalTrips: 0,
+    totalExpenses: 0,
+    gearRented: 0,
+    gearOwned: 0,
+    tripsThisYear: 0,
+    percentageIncrease: 0
+  });
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -202,6 +210,22 @@ export default function AccountPage() {
       setLoading(false);
     }
   };
+
+  const fetchUserStats = async () => {
+    try {
+      const stats = await userAPI.getStats();
+      setUserStats(stats);
+    } catch (err: any) {
+      console.error('Failed to load stats:', err);
+    }
+  };
+
+  // Fetch stats when stats tab is active
+  useEffect(() => {
+    if (activeTab === 'stats') {
+      fetchUserStats();
+    }
+  }, [activeTab]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1252,74 +1276,6 @@ export default function AccountPage() {
                     </div>
                   </section>
                 </div>
-
-                {/* Right Column: Stats */}
-                <div className="col-span-12 lg:col-span-5 flex flex-col gap-4 md:gap-6">
-                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white px-2">Travel Stats</h3>
-                  
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* Stat Card 1 */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-                      <div className="flex flex-col">
-                        <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Trips</span>
-                        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">34</span>
-                        <span className="text-xs font-semibold text-[#059467] mt-1 md:mt-2 flex items-center gap-1">
-                          <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
-                          +12% this year
-                        </span>
-                      </div>
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467]">
-                        <Plane className="w-6 h-6 md:w-8 md:h-8" />
-                      </div>
-                    </div>
-
-                    {/* Stat Card 2 */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-                      <div className="flex flex-col">
-                        <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Expenses</span>
-                        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">$12.4k</span>
-                        <span className="text-xs font-semibold text-amber-500 mt-1 md:mt-2 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3 md:w-4 md:h-4" />
-                          Near budget limit
-                        </span>
-                      </div>
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                        <Wallet className="w-6 h-6 md:w-8 md:h-8" />
-                      </div>
-                    </div>
-
-                    {/* Stat Card 3 */}
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-                      <div className="flex flex-col">
-                        <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Gear Rented</span>
-                        <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">8</span>
-                        <span className="text-xs font-semibold text-slate-400 mt-1 md:mt-2">Active rentals</span>
-                      </div>
-                      <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                        <Backpack className="w-6 h-6 md:w-8 md:h-8" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Promo Card */}
-                  <div className="relative overflow-hidden bg-gradient-to-br from-[#059467] to-[#035e41] rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg text-white">
-                    <div className="absolute -top-10 -right-10 w-24 h-24 md:w-32 md:h-32 bg-white/10 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 w-16 h-16 md:w-24 md:h-24 bg-white/10 rounded-full blur-xl"></div>
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-3 md:mb-4">
-                        <div className="bg-white/20 p-1.5 md:p-2 rounded-lg md:rounded-xl">
-                          <Diamond className="w-5 h-5 md:w-6 md:h-6" />
-                        </div>
-                        <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Pro</span>
-                      </div>
-                      <h4 className="font-bold text-lg md:text-xl mb-1">Upgrade to Nomad Pro</h4>
-                      <p className="text-white/80 text-xs md:text-sm mb-3 md:mb-4">Get unlimited trip tracking and offline maps.</p>
-                      <button className="w-full py-2 md:py-3 bg-white text-[#059467] text-sm md:text-base font-bold rounded-lg md:rounded-xl hover:bg-slate-100 transition-colors">
-                        View Plans
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </>
             )}
 
@@ -1603,9 +1559,80 @@ export default function AccountPage() {
             {/* Stats Tab Content */}
             {activeTab === 'stats' && (
               <div className="col-span-12">
-                <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Coming Soon</h3>
-                  <p className="text-slate-500 dark:text-slate-400">Detailed travel statistics and analytics will be available here.</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+                  {/* Left Column: Stats Cards */}
+                  <div className="col-span-12 lg:col-span-7 flex flex-col gap-4 md:gap-6">
+                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white px-2">Travel Stats</h3>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Stat Card 1 */}
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div className="flex flex-col">
+                          <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Trips</span>
+                          <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{userStats.totalTrips}</span>
+                          <span className="text-xs font-semibold text-[#059467] mt-1 md:mt-2 flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
+                            {userStats.percentageIncrease > 0 ? '+' : ''}{userStats.percentageIncrease}% this year
+                          </span>
+                        </div>
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-[#059467]/10 flex items-center justify-center text-[#059467]">
+                          <Plane className="w-6 h-6 md:w-8 md:h-8" />
+                        </div>
+                      </div>
+
+                      {/* Stat Card 2 */}
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div className="flex flex-col">
+                          <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Expenses</span>
+                          <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                            ${userStats.totalExpenses >= 1000 
+                              ? `${(userStats.totalExpenses / 1000).toFixed(1)}k` 
+                              : userStats.totalExpenses.toFixed(0)}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-400 mt-1 md:mt-2">
+                            From all trips
+                          </span>
+                        </div>
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                          <Wallet className="w-6 h-6 md:w-8 md:h-8" />
+                        </div>
+                      </div>
+
+                      {/* Stat Card 3 */}
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div className="flex flex-col">
+                          <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Gear Rented</span>
+                          <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{userStats.gearRented}</span>
+                          <span className="text-xs font-semibold text-slate-400 mt-1 md:mt-2">Active rentals</span>
+                        </div>
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                          <Backpack className="w-6 h-6 md:w-8 md:h-8" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Upgrade Card */}
+                  <div className="col-span-12 lg:col-span-5">
+                    {/* Promo Card */}
+                    <div className="relative overflow-hidden bg-gradient-to-br from-[#059467] to-[#035e41] rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg text-white">
+                      <div className="absolute -top-10 -right-10 w-24 h-24 md:w-32 md:h-32 bg-white/10 rounded-full blur-2xl"></div>
+                      <div className="absolute bottom-0 left-0 w-16 h-16 md:w-24 md:h-24 bg-white/10 rounded-full blur-xl"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-3 md:mb-4">
+                          <div className="bg-white/20 p-1.5 md:p-2 rounded-lg md:rounded-xl">
+                            <Diamond className="w-5 h-5 md:w-6 md:h-6" />
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-wider bg-white/20 px-2 py-1 rounded">Pro</span>
+                        </div>
+                        <h4 className="font-bold text-lg md:text-xl mb-1">Upgrade to Nomad Pro</h4>
+                        <p className="text-white/80 text-xs md:text-sm mb-3 md:mb-4">Get unlimited trip tracking and offline maps.</p>
+                        <button className="w-full py-2 md:py-3 bg-white text-[#059467] text-sm md:text-base font-bold rounded-lg md:rounded-xl hover:bg-slate-100 transition-colors">
+                          View Plans
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

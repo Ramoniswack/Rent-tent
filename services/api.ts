@@ -341,6 +341,11 @@ export const userAPI = {
   getAllUsers: async () => {
     return apiRequest('/user/all');
   },
+
+  // Get user statistics
+  getStats: async () => {
+    return apiRequest('/user/stats');
+  },
 };
 
 // Match API
