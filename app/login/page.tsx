@@ -7,6 +7,7 @@ import { authAPI } from '../../services/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import { Mail, Eye, EyeOff, ArrowRight, Compass, AlertCircle } from 'lucide-react';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -67,9 +68,55 @@ export default function LoginPage() {
     if (error) setError('');
   };
 
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Google authentication failed');
+      }
+
+      const data = await response.json();
+      
+      // Store token
+      localStorage.setItem('token', data.token);
+      
+      // Update auth context
+      login(data.token, data.user);
+      
+      // Redirect to stored path or dashboard
+      const redirectPath = localStorage.getItem('redirectAfterLogin');
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin');
+        router.push(redirectPath);
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Google login failed. Please try again.');
+      console.error('Google login error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google login was cancelled or failed');
+  };
+
   return (
-    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
-      <Header />
+    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
+        <Header />
 
       {/* Main Wrapper */}
       <div className="relative flex-grow w-full flex items-center justify-center overflow-hidden py-12">
@@ -214,6 +261,32 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white dark:bg-[#152e26] text-slate-500 dark:text-slate-400 font-medium">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* Google Login Button */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              theme="outline"
+              size="large"
+              text="continue_with"
+              shape="rectangular"
+              logo_alignment="left"
+              width="100%"
+            />
+          </div>
+
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
@@ -232,5 +305,6 @@ export default function LoginPage() {
 
       <Footer />
     </div>
+    </GoogleOAuthProvider>
   );
 }
