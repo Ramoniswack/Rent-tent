@@ -149,6 +149,39 @@ export default function TripDetailsPage() {
     fetchTripData();
   }, [tripId]);
 
+  // Auto-refresh data every 10 seconds for collaborative updates
+  useEffect(() => {
+    // Only enable polling if trip has collaborators
+    if (!trip || !trip.collaborators || trip.collaborators.length === 0) {
+      return;
+    }
+
+    const pollInterval = setInterval(() => {
+      // Silently fetch updates without showing loading state
+      const fetchUpdates = async () => {
+        try {
+          // Fetch itinerary updates
+          const itineraryData = await tripAPI.getItinerary(tripId);
+          setItinerary(itineraryData || []);
+          
+          // Fetch expenses updates
+          const expensesData = await tripAPI.getExpenses(tripId);
+          setExpenses(expensesData || []);
+          
+          // Fetch packing items updates
+          const packingData = await tripAPI.getPackingList(tripId);
+          setPackingItems(packingData || []);
+        } catch (err) {
+          console.log('Background update failed:', err);
+        }
+      };
+      
+      fetchUpdates();
+    }, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [tripId, trip]);
+
   // Update URL when tab changes
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
