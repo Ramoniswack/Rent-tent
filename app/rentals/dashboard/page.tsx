@@ -7,7 +7,6 @@ import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Toast from '../../../components/Toast';
 import ConfirmModal from '../../../components/ConfirmModal';
-import BookingDetailsModal from '../../../components/BookingDetailsModal';
 import { BookingCardSkeleton } from '../../../components/SkeletonCard';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
@@ -44,7 +43,6 @@ function RentalDashboard() {
     status: string;
     type: 'confirm' | 'decline';
   } | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -214,13 +212,6 @@ function RentalDashboard() {
           onCancel={() => setConfirmModal(null)}
         />
       )}
-      {selectedBooking && (
-        <BookingDetailsModal
-          booking={selectedBooking}
-          isOwner={activeTab === 'rentals'}
-          onClose={() => setSelectedBooking(null)}
-        />
-      )}
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
           {/* Header Section */}
@@ -368,7 +359,7 @@ function RentalDashboard() {
                 return (
                   <article
                     key={booking._id}
-                    onClick={() => setSelectedBooking(booking)}
+                    onClick={() => router.push(`/bookings/${booking._id}`)}
                     className={`bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] p-4 md:p-5 shadow-sm border border-[#e7f4f0]/60 dark:border-white/5 hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 group cursor-pointer ${
                       booking.status === 'completed' ? 'opacity-80 hover:opacity-100' : ''
                     }`}

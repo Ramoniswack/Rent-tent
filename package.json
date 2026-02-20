@@ -19,7 +19,7 @@
     "dexie": "^4.3.0",
     "firebase": "^12.9.0",
     "framer-motion": "^12.34.1",
-    "jspdf": "^4.1.0",
+    "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.574.0",
