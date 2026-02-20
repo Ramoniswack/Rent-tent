@@ -1445,54 +1445,138 @@ export default function AccountPage() {
 
                 {/* Travel Match Filters Section */}
                 <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm mt-6">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Travel Match Filters</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Set your default preferences for finding travel buddies</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Heart className="w-6 h-6 text-pink-500" />
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Travel Match Filters</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Set your preferences for discovering compatible travel buddies</p>
                   
                   <div className="space-y-6">
                     {/* Age Range */}
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                        Age Range: {formData.matchPreferences.ageRange[0]} - {formData.matchPreferences.ageRange[1]}
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Age Range: <span className="text-[#059467]">{formData.matchPreferences.ageRange[0]} - {formData.matchPreferences.ageRange[1]} years</span>
                       </label>
-                      <div className="flex gap-4">
-                        <input
-                          type="range"
-                          min="18"
-                          max="60"
-                          value={formData.matchPreferences.ageRange[0]}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            matchPreferences: {
-                              ...formData.matchPreferences,
-                              ageRange: [parseInt(e.target.value), formData.matchPreferences.ageRange[1]]
-                            }
-                          })}
-                          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#059467]"
-                        />
-                        <input
-                          type="range"
-                          min="18"
-                          max="60"
-                          value={formData.matchPreferences.ageRange[1]}
-                          onChange={(e) => setFormData({
-                            ...formData,
-                            matchPreferences: {
-                              ...formData.matchPreferences,
-                              ageRange: [formData.matchPreferences.ageRange[0], parseInt(e.target.value)]
-                            }
-                          })}
-                          className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#059467]"
-                        />
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-500 mb-2">
+                            <span>Min Age: {formData.matchPreferences.ageRange[0]}</span>
+                            <span>18 - 100</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="18"
+                            max="100"
+                            value={formData.matchPreferences.ageRange[0]}
+                            onChange={(e) => {
+                              const minAge = parseInt(e.target.value);
+                              const maxAge = formData.matchPreferences.ageRange[1];
+                              // Ensure min is not greater than max
+                              if (minAge <= maxAge) {
+                                setFormData({
+                                  ...formData,
+                                  matchPreferences: {
+                                    ...formData.matchPreferences,
+                                    ageRange: [minAge, maxAge]
+                                  }
+                                });
+                              }
+                            }}
+                            className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#059467]"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex justify-between text-xs text-slate-500 mb-2">
+                            <span>Max Age: {formData.matchPreferences.ageRange[1]}</span>
+                            <span>18 - 100</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="18"
+                            max="100"
+                            value={formData.matchPreferences.ageRange[1]}
+                            onChange={(e) => {
+                              const maxAge = parseInt(e.target.value);
+                              const minAge = formData.matchPreferences.ageRange[0];
+                              // Ensure max is not less than min
+                              if (maxAge >= minAge) {
+                                setFormData({
+                                  ...formData,
+                                  matchPreferences: {
+                                    ...formData.matchPreferences,
+                                    ageRange: [minAge, maxAge]
+                                  }
+                                });
+                              }
+                            }}
+                            className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#059467]"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Travel Style */}
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                        Preferred Travel Styles
+                    {/* Gender Preference */}
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Preferred Gender {formData.matchPreferences.genders.length > 0 && (
+                          <span className="text-xs text-[#059467]">({formData.matchPreferences.genders.length} selected)</span>
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Luxury', 'Budget'].map(style => (
+                        {['Male', 'Female', 'Non-binary', 'Any'].map(gender => (
+                          <button
+                            key={gender}
+                            type="button"
+                            onClick={() => {
+                              const genders = formData.matchPreferences.genders;
+                              // If "Any" is selected, clear all others
+                              if (gender === 'Any') {
+                                setFormData({
+                                  ...formData,
+                                  matchPreferences: {
+                                    ...formData.matchPreferences,
+                                    genders: genders.includes('Any') ? [] : ['Any']
+                                  }
+                                });
+                              } else {
+                                // Remove "Any" if selecting specific gender
+                                const newGenders = genders.filter(g => g !== 'Any');
+                                setFormData({
+                                  ...formData,
+                                  matchPreferences: {
+                                    ...formData.matchPreferences,
+                                    genders: newGenders.includes(gender)
+                                      ? newGenders.filter(g => g !== gender)
+                                      : [...newGenders, gender]
+                                  }
+                                });
+                              }
+                            }}
+                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                              formData.matchPreferences.genders.includes(gender)
+                                ? 'bg-[#059467] text-white shadow-lg'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            {gender}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Select "Any" to see all genders, or choose specific preferences</p>
+                    </div>
+
+                    {/* Travel Style */}
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                        <Mountain className="w-4 h-4" />
+                        Preferred Travel Styles {formData.matchPreferences.travelStyles.length > 0 && (
+                          <span className="text-xs text-[#059467]">({formData.matchPreferences.travelStyles.length} selected)</span>
+                        )}
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {TRAVEL_STYLES.map(style => (
                           <button
                             key={style}
                             type="button"
@@ -1510,23 +1594,27 @@ export default function AccountPage() {
                             }}
                             className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                               formData.matchPreferences.travelStyles.includes(style)
-                                ? 'bg-[#059467] text-white'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                ? 'bg-[#059467] text-white shadow-lg'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
                             }`}
                           >
                             {style}
                           </button>
                         ))}
                       </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Select multiple styles to find travelers with similar preferences</p>
                     </div>
 
                     {/* Interests */}
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                        Preferred Interests
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                        <Heart className="w-4 h-4" />
+                        Preferred Interests {formData.matchPreferences.interests.length > 0 && (
+                          <span className="text-xs text-[#059467]">({formData.matchPreferences.interests.length} selected)</span>
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {['Trekking', 'Photography', 'Food', 'Culture', 'Yoga', 'Adventure', 'History', 'Art'].map(interest => (
+                        {COMMON_INTERESTS.map(interest => (
                           <button
                             key={interest}
                             type="button"
@@ -1544,55 +1632,26 @@ export default function AccountPage() {
                             }}
                             className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                               formData.matchPreferences.interests.includes(interest)
-                                ? 'bg-[#059467] text-white'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                ? 'bg-pink-500 text-white shadow-lg'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
                             }`}
                           >
                             {interest}
                           </button>
                         ))}
                       </div>
-                    </div>
-
-                    {/* Gender Preference */}
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-                        Preferred Gender
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {['Male', 'Female', 'Non-binary', 'Any'].map(gender => (
-                          <button
-                            key={gender}
-                            type="button"
-                            onClick={() => {
-                              const genders = formData.matchPreferences.genders;
-                              setFormData({
-                                ...formData,
-                                matchPreferences: {
-                                  ...formData.matchPreferences,
-                                  genders: genders.includes(gender)
-                                    ? genders.filter(g => g !== gender)
-                                    : [...genders, gender]
-                                }
-                              });
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                              formData.matchPreferences.genders.includes(gender)
-                                ? 'bg-[#059467] text-white'
-                                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                            }`}
-                          >
-                            {gender}
-                          </button>
-                        ))}
-                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">More interests = better matches! Select all that apply</p>
                     </div>
 
                     {/* Location Range */}
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
                         <MapPin className="w-4 h-4" />
-                        Location Range: {formData.matchPreferences.locationRange === 0 ? 'Nearby only' : formData.matchPreferences.locationRange === 500 ? '500+ km' : `${formData.matchPreferences.locationRange} km`}
+                        Search Radius: <span className="text-[#059467]">
+                          {formData.matchPreferences.locationRange === 0 ? 'Nearby only (< 10 km)' : 
+                           formData.matchPreferences.locationRange >= 500 ? 'Worldwide (500+ km)' : 
+                           `Within ${formData.matchPreferences.locationRange} km`}
+                        </span>
                       </label>
                       <input
                         type="range"
@@ -1607,12 +1666,32 @@ export default function AccountPage() {
                             locationRange: parseInt(e.target.value)
                           }
                         })}
-                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#059467]"
+                        className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#059467]"
                       />
                       <div className="flex justify-between text-xs text-slate-500 mt-2">
-                        <span>0 km</span>
-                        <span>250 km</span>
-                        <span>500 km</span>
+                        <span>Nearby</span>
+                        <span>Regional</span>
+                        <span>Worldwide</span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+                        {formData.matchPreferences.locationRange < 50 ? 'Perfect for finding local travel buddies' :
+                         formData.matchPreferences.locationRange < 200 ? 'Great for regional adventures' :
+                         'Ideal for international travel connections'}
+                      </p>
+                    </div>
+
+                    {/* Preview Summary */}
+                    <div className="bg-gradient-to-br from-[#059467]/10 to-pink-500/10 rounded-2xl p-5 border-2 border-dashed border-[#059467]/30">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                        <Heart className="w-4 h-4 text-pink-500" />
+                        Your Match Preferences Summary
+                      </h4>
+                      <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                        <p>• Looking for travelers aged <strong>{formData.matchPreferences.ageRange[0]}-{formData.matchPreferences.ageRange[1]}</strong></p>
+                        <p>• Gender: <strong>{formData.matchPreferences.genders.length === 0 ? 'Any' : formData.matchPreferences.genders.join(', ')}</strong></p>
+                        <p>• Travel styles: <strong>{formData.matchPreferences.travelStyles.length === 0 ? 'Any' : formData.matchPreferences.travelStyles.join(', ')}</strong></p>
+                        <p>• Shared interests: <strong>{formData.matchPreferences.interests.length === 0 ? 'Any' : formData.matchPreferences.interests.length + ' selected'}</strong></p>
+                        <p>• Within <strong>{formData.matchPreferences.locationRange === 0 ? '10' : formData.matchPreferences.locationRange >= 500 ? '500+' : formData.matchPreferences.locationRange} km</strong> of your location</p>
                       </div>
                     </div>
                   </div>
