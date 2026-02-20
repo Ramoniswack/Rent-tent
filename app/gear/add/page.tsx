@@ -1036,11 +1036,12 @@ export default function AddGearPage() {
                   Currency
                 </label>
                 <select
-                  className="w-full px-4 py-4 bg-[#f5f8f7] dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white font-medium"
+                  className="w-full px-4 py-4 bg-[#f5f8f7] dark:bg-slate-900 border-none rounded-2xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white font-medium appearance-none cursor-pointer"
                   id="currency"
                   name="currency"
                   value={formData.currency}
                   onChange={handleInputChange}
+                  required
                 >
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
