@@ -12,7 +12,7 @@ import {
   Search, Send, Plus, Phone, Video, Info, 
   ArrowLeft, Smile, Loader2, Image as ImageIcon, X,
   PhoneOff, VideoOff, Mic, MicOff, MoreVertical, Pin, 
-  Trash2, UserX, Volume2, VolumeX, Edit3, PinOff
+  Trash2, UserX, Volume2, VolumeX, Edit3, PinOff, User, MapPin
 } from 'lucide-react';
 
 interface Match {
@@ -886,6 +886,22 @@ function MessagesPage() {
     }
   };
 
+  // View profile
+  const handleViewProfile = () => {
+    if (!selectedMatch) return;
+    const username = selectedMatch.username || selectedMatch.name.toLowerCase().replace(/\s+/g, '');
+    router.push(`/profile/${username}`);
+    setShowOptionsMenu(false);
+  };
+
+  // Show on map
+  const handleShowOnMap = () => {
+    if (!selectedMatch) return;
+    // Navigate to map page with user location
+    router.push(`/map?user=${selectedMatch._id || selectedMatch.id}`);
+    setShowOptionsMenu(false);
+  };
+
   // Send message via WebSocket
   const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1497,6 +1513,24 @@ function MessagesPage() {
                           onClick={() => setShowOptionsMenu(false)}
                         />
                         <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#132a24] rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-fadeIn">
+                          <button
+                            onClick={handleViewProfile}
+                            className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                          >
+                            <User className="w-4 h-4" />
+                            View profile
+                          </button>
+                          
+                          <button
+                            onClick={handleShowOnMap}
+                            className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            Show on map
+                          </button>
+                          
+                          <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
+                          
                           <button
                             onClick={handleTogglePin}
                             className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
