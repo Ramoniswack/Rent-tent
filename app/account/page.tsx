@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
-import { userAPI } from '../../services/api';
+import { userAPI, messageAPI } from '../../services/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import {
@@ -26,7 +26,8 @@ import {
   Calendar,
   Globe,
   Mountain,
-  Heart
+  Heart,
+  UserX
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -84,7 +85,7 @@ const TRAVEL_STYLES = ['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Trav
 const COMMON_INTERESTS = ['Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 'Meditation', 'Local Cuisine', 'Mountaineering', 'Rock Climbing', 'Camping', 'Coworking', 'Cafes', 'History', 'Language Exchange'];
 const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Mandarin', 'Japanese', 'Korean', 'Hindi', 'Arabic', 'Russian', 'Nepali'];
 
-type TabType = 'profile' | 'preferences' | 'stats' | 'billing';
+type TabType = 'profile' | 'preferences' | 'stats' | 'billing' | 'blocked';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -110,6 +111,8 @@ export default function AccountPage() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [newTrip, setNewTrip] = useState('');
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -226,6 +229,38 @@ export default function AccountPage() {
       fetchUserStats();
     }
   }, [activeTab]);
+
+  // Fetch blocked users when blocked tab is active
+  useEffect(() => {
+    if (activeTab === 'blocked') {
+      fetchBlockedUsers();
+    }
+  }, [activeTab]);
+
+  const fetchBlockedUsers = async () => {
+    try {
+      setLoadingBlocked(true);
+      const data = await messageAPI.getBlockedUsers();
+      setBlockedUsers(data);
+    } catch (err: any) {
+      console.error('Error fetching blocked users:', err);
+      setError(err.message || 'Failed to load blocked users');
+    } finally {
+      setLoadingBlocked(false);
+    }
+  };
+
+  const handleUnblockUser = async (userId: string) => {
+    try {
+      await messageAPI.unblockUser(userId);
+      setBlockedUsers(prev => prev.filter(user => user.id !== userId));
+      setSuccess('User unblocked successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to unblock user');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -768,6 +803,22 @@ export default function AccountPage() {
               <span>Billing</span>
             </button>
 
+            {/* Blocked Users Tab */}
+            <button
+              onClick={() => setActiveTab('blocked')}
+              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
+                activeTab === 'blocked'
+                  ? 'bg-[#059467]/10 text-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {activeTab === 'blocked' && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
+              )}
+              <UserX className="w-5 h-5" />
+              <span>Blocked Users</span>
+            </button>
+
             {/* Logout */}
             <button
               onClick={handleLogout}
@@ -852,6 +903,17 @@ export default function AccountPage() {
               <CreditCard className="w-4 h-4" />
               <span>Billing</span>
             </button>
+            <button
+              onClick={() => setActiveTab('blocked')}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'blocked'
+                  ? 'text-[#059467] border-b-2 border-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <UserX className="w-4 h-4" />
+              <span>Blocked</span>
+            </button>
           </div>
         </div>
 
@@ -864,12 +926,14 @@ export default function AccountPage() {
                 {activeTab === 'preferences' && 'Preferences'}
                 {activeTab === 'stats' && 'Travel Statistics'}
                 {activeTab === 'billing' && 'Billing & Plans'}
+                {activeTab === 'blocked' && 'Blocked Users'}
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg">
                 {activeTab === 'profile' && 'Manage your account details and view your travel statistics.'}
                 {activeTab === 'preferences' && 'Customize your experience and notification settings.'}
                 {activeTab === 'stats' && 'View your travel history and activity.'}
                 {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
+                {activeTab === 'blocked' && 'Manage users you have blocked from messaging you.'}
               </p>
             </div>
           </header>
@@ -1763,6 +1827,62 @@ export default function AccountPage() {
                       </p>
                     </div>
                   </div>
+                </section>
+              </div>
+            )}
+
+            {/* Blocked Users Tab Content */}
+            {activeTab === 'blocked' && (
+              <div className="col-span-12">
+                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-6 md:p-8 shadow-sm">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Blocked Users</h3>
+                  <p className="text-slate-500 dark:text-slate-400 mb-6">Users you've blocked won't be able to message you or see your activity.</p>
+                  
+                  {loadingBlocked ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+                    </div>
+                  ) : blockedUsers.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <UserX className="w-8 h-8 text-slate-400" />
+                      </div>
+                      <p className="text-slate-500 dark:text-slate-400 font-medium">No blocked users</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">You haven't blocked anyone yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {blockedUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div
+                              className="w-12 h-12 rounded-full bg-cover bg-center shadow-md ring-2 ring-white dark:ring-slate-800"
+                              style={{ backgroundImage: `url(${user.imageUrl})` }}
+                            />
+                            <div>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">
+                                {user.name}
+                              </p>
+                              {user.username && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                  @{user.username}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleUnblockUser(user.id)}
+                            className="px-4 py-2 bg-[#059467] hover:bg-[#047854] text-white text-sm font-semibold rounded-full transition-colors"
+                          >
+                            Unblock
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               </div>
             )}

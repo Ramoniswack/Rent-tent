@@ -616,6 +616,11 @@ export const messageAPI = {
       method: 'POST',
     });
   },
+
+  // Get blocked users
+  getBlockedUsers: async () => {
+    return apiRequest('/messages/blocked');
+  },
 };
 
 // Admin API
