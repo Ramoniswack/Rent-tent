@@ -10,6 +10,7 @@ import ConfirmModal from '../../../components/ConfirmModal';
 import { BookingCardSkeleton } from '../../../components/SkeletonCard';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatNPR } from '../../../lib/currency';
 import {
   Calendar,
   User,
@@ -407,7 +408,7 @@ function RentalDashboard() {
                             {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Earnings' : 'Cost'}
                           </p>
                           <p className={`text-base font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
-                            ${booking.totalPrice.toFixed(2)}
+                            {formatNPR(booking.totalPrice)}
                           </p>
                         </div>
                       </div>
@@ -539,7 +540,7 @@ function RentalDashboard() {
                             {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Total Earnings' : 'Total Cost'}
                           </p>
                           <p className={`text-[20px] font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
-                            ${booking.totalPrice.toFixed(2)}
+                            {formatNPR(booking.totalPrice)}
                           </p>
                         </div>
                         <div className="flex gap-2">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatNPR, formatNPRShort } from '../../../lib/currency';
 import { tripAPI } from '../../../services/api';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -381,17 +382,17 @@ export default function TripDetailsPage() {
     // Budget Summary
     doc.setFontSize(12);
     doc.setTextColor(0);
-    doc.text(`Total Spent: $${totalExpenses.toFixed(2)}`, 14, 40);
+    doc.text(`Total Spent: ${formatNPR(totalExpenses)}`, 14, 40);
     if (budget > 0) {
-      doc.text(`Budget: $${budget.toFixed(2)}`, 14, 47);
-      doc.text(`Remaining: $${(budget - totalExpenses).toFixed(2)}`, 14, 54);
+      doc.text(`Budget: ${formatNPR(budget)}`, 14, 47);
+      doc.text(`Remaining: ${formatNPR((budget - totalExpenses))}`, 14, 54);
     }
     
     // Expenses Table
     const tableData = expenses.map(expense => [
       expense.item,
       expense.category.toUpperCase(),
-      `$${expense.amount.toFixed(2)}`,
+      formatNPR(expense.amount),
       new Date(expense.createdAt).toLocaleDateString(),
       expense.createdBy?.name || 'You'
     ]);
@@ -403,7 +404,7 @@ export default function TripDetailsPage() {
       theme: 'grid',
       headStyles: { fillColor: [5, 148, 103], textColor: 255 },
       styles: { fontSize: 9 },
-      foot: [[{ content: `Total: $${totalExpenses.toFixed(2)}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }]],
+      foot: [[{ content: `Total: ${formatNPR(totalExpenses)}`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }]],
       footStyles: { fillColor: [5, 148, 103], textColor: 255 }
     });
     
@@ -1191,7 +1192,7 @@ export default function TripDetailsPage() {
                         Total Spent
                       </p>
                       <h2 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tighter">
-                        ${totalExpenses.toFixed(2)}
+                        {formatNPR(totalExpenses)}
                       </h2>
                     </div>
                     <div className="text-left md:text-right w-full md:w-auto">
@@ -1215,9 +1216,9 @@ export default function TripDetailsPage() {
                       <p className="text-xl md:text-2xl font-bold text-gray-700 dark:text-gray-300">
                         {budget > 0 ? (
                           <>
-                            ${(budget - totalExpenses).toFixed(2)}{' '}
+                            {formatNPR((budget - totalExpenses))}{' '}
                             <span className="text-xs md:text-sm font-medium text-gray-400">
-                              of ${budget.toFixed(2)}
+                              of {formatNPR(budget)}
                             </span>
                           </>
                         ) : (
@@ -1343,7 +1344,7 @@ export default function TripDetailsPage() {
                         {/* Amount and Delete */}
                         <div className="flex items-center gap-3 md:gap-8 flex-shrink-0">
                           <span className="text-lg md:text-2xl font-black text-[#059467]">
-                            ${expense.amount.toFixed(2)}
+                            {formatNPR(expense.amount)}
                           </span>
                           <button 
                             onClick={(e) => {
@@ -1687,7 +1688,7 @@ export default function TripDetailsPage() {
                     </div>
                     <p className="text-sm text-[#f59e0b]/80 font-medium leading-relaxed">
                       You've used <span className="font-bold">{Math.round((totalExpenses / budget) * 100)}%</span> of your budget. 
-                      You have approximately <span className="font-bold">${(budget - totalExpenses).toFixed(2)}</span> remaining.
+                      You have approximately <span className="font-bold">{formatNPR((budget - totalExpenses))}</span> remaining.
                     </p>
                   </div>
                 )}
@@ -1720,7 +1721,7 @@ export default function TripDetailsPage() {
                               {cat.category}
                             </span>
                           </div>
-                          <span className="text-xs text-black font-black">${cat.amount.toFixed(2)}</span>
+                          <span className="text-xs text-black font-black">{formatNPR(cat.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -1786,7 +1787,7 @@ export default function TripDetailsPage() {
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-black text-[#059467]">
-                                  ${collab.amount.toFixed(2)}
+                                  {formatNPR(collab.amount)}
                                 </p>
                                 <p className="text-[10px] font-bold text-slate-400">
                                   {percentage}%
@@ -1813,7 +1814,7 @@ export default function TripDetailsPage() {
                             Total Team
                           </span>
                           <span className="text-lg font-black text-slate-900 dark:text-white">
-                            ${totalExpenses.toFixed(2)}
+                            {formatNPR(totalExpenses)}
                           </span>
                         </div>
                       </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
 import { userAPI, messageAPI } from '../../services/api';
+import { formatNPRShort } from '../../lib/currency';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import {
@@ -1784,9 +1785,7 @@ export default function AccountPage() {
                         <div className="flex flex-col">
                           <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total Expenses</span>
                           <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                            ${userStats.totalExpenses >= 1000 
-                              ? `${(userStats.totalExpenses / 1000).toFixed(1)}k` 
-                              : userStats.totalExpenses.toFixed(0)}
+                            {formatNPRShort(userStats.totalExpenses)}
                           </span>
                           <span className="text-xs font-semibold text-slate-400 mt-1 md:mt-2">
                             From all trips

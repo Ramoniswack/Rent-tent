@@ -7,6 +7,7 @@ import Footer from '../../../../components/Footer';
 import Toast from '../../../../components/Toast';
 import { gearAPI, bookingAPI } from '../../../../services/api';
 import { useAuth } from '../../../../hooks/useAuth';
+import { formatNPR } from '../../../../lib/currency';
 import {
   ChevronLeft,
   ChevronRight,
@@ -493,23 +494,23 @@ export default function BookGearPage() {
                   <div className="flex items-center justify-between text-xs sm:text-sm text-[#0d1c17]/70 dark:text-white/70">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-[#059467]/60 flex-shrink-0" />
-                      <span className="line-clamp-2">Rental Rate (${gear.pricePerDay}/day × {pricing.days} days)</span>
+                      <span className="line-clamp-2">Rental Rate ({formatNPR(gear.pricePerDay)}/day × {pricing.days} days)</span>
                     </div>
-                    <span className="font-bold text-[#0d1c17] dark:text-white ml-2">${pricing.rental.toFixed(2)}</span>
+                    <span className="font-bold text-[#0d1c17] dark:text-white ml-2">{formatNPR(pricing.rental)}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs sm:text-sm text-[#0d1c17]/70 dark:text-white/70">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-[#059467]/60 flex-shrink-0" />
                       <span>Security Deposit (Refundable)</span>
                     </div>
-                    <span className="font-bold text-[#0d1c17] dark:text-white ml-2">${pricing.deposit.toFixed(2)}</span>
+                    <span className="font-bold text-[#0d1c17] dark:text-white ml-2">{formatNPR(pricing.deposit)}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs sm:text-sm text-[#0d1c17]/70 dark:text-white/70 pb-4 sm:pb-6 border-b border-dashed border-[#059467]/20">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Receipt className="w-3 h-3 sm:w-4 sm:h-4 text-[#059467]/60 flex-shrink-0" />
                       <span>Service Fee (5%)</span>
                     </div>
-                    <span className="font-bold text-[#0d1c17] dark:text-white ml-2">${pricing.serviceFee.toFixed(2)}</span>
+                    <span className="font-bold text-[#0d1c17] dark:text-white ml-2">{formatNPR(pricing.serviceFee)}</span>
                   </div>
 
                   {/* Total Amount */}
@@ -519,7 +520,7 @@ export default function BookGearPage() {
                       <p className="text-[10px] sm:text-xs text-[#0d1c17]/50 dark:text-white/50">Inc. all taxes and fees</p>
                     </div>
                     <div className="text-2xl sm:text-3xl md:text-4xl font-black text-[#0d1c17] dark:text-white">
-                      ${pricing.total.toFixed(2)}
+                      {formatNPR(pricing.total)}
                     </div>
                   </div>
                 </div>

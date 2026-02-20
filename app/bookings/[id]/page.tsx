@@ -8,6 +8,7 @@ import ProtectedRoute from '../../../components/ProtectedRoute';
 import Toast from '../../../components/Toast';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
+import { formatNPR } from '../../../lib/currency';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import {
@@ -198,13 +199,13 @@ function BookingDetailsPage() {
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Rental Rate: $${(booking.totalPrice / booking.totalDays).toFixed(2)}/day`, 20, yPos);
+      doc.text(`Rental Rate: ${formatNPR((booking.totalPrice / booking.totalDays))}/day`, 20, yPos);
       yPos += 6;
       doc.text(`Total Days: ${booking.totalDays}`, 20, yPos);
       yPos += 6;
-      doc.text(`Subtotal: $${booking.totalPrice.toFixed(2)}`, 20, yPos);
+      doc.text(`Subtotal: ${formatNPR(booking.totalPrice)}`, 20, yPos);
       yPos += 6;
-      doc.text(`Security Deposit: $${booking.deposit.toFixed(2)}`, 20, yPos);
+      doc.text(`Security Deposit: ${formatNPR(booking.deposit)}`, 20, yPos);
       yPos += 8;
       
       // Total line
@@ -215,7 +216,7 @@ function BookingDetailsPage() {
       
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`TOTAL: $${(booking.totalPrice + booking.deposit).toFixed(2)}`, 20, yPos);
+      doc.text(`TOTAL: ${formatNPR((booking.totalPrice + booking.deposit))}`, 20, yPos);
       yPos += 12;
       
       // Pickup Location
@@ -444,7 +445,7 @@ function BookingDetailsPage() {
                   <div className="flex justify-between text-sm">
                     <span className="text-[#0d1c17]/70 dark:text-white/70">Rate/day:</span>
                     <span className="font-semibold text-[#0d1c17] dark:text-white">
-                      ${(booking.totalPrice / booking.totalDays).toFixed(2)}
+                      {formatNPR((booking.totalPrice / booking.totalDays))}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -453,17 +454,17 @@ function BookingDetailsPage() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#0d1c17]/70 dark:text-white/70">Subtotal:</span>
-                    <span className="font-semibold text-[#0d1c17] dark:text-white">${booking.totalPrice.toFixed(2)}</span>
+                    <span className="font-semibold text-[#0d1c17] dark:text-white">{formatNPR(booking.totalPrice)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#0d1c17]/70 dark:text-white/70">Deposit:</span>
-                    <span className="font-semibold text-[#0d1c17] dark:text-white">${booking.deposit.toFixed(2)}</span>
+                    <span className="font-semibold text-[#0d1c17] dark:text-white">{formatNPR(booking.deposit)}</span>
                   </div>
                   <div className="pt-3 border-t-2 border-[#059467]/20">
                     <div className="flex justify-between">
                       <span className="font-bold text-[#0d1c17] dark:text-white">Total:</span>
                       <span className="font-black text-2xl text-[#059467]">
-                        ${(booking.totalPrice + booking.deposit).toFixed(2)}
+                        {formatNPR((booking.totalPrice + booking.deposit))}
                       </span>
                     </div>
                   </div>

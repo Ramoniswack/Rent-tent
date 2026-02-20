@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import { formatNPR } from '../../lib/currency';
 import {
   Search,
   Bell,
@@ -292,7 +293,7 @@ export default function MyRentalsPage() {
                   <p className={`text-[20px] font-bold text-[#0f231d] dark:text-white ${
                     rental.status === 'declined' ? 'line-through decoration-[#ef4444]' : ''
                   }`}>
-                    ${rental.earnings.toFixed(2)}
+                    {formatNPR(rental.earnings)}
                   </p>
                 </div>
 
