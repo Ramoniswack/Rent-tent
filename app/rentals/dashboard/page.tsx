@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import Toast from '../../../components/Toast';
+import ConfirmModal from '../../../components/ConfirmModal';
 import { BookingCardSkeleton } from '../../../components/SkeletonCard';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
@@ -35,6 +37,12 @@ function RentalDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    bookingId: string;
+    status: string;
+    type: 'confirm' | 'decline';
+  } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -90,19 +98,21 @@ function RentalDashboard() {
   };
 
   const handleStatusUpdate = async (bookingId: string, status: string) => {
-    const confirmMessage = status === 'confirmed' 
-      ? 'Accept this booking request?' 
-      : 'Decline this booking request?';
-    
-    if (!confirm(confirmMessage)) return;
-
     try {
       await bookingAPI.updateStatus(bookingId, status);
       await fetchBookings();
-      alert(`Booking ${status === 'confirmed' ? 'accepted' : 'declined'} successfully!`);
+      setToast({ 
+        message: `Booking ${status === 'confirmed' ? 'accepted' : 'declined'} successfully!`, 
+        type: 'success' 
+      });
     } catch (error: any) {
       console.error('Error updating status:', error);
-      alert(error.message || 'Failed to update booking status');
+      setToast({ 
+        message: error.message || 'Failed to update booking status', 
+        type: 'error' 
+      });
+    } finally {
+      setConfirmModal(null);
     }
   };
 
@@ -181,6 +191,27 @@ function RentalDashboard() {
   return (
     <>
       <Header />
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+      {confirmModal && (
+        <ConfirmModal
+          title={confirmModal.status === 'confirmed' ? 'Accept Booking Request?' : 'Decline Booking Request?'}
+          message={confirmModal.status === 'confirmed' 
+            ? 'Are you sure you want to accept this booking request? The renter will be notified.'
+            : 'Are you sure you want to decline this booking request? This action cannot be undone.'
+          }
+          confirmText={confirmModal.status === 'confirmed' ? 'Accept' : 'Decline'}
+          cancelText="Cancel"
+          type={confirmModal.type}
+          onConfirm={() => handleStatusUpdate(confirmModal.bookingId, confirmModal.status)}
+          onCancel={() => setConfirmModal(null)}
+        />
+      )}
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
         <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
           {/* Header Section */}
@@ -403,13 +434,13 @@ function RentalDashboard() {
                       {booking.status === 'pending' && isOwner && (
                         <>
                           <button
-                            onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                            onClick={() => setConfirmModal({ bookingId: booking._id, status: 'cancelled', type: 'decline' })}
                             className="flex-1 h-9 px-3 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                           >
                             Decline
                           </button>
                           <button
-                            onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                            onClick={() => setConfirmModal({ bookingId: booking._id, status: 'confirmed', type: 'confirm' })}
                             className="flex-1 h-9 px-4 rounded-full bg-[#059467] text-white font-bold text-xs hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
                           >
                             Accept
@@ -514,13 +545,13 @@ function RentalDashboard() {
                           {booking.status === 'pending' && isOwner && (
                             <>
                               <button
-                                onClick={() => handleStatusUpdate(booking._id, 'cancelled')}
+                                onClick={() => setConfirmModal({ bookingId: booking._id, status: 'cancelled', type: 'decline' })}
                                 className="h-10 px-4 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
                               >
                                 Decline
                               </button>
                               <button
-                                onClick={() => handleStatusUpdate(booking._id, 'confirmed')}
+                                onClick={() => setConfirmModal({ bookingId: booking._id, status: 'confirmed', type: 'confirm' })}
                                 className="h-10 px-5 rounded-full bg-[#059467] text-white font-bold text-sm hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
                               >
                                 Accept
