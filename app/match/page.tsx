@@ -551,7 +551,7 @@ const TravelMatch: React.FC = () => {
                 Start Over
               </button>
               <button
-                onClick={() => router.push('/account?tab=preferences')}
+                onClick={() => router.push('/account?tab=filters')}
                 className="h-12 px-8 bg-white dark:bg-[#152e26] hover:bg-slate-50 dark:hover:bg-[#1a3730] text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <Filter className="w-5 h-5" />
@@ -595,7 +595,7 @@ const TravelMatch: React.FC = () => {
               TravelMatch
             </h1>
             <button 
-              onClick={() => router.push('/account?tab=preferences')}
+              onClick={() => router.push('/account?tab=filters')}
               className="relative w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110 group"
               title="Edit Match Filters"
             >

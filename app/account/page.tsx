@@ -27,7 +27,8 @@ import {
   Globe,
   Mountain,
   Heart,
-  UserX
+  UserX,
+  Filter
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -85,7 +86,7 @@ const TRAVEL_STYLES = ['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Trav
 const COMMON_INTERESTS = ['Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 'Meditation', 'Local Cuisine', 'Mountaineering', 'Rock Climbing', 'Camping', 'Coworking', 'Cafes', 'History', 'Language Exchange'];
 const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Mandarin', 'Japanese', 'Korean', 'Hindi', 'Arabic', 'Russian', 'Nepali'];
 
-type TabType = 'profile' | 'preferences' | 'stats' | 'billing' | 'blocked';
+type TabType = 'profile' | 'filters' | 'settings' | 'stats' | 'billing' | 'blocked';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -157,7 +158,10 @@ export default function AccountPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tab = urlParams.get('tab');
-      if (tab && ['profile', 'preferences', 'stats', 'billing'].includes(tab)) {
+      // Map 'preferences' to 'filters' for backward compatibility
+      if (tab === 'preferences') {
+        setActiveTab('filters');
+      } else if (tab && ['profile', 'filters', 'settings', 'stats', 'billing', 'blocked'].includes(tab)) {
         setActiveTab(tab as TabType);
       }
     }
@@ -755,20 +759,36 @@ export default function AccountPage() {
               <span>Profile</span>
             </button>
 
-            {/* Preferences Tab */}
+            {/* Filters Tab */}
             <button
-              onClick={() => setActiveTab('preferences')}
+              onClick={() => setActiveTab('filters')}
               className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
-                activeTab === 'preferences'
+                activeTab === 'filters'
                   ? 'bg-[#059467]/10 text-[#059467]'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              {activeTab === 'preferences' && (
+              {activeTab === 'filters' && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
+              )}
+              <Filter className="w-5 h-5" />
+              <span>Filters</span>
+            </button>
+
+            {/* Settings Tab */}
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
+                activeTab === 'settings'
+                  ? 'bg-[#059467]/10 text-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              {activeTab === 'settings' && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
               )}
               <Settings className="w-5 h-5" />
-              <span>Preferences</span>
+              <span>Settings</span>
             </button>
 
             {/* Stats Tab */}
@@ -871,15 +891,26 @@ export default function AccountPage() {
               <span>Profile</span>
             </button>
             <button
-              onClick={() => setActiveTab('preferences')}
-              className={`flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
-                activeTab === 'preferences'
+              onClick={() => setActiveTab('filters')}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'filters'
+                  ? 'text-[#059467] border-b-2 border-[#059467]'
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              <span>Filters</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
+                activeTab === 'settings'
                   ? 'text-[#059467] border-b-2 border-[#059467]'
                   : 'text-slate-600 dark:text-slate-400'
               }`}
             >
               <Settings className="w-4 h-4" />
-              <span>Preferences</span>
+              <span>Settings</span>
             </button>
             <button
               onClick={() => setActiveTab('stats')}
@@ -923,15 +954,19 @@ export default function AccountPage() {
             <div>
               <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-1 md:mb-2">
                 {activeTab === 'profile' && 'Profile Settings'}
-                {activeTab === 'preferences' && 'Preferences'}
+                {activeTab === 'filters' && 'Travel Match Filters'}
+                {activeTab === 'settings' && 'Settings'}
                 {activeTab === 'stats' && 'Travel Statistics'}
                 {activeTab === 'billing' && 'Billing & Plans'}
                 {activeTab === 'blocked' && 'Blocked Users'}
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg">
                 {activeTab === 'profile' && 'Manage your account details and view your travel statistics.'}
-                {activeTab === 'preferences' && 'Customize your experience and notification settings.'}
+                {activeTab === 'filters' && 'Set your preferences for discovering compatible travel buddies.'}
+                {activeTab === 'settings' && 'Customize your experience and notification settings.'}
                 {activeTab === 'stats' && 'View your travel history and activity.'}
+                {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
+                {activeTab === 'blocked' && 'Manage users you have blocked from messaging you.'}
                 {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
                 {activeTab === 'blocked' && 'Manage users you have blocked from messaging you.'}
               </p>
@@ -1343,108 +1378,11 @@ export default function AccountPage() {
               </>
             )}
 
-            {/* Preferences Tab Content */}
-            {activeTab === 'preferences' && (
+            {/* Filters Tab Content */}
+            {activeTab === 'filters' && (
               <div className="col-span-12 lg:col-span-7">
-                <section className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-700/50 p-4 md:p-8 shadow-sm">
-                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-4 md:mb-6">Preferences</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Language</label>
-                      <div className="relative">
-                        <select
-                          name="language"
-                          value={formData.language}
-                          onChange={handleInputChange}
-                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
-                        >
-                          <option>English (US)</option>
-                          <option>Spanish</option>
-                          <option>French</option>
-                          <option>German</option>
-                          <option>Italian</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300">Currency</label>
-                      <div className="relative">
-                        <select
-                          name="currency"
-                          value={formData.currency}
-                          onChange={handleInputChange}
-                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
-                        >
-                          <option>USD ($)</option>
-                          <option>EUR (€)</option>
-                          <option>GBP (£)</option>
-                          <option>JPY (¥)</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 md:space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-sm md:text-base text-slate-900 dark:text-white">Email Notifications</p>
-                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Receive updates about your trips and deals.</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="emailNotifications"
-                          checked={formData.emailNotifications}
-                          onChange={handleInputChange}
-                          className="sr-only peer"
-                        />
-                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
-                      </label>
-                    </div>
-
-                    <hr className="border-slate-100 dark:border-slate-700" />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">Public Profile</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Allow other nomads to see your current location.</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="publicProfile"
-                          checked={formData.publicProfile}
-                          onChange={handleInputChange}
-                          className="sr-only peer"
-                        />
-                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
-                      </label>
-                    </div>
-
-                    <hr className="border-slate-100 dark:border-slate-700" />
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">Share Location</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Automatically update location based on IP.</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="shareLocation"
-                          checked={formData.shareLocation}
-                          onChange={handleInputChange}
-                          className="sr-only peer"
-                        />
-                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
-                      </label>
-                    </div>
-                  </div>
-                </section>
-
                 {/* Travel Match Filters Section */}
-                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm mt-6">
+                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <Heart className="w-6 h-6 text-pink-500" />
                     <h3 className="text-xl font-bold text-slate-900 dark:text-white">Travel Match Filters</h3>
@@ -1693,6 +1631,110 @@ export default function AccountPage() {
                         <p>• Shared interests: <strong>{formData.matchPreferences.interests.length === 0 ? 'Any' : formData.matchPreferences.interests.length + ' selected'}</strong></p>
                         <p>• Within <strong>{formData.matchPreferences.locationRange === 0 ? '10' : formData.matchPreferences.locationRange >= 500 ? '500+' : formData.matchPreferences.locationRange} km</strong> of your location</p>
                       </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {/* Settings Tab Content */}
+            {activeTab === 'settings' && (
+              <div className="col-span-12 lg:col-span-7">
+                <section className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl border border-slate-100 dark:border-slate-700/50 p-4 md:p-8 shadow-sm">
+                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white mb-4 md:mb-6">Settings</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <Globe className="w-4 h-4" />
+                        Language
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="language"
+                          value={formData.language}
+                          onChange={handleInputChange}
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                        >
+                          <option>English (US)</option>
+                          <option>Spanish</option>
+                          <option>French</option>
+                          <option>German</option>
+                          <option>Italian</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <Wallet className="w-4 h-4" />
+                        Currency
+                      </label>
+                      <div className="relative">
+                        <select
+                          name="currency"
+                          value={formData.currency}
+                          onChange={handleInputChange}
+                          className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border-none rounded-xl md:rounded-2xl px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 cursor-pointer"
+                        >
+                          <option>USD ($)</option>
+                          <option>EUR (€)</option>
+                          <option>GBP (£)</option>
+                          <option>JPY (¥)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+                      <div>
+                        <p className="font-semibold text-sm md:text-base text-slate-900 dark:text-white">Email Notifications</p>
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Receive updates about your trips and deals.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="emailNotifications"
+                          checked={formData.emailNotifications}
+                          onChange={handleInputChange}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+                      <div>
+                        <p className="font-semibold text-sm md:text-base text-slate-900 dark:text-white">Public Profile</p>
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Allow other nomads to see your profile.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="publicProfile"
+                          checked={formData.publicProfile}
+                          onChange={handleInputChange}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
+                      </label>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl">
+                      <div>
+                        <p className="font-semibold text-sm md:text-base text-slate-900 dark:text-white">Share Location</p>
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Automatically update location based on IP.</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="shareLocation"
+                          checked={formData.shareLocation}
+                          onChange={handleInputChange}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-[#059467]"></div>
+                      </label>
                     </div>
                   </div>
                 </section>
@@ -1969,7 +2011,7 @@ export default function AccountPage() {
 
           {/* Action Buttons - Moved to Bottom */}
           <div className="flex flex-col md:flex-row gap-3 md:gap-3 w-full md:w-auto md:justify-end mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-            {(activeTab === 'profile' || activeTab === 'preferences' || activeTab === 'billing') && (
+            {(activeTab === 'profile' || activeTab === 'filters' || activeTab === 'settings' || activeTab === 'billing') && (
               <>
                 <button 
                   onClick={handleCancel}
