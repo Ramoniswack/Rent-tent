@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
+import NotificationCenter from './NotificationCenter';
 import {
   Home,
   Compass,
@@ -150,6 +151,9 @@ const Header: React.FC = () => {
 
               {user ? (
                 <>
+                  {/* Notification Center */}
+                  <NotificationCenter />
+                  
                   {/* Profile Picture */}
                   <button
                     onClick={() => router.push('/account')}

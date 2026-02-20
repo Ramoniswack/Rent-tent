@@ -717,3 +717,45 @@ export default {
   message: messageAPI,
   admin: adminAPI,
 };
+
+
+// Notification API
+export const notificationAPI = {
+  // Get all notifications
+  getNotifications: async (page = 1, limit = 20, unreadOnly = false) => {
+    return apiRequest(`/notifications?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`);
+  },
+
+  // Get unread count
+  getUnreadCount: async () => {
+    return apiRequest('/notifications/unread/count');
+  },
+
+  // Mark notification as read
+  markAsRead: async (notificationId: string) => {
+    return apiRequest(`/notifications/${notificationId}/read`, {
+      method: 'PUT',
+    });
+  },
+
+  // Mark all as read
+  markAllAsRead: async () => {
+    return apiRequest('/notifications/read-all', {
+      method: 'PUT',
+    });
+  },
+
+  // Delete notification
+  deleteNotification: async (notificationId: string) => {
+    return apiRequest(`/notifications/${notificationId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Delete all read notifications
+  deleteAllRead: async () => {
+    return apiRequest('/notifications/read/all', {
+      method: 'DELETE',
+    });
+  },
+};
