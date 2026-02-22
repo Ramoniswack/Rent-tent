@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useToast } from '../../hooks/useToast';
 import { adminAPI, userAPI } from '../../services/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -23,6 +24,7 @@ type Tab = 'overview' | 'users' | 'trips' | 'gear';
 
 export default function AdminPage() {
   const router = useRouter();
+  const { showConfirm, showToast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -143,59 +145,82 @@ export default function AdminPage() {
   }, [isAdmin, activeTab, gearPage, gearSearch]);
 
   const handleDeleteUser = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user? This will also delete all their trips and gear.')) {
-      return;
-    }
-    try {
-      await adminAPI.deleteUser(id);
-      loadUsers();
-      loadStats();
-    } catch (err: any) {
-      alert(err.message);
-    }
+    showConfirm({
+      title: 'Delete User',
+      message: 'Are you sure you want to delete this user? This will permanently delete all their trips, gear listings, and associated data. This action cannot be undone.',
+      confirmText: 'Delete User',
+      cancelText: 'Cancel',
+      type: 'error',
+      onConfirm: async () => {
+        try {
+          await adminAPI.deleteUser(id);
+          loadUsers();
+          loadStats();
+          showToast('User deleted successfully', 'success');
+        } catch (err: any) {
+          showToast(err.message || 'Failed to delete user', 'error');
+        }
+      }
+    });
   };
 
   const handleToggleAdmin = async (id: string, currentStatus: boolean) => {
     try {
       await adminAPI.updateUser(id, { isAdmin: !currentStatus });
       loadUsers();
+      showToast(`User ${!currentStatus ? 'promoted to' : 'removed from'} admin successfully`, 'success');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message || 'Failed to update user admin status', 'error');
     }
   };
 
   const handleDeleteTrip = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this trip?')) {
-      return;
-    }
-    try {
-      await adminAPI.deleteTrip(id);
-      loadTrips();
-      loadStats();
-    } catch (err: any) {
-      alert(err.message);
-    }
+    showConfirm({
+      title: 'Delete Trip',
+      message: 'Are you sure you want to delete this trip? This will permanently remove the trip and all associated data including itinerary, expenses, and packing lists.',
+      confirmText: 'Delete Trip',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await adminAPI.deleteTrip(id);
+          loadTrips();
+          loadStats();
+          showToast('Trip deleted successfully', 'success');
+        } catch (err: any) {
+          showToast(err.message || 'Failed to delete trip', 'error');
+        }
+      }
+    });
   };
 
   const handleDeleteGear = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this gear listing?')) {
-      return;
-    }
-    try {
-      await adminAPI.deleteGear(id);
-      loadGear();
-      loadStats();
-    } catch (err: any) {
-      alert(err.message);
-    }
+    showConfirm({
+      title: 'Delete Gear Listing',
+      message: 'Are you sure you want to delete this gear listing? This will permanently remove the listing and all associated bookings and reviews.',
+      confirmText: 'Delete Gear',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await adminAPI.deleteGear(id);
+          loadGear();
+          loadStats();
+          showToast('Gear listing deleted successfully', 'success');
+        } catch (err: any) {
+          showToast(err.message || 'Failed to delete gear listing', 'error');
+        }
+      }
+    });
   };
 
   const handleToggleGearAvailability = async (id: string, currentStatus: boolean) => {
     try {
       await adminAPI.updateGear(id, { available: !currentStatus });
       loadGear();
+      showToast(`Gear listing ${!currentStatus ? 'enabled' : 'disabled'} successfully`, 'success');
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message || 'Failed to update gear availability', 'error');
     }
   };
 

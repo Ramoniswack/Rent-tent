@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
+import { useToast } from '../../../hooks/useToast';
 import { formatNPR, formatNPRShort } from '../../../lib/currency';
 import { tripAPI } from '../../../services/api';
 import Header from '../../../components/Header';
@@ -110,6 +111,7 @@ export default function TripDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAuth();
+  const { showConfirm, showToast } = useToast();
   const tripId = params.id as string;
 
   // Get initial tab from URL or default to 'itinerary'
@@ -244,7 +246,7 @@ export default function TripDetailsPage() {
       setShowStatusMenu(false);
     } catch (err) {
       console.error('Failed to update status:', err);
-      alert('Failed to update trip status');
+      showToast('Failed to update trip status', 'error');
     }
   };
 
@@ -257,7 +259,7 @@ export default function TripDetailsPage() {
       setShowAddStop(false);
     } catch (err) {
       console.error('Failed to add stop:', err);
-      alert('Failed to add stop. Please try again.');
+      showToast('Failed to add stop. Please try again.', 'error');
     }
   };
 
@@ -274,7 +276,7 @@ export default function TripDetailsPage() {
       setShowEditStop(false);
     } catch (err) {
       console.error('Failed to update stop:', err);
-      alert('Failed to update stop. Please try again.');
+      showToast('Failed to update stop. Please try again.', 'error');
     }
   };
 
@@ -298,20 +300,29 @@ export default function TripDetailsPage() {
       setShowAddExpense(false);
     } catch (err) {
       console.error('Failed to add expense:', err);
-      alert('Failed to add expense. Please try again.');
+      showToast('Failed to add expense. Please try again.', 'error');
     }
   };
 
   const handleDeleteStop = async (stopId: string) => {
-    if (!confirm('Delete this stop?')) return;
-    try {
-      await tripAPI.deleteItineraryStop(stopId);
-      setItinerary(itinerary.filter(s => s._id !== stopId));
-      setShowStopMenu(null);
-    } catch (err) {
-      console.error('Failed to delete stop:', err);
-      alert('Failed to delete stop. Please try again.');
-    }
+    showConfirm({
+      title: 'Delete Stop',
+      message: 'Are you sure you want to delete this stop? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await tripAPI.deleteItineraryStop(stopId);
+          setItinerary(itinerary.filter(s => s._id !== stopId));
+          setShowStopMenu(null);
+          showToast('Stop deleted successfully', 'success');
+        } catch (err) {
+          console.error('Failed to delete stop:', err);
+          showToast('Failed to delete stop. Please try again.', 'error');
+        }
+      }
+    });
   };
 
   const handleUpdateStopStatus = async (stopId: string, newStatus: StopStatus) => {
@@ -323,7 +334,7 @@ export default function TripDetailsPage() {
       setShowStopMenu(null);
     } catch (err) {
       console.error('Failed to update stop status:', err);
-      alert('Failed to update stop status. Please try again.');
+      showToast('Failed to update stop status. Please try again.', 'error');
     }
   };
 
@@ -596,14 +607,23 @@ export default function TripDetailsPage() {
   };
 
   const handleDeleteExpense = async (expenseId: string) => {
-    if (!confirm('Delete this expense?')) return;
-    try {
-      await tripAPI.deleteExpense(expenseId);
-      setExpenses(expenses.filter(e => e._id !== expenseId));
-    } catch (err) {
-      console.error('Failed to delete expense:', err);
-      alert('Failed to delete expense. Please try again.');
-    }
+    showConfirm({
+      title: 'Delete Expense',
+      message: 'Are you sure you want to delete this expense? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await tripAPI.deleteExpense(expenseId);
+          setExpenses(expenses.filter(e => e._id !== expenseId));
+          showToast('Expense deleted successfully', 'success');
+        } catch (err) {
+          console.error('Failed to delete expense:', err);
+          showToast('Failed to delete expense. Please try again.', 'error');
+        }
+      }
+    });
   };
 
   // Helper functions for packing
@@ -620,26 +640,34 @@ export default function TripDetailsPage() {
       ));
     } catch (err) {
       console.error('Failed to update packing item:', err);
-      alert('Failed to update item. Please try again.');
+      showToast('Failed to update item. Please try again.', 'error');
     }
   };
 
   const handleDeletePackingItem = async (itemId: string) => {
-    if (!confirm('Delete this item?')) return;
-    
-    try {
-      await tripAPI.deletePackingItem(itemId);
-      setPackingItems(packingItems.filter(i => i._id !== itemId));
-    } catch (err) {
-      console.error('Failed to delete packing item:', err);
-      alert('Failed to delete item. Please try again.');
-    }
+    showConfirm({
+      title: 'Delete Packing Item',
+      message: 'Are you sure you want to delete this packing item? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          await tripAPI.deletePackingItem(itemId);
+          setPackingItems(packingItems.filter(i => i._id !== itemId));
+          showToast('Packing item deleted successfully', 'success');
+        } catch (err) {
+          console.error('Failed to delete packing item:', err);
+          showToast('Failed to delete item. Please try again.', 'error');
+        }
+      }
+    });
   };
 
   const handleAddPackingItemFromModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPackingItem.name.trim()) {
-      alert('Please enter an item name');
+      showToast('Please enter an item name', 'warning');
       return;
     }
     
@@ -656,7 +684,7 @@ export default function TripDetailsPage() {
       setShowAddPackingItem(false);
     } catch (err) {
       console.error('Failed to add packing item:', err);
-      alert('Failed to add item. Please try again.');
+      showToast('Failed to add item. Please try again.', 'error');
     }
   };
 
@@ -673,7 +701,7 @@ export default function TripDetailsPage() {
       setEditingQuantity(null);
     } catch (err) {
       console.error('Failed to update quantity:', err);
-      alert('Failed to update quantity. Please try again.');
+      showToast('Failed to update quantity. Please try again.', 'error');
     }
   };
 
@@ -731,20 +759,20 @@ export default function TripDetailsPage() {
       setShowEditBudget(false);
     } catch (err) {
       console.error('Failed to update budget:', err);
-      alert('Failed to update budget. Please try again.');
+      showToast('Failed to update budget. Please try again.', 'error');
     }
   };
 
   const handleInviteCollaborator = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteUsername.trim()) {
-      alert('Please enter a username');
+      showToast('Please enter a username', 'warning');
       return;
     }
     
     try {
       const result = await tripAPI.inviteCollaborator(tripId, inviteUsername, inviteRole);
-      alert(`Successfully invited ${inviteUsername} to the trip!`);
+      showToast(`Successfully invited ${inviteUsername} to the trip!`, 'success');
       setInviteUsername('');
       setInviteRole('editor');
       setShowInviteModal(false);
@@ -752,7 +780,7 @@ export default function TripDetailsPage() {
       fetchTripData();
     } catch (err: any) {
       console.error('Failed to invite collaborator:', err);
-      alert(err.message || 'Failed to invite collaborator. Please try again.');
+      showToast(err.message || 'Failed to invite collaborator. Please try again.', 'error');
     }
   };
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { userAPI, messageAPI } from '../../services/api';
 import { formatNPRShort } from '../../lib/currency';
 import Header from '../../components/Header';
@@ -92,6 +93,7 @@ type TabType = 'profile' | 'filters' | 'settings' | 'stats' | 'billing' | 'block
 export default function AccountPage() {
   const router = useRouter();
   const { logout, refreshUser } = useAuth();
+  const { showConfirm, showToast } = useToast();
   
   // Get initial tab from URL or default to 'profile'
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -719,10 +721,18 @@ export default function AccountPage() {
   };
 
   const handleLogout = () => {
-    if (confirm('Are you sure you want to logout?')) {
-      logout();
-      router.push('/login');
-    }
+    showConfirm({
+      title: 'Logout Confirmation',
+      message: 'Are you sure you want to logout? You will need to sign in again to access your account.',
+      confirmText: 'Logout',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: () => {
+        logout();
+        showToast('Successfully logged out', 'success');
+        router.push('/login');
+      }
+    });
   };
 
   if (loading) {

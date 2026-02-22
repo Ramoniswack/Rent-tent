@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../hooks/useAuth';
+import { useToast } from '../hooks/useToast';
 import NotificationCenter from './NotificationCenter';
 import {
   Home,
@@ -31,6 +32,7 @@ const Header: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { showConfirm, showToast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -99,9 +101,22 @@ const Header: React.FC = () => {
   };
 
   const handleLogout = () => {
-    logout();
-    router.push('/login');
-    setMobileMenuOpen(false);
+    showConfirm({
+      title: 'Logout Confirmation',
+      message: 'Are you sure you want to logout? You will need to sign in again to access your account.',
+      confirmText: 'Logout',
+      cancelText: 'Cancel',
+      type: 'warning',
+      onConfirm: () => {
+        logout();
+        showToast('Successfully logged out', 'success');
+        router.push('/login');
+        setMobileMenuOpen(false);
+      },
+      onCancel: () => {
+        // Just close the dialog, no action needed
+      }
+    });
   };
 
   const isActive = (path: string) => {

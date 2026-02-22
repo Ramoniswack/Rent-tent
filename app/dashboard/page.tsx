@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../hooks/useAuth';
+import { useToast } from '../../hooks/useToast';
 import { tripAPI } from '../../services/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -47,6 +48,7 @@ interface Trip {
 function DashboardPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { showConfirm, showToast } = useToast();
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -106,20 +108,26 @@ function DashboardPage() {
   const handleDeleteTrip = async (e: React.MouseEvent, tripId: string) => {
     e.stopPropagation();
     
-    if (!confirm('Are you sure you want to delete this trip? This action cannot be undone.')) {
-      return;
-    }
-
-    setDeletingId(tripId);
-    try {
-      await tripAPI.delete(tripId);
-      setTrips(trips.filter(t => t._id !== tripId));
-    } catch (err: any) {
-      console.error('Error deleting trip:', err);
-      alert('Failed to delete trip. Please try again.');
-    } finally {
-      setDeletingId(null);
-    }
+    showConfirm({
+      title: 'Delete Trip',
+      message: 'Are you sure you want to delete this trip? This action cannot be undone and will remove all associated data including itinerary, expenses, and packing lists.',
+      confirmText: 'Delete Trip',
+      cancelText: 'Cancel',
+      type: 'error',
+      onConfirm: async () => {
+        setDeletingId(tripId);
+        try {
+          await tripAPI.delete(tripId);
+          setTrips(trips.filter(t => t._id !== tripId));
+          showToast('Trip deleted successfully', 'success');
+        } catch (err: any) {
+          console.error('Error deleting trip:', err);
+          showToast('Failed to delete trip. Please try again.', 'error');
+        } finally {
+          setDeletingId(null);
+        }
+      }
+    });
   };
 
   const getStatusDisplay = (status: string) => {

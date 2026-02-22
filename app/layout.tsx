@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "../hooks/useAuth";
+import { ToastProvider } from "../hooks/useToast";
 import MobileNav from "../components/MobileNav";
 import InstallPWA from "../components/InstallPWA";
 import NotificationPrompt from "../components/NotificationPrompt";
@@ -62,11 +63,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
-          {children}
-          <MobileNav />
-          <InstallPWA />
-          <NotificationPrompt />
-          <OfflineIndicator />
+          <ToastProvider>
+            {children}
+            <MobileNav />
+            <InstallPWA />
+            <NotificationPrompt />
+            <OfflineIndicator />
+          </ToastProvider>
         </AuthProvider>
         <Script
           src="https://upload-widget.cloudinary.com/global/all.js"
