@@ -426,6 +426,14 @@ export const matchAPI = {
       method: 'DELETE',
     });
   },
+
+  // Cancel a sent connection request
+  cancelConnection: async (targetUserId: string) => {
+    return apiRequest('/matches/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId }),
+    });
+  },
 };
 
 // Trip API

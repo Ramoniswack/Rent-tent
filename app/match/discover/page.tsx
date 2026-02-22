@@ -63,7 +63,7 @@ export default function DiscoverPage() {
           avatar: profile.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=059467`,
           travelStyles: Array.isArray(profile.travelStyle) ? profile.travelStyle : 
                        profile.travelStyle ? [profile.travelStyle] : [],
-          connectionStatus: 'none',
+          connectionStatus: profile.connectionStatus || 'none',
           bio: profile.bio,
           distance: profile.distance,
           upcomingTrips: profile.upcomingTrips || [],
@@ -217,6 +217,28 @@ export default function DiscoverPage() {
     } catch (err: any) {
       console.error('Error connecting:', err);
       showToast(err.message || 'Failed to connect. Please try again.', 'error');
+    }
+  };
+
+  const handleCancelConnection = async (userId: string) => {
+    try {
+      await matchAPI.cancelConnection(userId);
+      
+      // Update the user's connection status back to 'none'
+      if (activeTab === 'discover') {
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId 
+              ? { ...user, connectionStatus: 'none' as const }
+              : user
+          )
+        );
+      }
+      
+      showToast('Connection request cancelled', 'success');
+    } catch (err: any) {
+      console.error('Error cancelling connection:', err);
+      showToast(err.message || 'Failed to cancel connection. Please try again.', 'error');
     }
   };
 
@@ -504,10 +526,12 @@ export default function DiscoverPage() {
                     </button>
                   ) : user.connectionStatus === 'sent' ? (
                     <button
-                      disabled
-                      className="w-full mt-auto h-12 bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                      onClick={() => handleCancelConnection(user.id)}
+                      className="w-full mt-auto h-12 bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-2xl transition-all hover:bg-red-500 hover:text-white flex items-center justify-center gap-2 group"
+                      title="Click to cancel connection request"
                     >
-                      <span>Connection Sent</span>
+                      <span className="group-hover:hidden">Connection Sent</span>
+                      <span className="hidden group-hover:inline">Cancel Request</span>
                       <Heart className="w-4 h-4" />
                     </button>
                   ) : (
