@@ -2,23 +2,26 @@
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Heart, Loader2, Star, Calendar, User } from 'lucide-react';
+import { Search, MapPin, Heart, Loader2, Star, Calendar, User, Users } from 'lucide-react';
 import { matchAPI } from '@/services/api';
 import Header from '@/components/Header';
+import { useToast } from '@/hooks/useToast';
 
 interface UserCard {
   id: string;
   name: string;
+  username?: string;
   age: number | string;
   location: string;
   coverImage: string;
   avatar: string;
   travelStyles: string[];
-  connectionStatus: 'connected' | 'pending' | 'none';
+  connectionStatus: 'connected' | 'pending' | 'sent' | 'none';
   bio?: string;
   distance?: number;
   upcomingTrips?: any[];
   interests?: string[];
+  totalConnections?: number;
   matchScore?: {
     total: number;
     travelStyle: number;
@@ -29,6 +32,7 @@ interface UserCard {
 
 export default function DiscoverPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('discover');
@@ -51,6 +55,7 @@ export default function DiscoverPage() {
         const formattedUsers: UserCard[] = response.profiles.map((profile: any) => ({
           id: profile.id,
           name: profile.name,
+          username: profile.username,
           age: profile.age || 'N/A',
           location: profile.location || 'Unknown',
           coverImage: profile.upcomingTrips?.[0]?.coverPhoto || 
@@ -63,6 +68,7 @@ export default function DiscoverPage() {
           distance: profile.distance,
           upcomingTrips: profile.upcomingTrips || [],
           interests: profile.interests || [],
+          totalConnections: profile.totalConnections || 0,
           matchScore: profile.matchScore
         }));
         setUsers(formattedUsers);
@@ -94,6 +100,7 @@ export default function DiscoverPage() {
       const formattedMatches: UserCard[] = response.map((match: any) => ({
         id: match.user._id,
         name: match.user.name,
+        username: match.user.username,
         age: match.user.age || 'N/A',
         location: match.user.location || 'Unknown',
         coverImage: match.user.upcomingTrips?.[0]?.coverPhoto || 
@@ -104,7 +111,8 @@ export default function DiscoverPage() {
         connectionStatus: 'connected',
         bio: match.user.bio,
         upcomingTrips: match.user.upcomingTrips || [],
-        interests: match.user.interests || []
+        interests: match.user.interests || [],
+        totalConnections: match.user.totalConnections || 0
       }));
       setMatches(formattedMatches);
     } catch (err: any) {
@@ -125,6 +133,7 @@ export default function DiscoverPage() {
       const formattedLikes: UserCard[] = response.map((like: any) => ({
         id: like.user._id,
         name: like.user.name,
+        username: like.user.username,
         age: like.user.age || 'N/A',
         location: like.user.location || 'Unknown',
         coverImage: like.user.upcomingTrips?.[0]?.coverPhoto || 
@@ -135,7 +144,8 @@ export default function DiscoverPage() {
         connectionStatus: 'pending',
         bio: like.user.bio,
         upcomingTrips: like.user.upcomingTrips || [],
-        interests: like.user.interests || []
+        interests: like.user.interests || [],
+        totalConnections: like.user.totalConnections || 0
       }));
       setIncomingLikes(formattedLikes);
     } catch (err: any) {
@@ -175,34 +185,56 @@ export default function DiscoverPage() {
 
   const handleConnect = async (userId: string) => {
     try {
-      setLoading(true);
       const response = await matchAPI.likeUser(userId);
+      
+      // Update the user's connection status in the current list without reloading
+      if (activeTab === 'discover') {
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId 
+              ? { ...user, connectionStatus: response.matched ? 'connected' : 'sent' as const }
+              : user
+          )
+        );
+      } else if (activeTab === 'incoming') {
+        setIncomingLikes(prevLikes => 
+          prevLikes.map(user => 
+            user.id === userId 
+              ? { ...user, connectionStatus: 'connected' as const }
+              : user
+          )
+        );
+      }
       
       // Show success message
       if (response.matched) {
-        alert(`🎉 It's a match! You can now message ${response.matchedUser?.name || 'this user'}`);
-        // Refresh all tabs
-        fetchDiscoverProfiles();
+        showToast(`🎉 It's a match! You can now message ${response.matchedUser?.name || 'this user'}`, 'success');
+        // Silently refresh matches count in background
         fetchMatches();
       } else {
-        alert('✅ Connection request sent!');
-        // Refresh discover to remove the user
-        fetchDiscoverProfiles();
+        showToast('✅ Connection request sent!', 'success');
       }
     } catch (err: any) {
       console.error('Error connecting:', err);
-      alert(err.message || 'Failed to connect. Please try again.');
-    } finally {
-      setLoading(false);
+      showToast(err.message || 'Failed to connect. Please try again.', 'error');
     }
   };
 
-  const handleMessage = (userId: string) => {
-    router.push(`/messages?userId=${userId}`);
+  const handleViewProfile = (username?: string, userId?: string) => {
+    if (username) {
+      router.push(`/profile/${username}`);
+    } else if (userId) {
+      // Fallback to userId if username not available
+      router.push(`/profile/${userId}`);
+    }
   };
 
-  const handleViewProfile = (userId: string) => {
-    router.push(`/profile/${userId}`);
+  const handleMessage = (username?: string, userId?: string) => {
+    if (username) {
+      router.push(`/messages?username=${username}`);
+    } else if (userId) {
+      router.push(`/messages?userId=${userId}`);
+    }
   };
 
   return (
@@ -345,21 +377,29 @@ export default function DiscoverPage() {
                   className="group relative bg-white dark:bg-[#1a3830] rounded-2xl p-6 shadow-soft hover:shadow-hover transition-all duration-300 hover:-translate-y-1 border border-transparent hover:border-[#059467]/20 flex flex-col items-center text-center"
                 >
                   {/* Top Match Badge */}
-                  {index === 0 && activeTab === 'discover' && user.matchScore && user.matchScore.total > 2 && (
+                  {index === 0 && activeTab === 'discover' && user.matchScore && user.matchScore.total > 2 && user.connectionStatus === 'none' && (
                     <div className="absolute top-4 right-4 bg-[#f59e0b]/10 text-[#f59e0b] px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-[#f59e0b]/20">
                       <Star className="w-4 h-4 fill-current" />
                       Top Match
                     </div>
                   )}
 
+                  {/* Connection Sent Badge */}
+                  {user.connectionStatus === 'sent' && (
+                    <div className="absolute top-4 right-4 bg-[#059467]/10 text-[#059467] px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 border border-[#059467]/20">
+                      <Heart className="w-4 h-4" />
+                      Connection Sent
+                    </div>
+                  )}
+
                   {/* Avatar */}
                   <div className="relative mb-4">
-                    <div className="size-[120px] rounded-full p-1 border-2 border-[#cee9e0] dark:border-[#059467]/30">
+                    <div className="size-[120px] rounded-full p-1 border-2 border-[#cee9e0] dark:border-[#059467]/30 cursor-pointer hover:border-[#059467] transition-colors">
                       <img
                         src={user.avatar}
                         alt={user.name}
-                        className="w-full h-full rounded-full object-cover cursor-pointer"
-                        onClick={() => handleViewProfile(user.id)}
+                        className="w-full h-full rounded-full object-cover"
+                        onClick={() => handleViewProfile(user.username, user.id)}
                       />
                     </div>
                     {user.connectionStatus === 'connected' && (
@@ -373,15 +413,30 @@ export default function DiscoverPage() {
                   <h3 className="text-lg font-bold text-[#0d1c17] dark:text-white mb-1">
                     {user.name}, {user.age}
                   </h3>
-                  <div className="flex items-center gap-1 text-[#489d82] text-sm font-medium mb-4">
+                  <div className="flex items-center gap-1 text-[#489d82] text-sm font-medium mb-2">
                     <MapPin className="w-4 h-4" />
                     <span>{user.location}</span>
                   </div>
 
+                  {/* Connection Count */}
+                  {user.totalConnections !== undefined && user.totalConnections > 0 && (
+                    <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-xs font-medium mb-4">
+                      <Users className="w-3 h-3" />
+                      <span>{user.totalConnections} connection{user.totalConnections !== 1 ? 's' : ''}</span>
+                    </div>
+                  )}
+
                   {/* Distance */}
-                  {user.distance && (
+                  {user.distance !== undefined && (
                     <p className="text-slate-400 text-xs mb-4 font-medium">
                       {user.distance} km away
+                    </p>
+                  )}
+
+                  {/* Bio */}
+                  {user.bio && (
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-4 line-clamp-2 w-full text-center px-2">
+                      {user.bio}
                     </p>
                   )}
 
@@ -412,34 +467,47 @@ export default function DiscoverPage() {
                   )}
 
                   {/* Interest Pills */}
-                  {(user.interests && user.interests.length > 0) || (user.travelStyles && user.travelStyles.length > 0) && (
-                    <div className="flex flex-wrap justify-center gap-2 mb-8">
-                      {user.travelStyles?.slice(0, 2).map((style) => (
-                        <span
-                          key={style}
-                          className="px-3 py-1 bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] rounded-full text-xs font-bold"
-                        >
-                          #{style}
-                        </span>
-                      ))}
-                      {user.interests?.slice(0, 2).map((interest) => (
-                        <span
-                          key={interest}
-                          className="px-3 py-1 bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] rounded-full text-xs font-bold"
-                        >
-                          #{interest}
-                        </span>
-                      ))}
+                  {((user.interests && user.interests.length > 0) || (user.travelStyles && user.travelStyles.length > 0)) && (
+                    <div className="w-full mb-4">
+                      <h4 className="text-xs font-bold text-[#489d82] uppercase tracking-wider mb-2 text-left">
+                        Interests & Travel Style
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {user.travelStyles?.slice(0, 3).map((style) => (
+                          <span
+                            key={style}
+                            className="px-3 py-1 bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] rounded-full text-xs font-bold"
+                          >
+                            #{style}
+                          </span>
+                        ))}
+                        {user.interests?.slice(0, 3).map((interest) => (
+                          <span
+                            key={interest}
+                            className="px-3 py-1 bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] rounded-full text-xs font-bold"
+                          >
+                            #{interest}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {/* Action Button */}
                   {user.connectionStatus === 'connected' ? (
                     <button
-                      onClick={() => handleMessage(user.id)}
+                      onClick={() => handleMessage(user.username, user.id)}
                       className="w-full mt-auto h-12 bg-[#059467] hover:bg-[#047854] text-white font-bold rounded-2xl transition-colors shadow-lg shadow-[#059467]/20 flex items-center justify-center gap-2 group-hover:shadow-[#059467]/40"
                     >
                       <span>Message</span>
+                      <Heart className="w-4 h-4" />
+                    </button>
+                  ) : user.connectionStatus === 'sent' ? (
+                    <button
+                      disabled
+                      className="w-full mt-auto h-12 bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold rounded-2xl cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <span>Connection Sent</span>
                       <Heart className="w-4 h-4" />
                     </button>
                   ) : (
