@@ -30,7 +30,8 @@ import {
   Mountain,
   Heart,
   UserX,
-  Filter
+  Filter,
+  Users
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -110,6 +111,7 @@ export default function AccountPage() {
     totalExpenses: 0,
     gearRented: 0,
     gearOwned: 0,
+    totalConnections: 0,
     tripsThisYear: 0,
     percentageIncrease: 0
   });
@@ -1815,6 +1817,18 @@ export default function AccountPage() {
                         </div>
                         <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
                           <Backpack className="w-6 h-6 md:w-8 md:h-8" />
+                        </div>
+                      </div>
+
+                      {/* Stat Card 4 - Total Connections */}
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                        <div className="flex flex-col">
+                          <span className="text-xs md:text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Travel Connections</span>
+                          <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">{userStats.totalConnections}</span>
+                          <span className="text-xs font-semibold text-slate-400 mt-1 md:mt-2">Mutual matches</span>
+                        </div>
+                        <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                          <Users className="w-6 h-6 md:w-8 md:h-8" />
                         </div>
                       </div>
                     </div>

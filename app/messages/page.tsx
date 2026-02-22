@@ -477,21 +477,30 @@ function MessagesPage() {
 
     // Track handler for receiving remote stream
     pc.ontrack = (event) => {
-      console.log('Received remote track:', event.track.kind, event.streams[0]);
-      const remoteElement = callType === 'video' ? remoteVideoRef.current : remoteAudioRef.current;
+      console.log('Received remote track:', event.track.kind, event.streams?.[0]);
       
-      if (remoteElement && event.streams[0]) {
-        console.log('Setting remote stream to element');
-        remoteElement.srcObject = event.streams[0];
+      // Wait for the next tick to ensure DOM elements are available
+      setTimeout(() => {
+        const remoteElement = callType === 'video' ? remoteVideoRef.current : remoteAudioRef.current;
         
-        // Force play
-        remoteElement.play().catch(err => {
-          console.error('Error playing remote stream:', err);
-          showNotification('Click to enable audio', 'info');
-        });
-      } else {
-        console.error('Remote element not available');
-      }
+        if (remoteElement && event.streams && event.streams[0]) {
+          console.log('Setting remote stream to element');
+          remoteElement.srcObject = event.streams[0];
+          
+          // Force play
+          remoteElement.play().catch(err => {
+            console.error('Error playing remote stream:', err);
+            showNotification('Click to enable audio', 'info');
+          });
+        } else {
+          console.warn('Remote element not available or no streams:', {
+            hasElement: !!remoteElement,
+            hasStreams: !!(event.streams && event.streams[0]),
+            callType,
+            elementType: callType === 'video' ? 'video' : 'audio'
+          });
+        }
+      }, 100);
     };
 
     // Connection state change handler

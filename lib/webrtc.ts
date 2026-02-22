@@ -96,7 +96,16 @@ export function createPeerConnection(
 
   // Handle remote tracks
   pc.ontrack = (event) => {
-    callbacks.onTrack?.(event);
+    console.log('Track received:', event);
+    try {
+      if (event.streams && event.streams.length > 0) {
+        callbacks.onTrack?.(event);
+      } else {
+        console.warn('Track received but no streams available');
+      }
+    } catch (error) {
+      console.error('Error handling track event:', error);
+    }
   };
 
   // Monitor connection state
@@ -237,6 +246,7 @@ export class CallManager {
   private callState: CallState = { status: 'idle' };
   private callTimeout: NodeJS.Timeout | null = null;
   private configuration: RTCConfiguration | null = null;
+  private pendingIceCandidates: RTCIceCandidateInit[] = [];
 
   constructor(socket: any) {
     this.socket = socket;
@@ -321,8 +331,18 @@ export class CallManager {
           });
         },
         onTrack: (event) => {
-          this.remoteStream = event.streams[0];
-          this.onRemoteStreamReceived?.(this.remoteStream);
+          console.log('Remote track received:', event);
+          if (event.streams && event.streams[0]) {
+            this.remoteStream = event.streams[0];
+            // Safely call the callback with error handling
+            try {
+              this.onRemoteStreamReceived?.(this.remoteStream);
+            } catch (error) {
+              console.error('Error handling remote stream:', error);
+            }
+          } else {
+            console.warn('Remote track received but no streams available');
+          }
         },
         onConnectionStateChange: (state) => {
           this.handleConnectionStateChange(state);
@@ -378,6 +398,20 @@ export class CallManager {
       }
 
       await this.peerConnection.setRemoteDescription(offer);
+      
+      // Process any queued ICE candidates now that remote description is set
+      if (this.pendingIceCandidates.length > 0) {
+        console.log(`Processing ${this.pendingIceCandidates.length} queued ICE candidates`);
+        for (const candidate of this.pendingIceCandidates) {
+          try {
+            await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+          } catch (error) {
+            console.error('Error adding queued ICE candidate:', error);
+          }
+        }
+        this.pendingIceCandidates = [];
+      }
+      
       const answer = await this.peerConnection.createAnswer();
       await this.peerConnection.setLocalDescription(answer);
 
@@ -431,6 +465,20 @@ export class CallManager {
     try {
       if (this.peerConnection) {
         await this.peerConnection.setRemoteDescription(answer);
+        
+        // Process any queued ICE candidates now that remote description is set
+        if (this.pendingIceCandidates.length > 0) {
+          console.log(`Processing ${this.pendingIceCandidates.length} queued ICE candidates`);
+          for (const candidate of this.pendingIceCandidates) {
+            try {
+              await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (error) {
+              console.error('Error adding queued ICE candidate:', error);
+            }
+          }
+          this.pendingIceCandidates = [];
+        }
+        
         this.updateCallState({ 
           status: 'connected',
           connectedTime: Date.now()
@@ -472,8 +520,15 @@ export class CallManager {
 
   private async handleIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
     try {
-      if (this.peerConnection) {
+      if (this.peerConnection && this.peerConnection.remoteDescription) {
         await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } else {
+        // Queue ICE candidates if remote description is not set yet
+        if (!this.pendingIceCandidates) {
+          this.pendingIceCandidates = [];
+        }
+        this.pendingIceCandidates.push(candidate);
+        console.log('Queued ICE candidate (remote description not set yet)');
       }
     } catch (error) {
       console.error('Error adding ICE candidate:', error);
@@ -519,6 +574,9 @@ export class CallManager {
 
   private cleanup(): void {
     this.clearCallTimeout();
+    
+    // Clear pending ICE candidates
+    this.pendingIceCandidates = [];
     
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());

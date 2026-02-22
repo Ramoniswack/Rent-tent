@@ -342,6 +342,11 @@ export const userAPI = {
     });
   },
 
+  // Get user profile by username
+  getUserByUsername: async (username: string) => {
+    return apiRequest(`/user/profile/${username}`);
+  },
+
   // Get all users for matching
   getAllUsers: async () => {
     return apiRequest('/user/all');
@@ -351,10 +356,34 @@ export const userAPI = {
   getStats: async () => {
     return apiRequest('/user/stats');
   },
+
+  // Follow a user
+  followUser: async (userId: string) => {
+    return apiRequest(`/user/follow/${userId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Unfollow a user
+  unfollowUser: async (userId: string) => {
+    return apiRequest(`/user/unfollow/${userId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Get follow status for a user
+  getFollowStatus: async (userId: string) => {
+    return apiRequest(`/user/follow-status/${userId}`);
+  },
 };
 
 // Match API
 export const matchAPI = {
+  // Discover potential matches
+  discover: async () => {
+    return apiRequest('/matches/discover');
+  },
+
   // Like a user
   likeUser: async (likedUserId: string) => {
     return apiRequest('/matches/like', {
@@ -389,6 +418,13 @@ export const matchAPI = {
   // Get all user IDs that current user has interacted with (liked or passed)
   getInteractedUsers: async () => {
     return apiRequest('/matches/interacted');
+  },
+
+  // Reset all interactions (clear match history)
+  resetInteractions: async () => {
+    return apiRequest('/matches/reset', {
+      method: 'DELETE',
+    });
   },
 };
 

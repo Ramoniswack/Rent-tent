@@ -25,9 +25,9 @@ function MapPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All Trips');
   
-  // Get initial tab from URL or default to 'trips'
+  // Get initial tab from URL or default to 'friends'
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const initialTab = (searchParams.get('tab') as 'trips' | 'friends') || 'trips';
+  const initialTab = (searchParams.get('tab') as 'trips' | 'friends') || 'friends';
   
   const [activeTab, setActiveTab] = useState<'trips' | 'friends'>(initialTab);
   const [selectedTrip, setSelectedTrip] = useState<string | null>(null);
@@ -608,19 +608,6 @@ function MapPage() {
             <div className="flex gap-2 mb-3 md:mb-4">
               <button
                 onClick={() => {
-                  handleTabChange('trips');
-                  setSelectedFriend(null);
-                }}
-                className={`flex-1 px-3 md:px-4 py-2 rounded-xl text-sm md:text-base font-bold transition-all ${
-                  activeTab === 'trips'
-                    ? 'bg-[#059467] text-white shadow-lg'
-                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                Trips
-              </button>
-              <button
-                onClick={() => {
                   handleTabChange('friends');
                   setSelectedTrip(null);
                 }}
@@ -632,10 +619,23 @@ function MapPage() {
               >
                 Friends
               </button>
+              <button
+                onClick={() => {
+                  handleTabChange('trips');
+                  setSelectedFriend(null);
+                }}
+                className={`flex-1 px-3 md:px-4 py-2 rounded-xl text-sm md:text-base font-bold transition-all ${
+                  activeTab === 'trips'
+                    ? 'bg-[#059467] text-white shadow-lg'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                Trips
+              </button>
             </div>
             
             <h1 className="text-xl md:text-2xl font-bold text-[#0d1c17] dark:text-white mb-3 md:mb-4">
-              {activeTab === 'trips' ? 'Your Trips' : 'Your Friends'}
+              {activeTab === 'friends' ? 'Your Friends' : 'Your Trips'}
             </h1>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -643,7 +643,7 @@ function MapPage() {
               </div>
               <input
                 className="block w-full pl-9 md:pl-10 pr-3 py-2.5 md:py-3 text-sm md:text-base border-none rounded-2xl leading-5 bg-[#f5f8f7] dark:bg-slate-800 text-[#0d1c17] dark:text-white placeholder-[#059467]/60 focus:outline-none focus:ring-2 focus:ring-[#059467]/50 focus:bg-white dark:focus:bg-slate-700 transition-shadow shadow-inner"
-                placeholder={activeTab === 'trips' ? 'Search locations...' : 'Search friends...'}
+                placeholder={activeTab === 'friends' ? 'Search friends...' : 'Search locations...'}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -678,7 +678,7 @@ function MapPage() {
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 text-[#059467] animate-spin mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">
-                  Loading {activeTab === 'trips' ? 'trips' : 'friends'}...
+                  Loading {activeTab === 'friends' ? 'friends' : 'trips'}...
                 </p>
               </div>
             ) : error ? (
