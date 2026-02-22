@@ -246,73 +246,97 @@ const TravelMatch: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="bg-[#f5f8f7] dark:bg-[#0f231d] text-slate-900 dark:text-slate-100 antialiased flex flex-col h-screen">
+      <>
         <Header />
-        
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar Skeleton */}
-          <aside className="w-[280px] bg-[#f8fcfb] dark:bg-[#132a24] border-r border-slate-100 dark:border-slate-800 flex flex-col h-full shrink-0 transition-all duration-300">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="bg-[#059467]/10 p-2 rounded-xl text-[#059467]">
-                  <Plane className="w-7 h-7" />
-                </div>
-                <div>
-                  <h1 className="text-slate-900 dark:text-white text-lg font-bold tracking-tight">NomadNotes</h1>
-                  <p className="text-slate-500 dark:text-slate-400 text-xs font-medium uppercase tracking-wider">Travel Match</p>
-                </div>
-              </div>
-              
-              <nav className="flex flex-col gap-2">
-                {/* Skeleton tabs */}
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="flex items-center gap-4 px-4 py-3 rounded-xl">
-                    <div className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                    <div className="h-4 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+        <div className="bg-[#f5f8f7] dark:bg-[#0f231d] text-slate-900 dark:text-slate-100 antialiased overflow-hidden h-[calc(100vh-64px)]">
+          <main className="w-full h-full overflow-y-auto bg-[#f5f8f7] dark:bg-[#0f231d] relative">
+            {/* Background Gradients */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#f5f8f7] to-[#f1f5f9] dark:from-[#0f231d] dark:to-[#05100d] z-0"></div>
+            
+            {/* Topographic Pattern */}
+            <div 
+              className="absolute inset-0 opacity-50 z-0 pointer-events-none"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23059467' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`
+              }}
+            ></div>
+            
+            <div className="relative z-10 max-w-md mx-auto px-4 py-4">
+              {/* Header Skeleton */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg animate-pulse">
+                    <Zap className="w-6 h-6 text-white" />
                   </div>
-                ))}
-              </nav>
-            </div>
-
-            <div className="mt-auto p-6">
-              <div className="bg-[#059467]/5 dark:bg-slate-800 rounded-2xl p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
-                <div className="flex-1">
-                  <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
-                  <div className="h-3 w-20 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                  <div className="h-8 w-32 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                  <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse"></div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse"></div>
+                  <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse"></div>
                 </div>
               </div>
-            </div>
-          </aside>
 
-          {/* Main Content with Loading Spinner */}
-          <main className="flex-1 overflow-y-auto bg-[#f5f8f7] dark:bg-[#0f231d] relative">
-            <div className="relative w-full h-full min-h-[600px] flex items-center justify-center">
-              {/* Background Gradients */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#f5f8f7] to-[#f1f5f9] dark:from-[#0f231d] dark:to-[#05100d] z-0"></div>
-              
-              {/* Topographic Pattern */}
-              <div 
-                className="absolute inset-0 opacity-50 z-0 pointer-events-none"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23059467' fill-opacity='0.08' fill-rule='evenodd'/%3E%3C/svg%3E")`
-                }}
-              ></div>
-              
-              <div className="relative z-10 text-center">
-                <Sparkles className="w-12 h-12 animate-spin text-[#059467] mx-auto mb-4" />
-                <p className="text-[#0f231d] dark:text-white font-bold text-sm uppercase tracking-widest">
-                  Loading...
+              {/* Card Skeleton */}
+              <div className="relative h-[calc(100vh-280px)] max-h-[650px] mb-6">
+                {/* Background cards */}
+                <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-xl scale-90 opacity-30 translate-y-4 animate-pulse" />
+                <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-xl scale-95 opacity-60 translate-y-2 animate-pulse" />
+                
+                {/* Main card */}
+                <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+                  {/* Image skeleton */}
+                  <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 animate-pulse relative">
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+                    <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/50 to-transparent" />
+                    
+                    {/* Info button skeleton */}
+                    <div className="absolute top-6 right-6 w-12 h-12 bg-white/20 backdrop-blur-md rounded-full animate-pulse"></div>
+
+                    {/* Bottom info skeleton */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                      <div className="flex items-end justify-between mb-4">
+                        <div className="flex-1 space-y-3">
+                          {/* Name skeleton */}
+                          <div className="h-10 w-48 bg-white/20 backdrop-blur-sm rounded-lg animate-pulse"></div>
+                          {/* Location skeleton */}
+                          <div className="h-6 w-32 bg-white/20 backdrop-blur-sm rounded-lg animate-pulse"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons Skeleton */}
+              <div className="flex items-center justify-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 border-2 border-yellow-400 animate-pulse"></div>
+                <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 border-2 border-red-500 animate-pulse"></div>
+                <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 border-2 border-blue-500 animate-pulse"></div>
+                <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 border-2 border-emerald-500 animate-pulse"></div>
+                <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 border-2 border-purple-500 animate-pulse"></div>
+              </div>
+
+              {/* Loading text */}
+              <div className="mt-8 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-[#059467] animate-spin" />
+                  <p className="text-[#0f231d] dark:text-white font-bold text-sm uppercase tracking-widest">
+                    Finding Travel Buddies
+                  </p>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-xs">
+                  Loading profiles near you...
                 </p>
               </div>
             </div>
           </main>
         </div>
-        
         <div className="hidden md:block">
           <Footer />
         </div>
-      </div>
+      </>
     );
   }
 

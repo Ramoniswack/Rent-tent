@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
+import Toast from '../../../components/Toast';
 import { gearAPI, bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatNPR } from '../../../lib/currency';
@@ -41,6 +42,7 @@ export default function GearDetailPage() {
   });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [userBookings, setUserBookings] = useState<any[]>([]);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     const fetchGearDetails = async () => {
@@ -54,14 +56,17 @@ export default function GearDetailPage() {
         const data = await gearAPI.getById(id);
         console.log('Gear data received:', data);
         console.log('Owner data:', data.owner);
+        console.log('Current user:', user);
         setGearItem(data);
 
         // Fetch reviews (non-blocking)
         try {
           const reviewsData = await gearAPI.getReviews(id);
+          console.log('Reviews data:', reviewsData);
           setReviews(reviewsData);
         } catch (err) {
           // Silently fail - reviews are optional
+          console.log('No reviews found or error fetching reviews');
           setReviews([]);
         }
 
@@ -117,12 +122,21 @@ export default function GearDetailPage() {
   // Handle review submission
   const handleSubmitReview = async (bookingId: string) => {
     if (!reviewForm.review.trim()) {
-      alert('Please write a review');
+      setToast({ message: 'Please write a review', type: 'error' });
+      return;
+    }
+
+    if (reviewForm.review.trim().length < 10) {
+      setToast({ message: 'Review must be at least 10 characters', type: 'error' });
       return;
     }
 
     try {
       setSubmittingReview(true);
+      console.log('Submitting review for booking:', bookingId);
+      console.log('Rating:', reviewForm.rating);
+      console.log('Review:', reviewForm.review);
+      
       await bookingAPI.addReview(bookingId, reviewForm.rating, reviewForm.review.trim());
       
       // Refresh reviews and bookings
@@ -131,9 +145,9 @@ export default function GearDetailPage() {
       
       const bookingsData = await bookingAPI.getMyBookings();
       const gearBookings = bookingsData.filter((booking: any) => 
-        booking.gear._id === params.id && 
-        booking.status === 'completed' && 
-        !booking.rating
+        booking?.gear?._id === params.id && 
+        booking?.status === 'completed' && 
+        !booking?.rating
       );
       setUserBookings(gearBookings);
       
@@ -141,10 +155,10 @@ export default function GearDetailPage() {
       setReviewForm({ rating: 5, review: '' });
       setShowReviewForm(false);
       
-      alert('Review submitted successfully!');
+      setToast({ message: 'Review submitted successfully!', type: 'success' });
     } catch (err: any) {
       console.error('Error submitting review:', err);
-      alert(err.message || 'Failed to submit review');
+      setToast({ message: err.message || 'Failed to submit review', type: 'error' });
     } finally {
       setSubmittingReview(false);
     }
@@ -154,10 +168,85 @@ export default function GearDetailPage() {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
-            <p className="text-[#0d1c17]/60 dark:text-white/60">Loading gear details...</p>
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
+          <div className="max-w-7xl mx-auto px-4 py-6 md:py-12">
+            {/* Back Button Skeleton */}
+            <div className="mb-6 animate-pulse">
+              <div className="h-10 w-24 bg-slate-200 dark:bg-slate-700 rounded-full" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-8">
+              {/* Image Gallery Skeleton */}
+              <div className="space-y-4">
+                <div className="aspect-square bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 rounded-3xl animate-pulse" />
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="aspect-square bg-slate-200 dark:bg-slate-700 rounded-xl animate-pulse" />
+                  ))}
+                </div>
+              </div>
+              
+              {/* Details Skeleton */}
+              <div className="space-y-6">
+                {/* Title & Price */}
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-3/4" />
+                  <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-1/3" />
+                </div>
+                
+                {/* Rating */}
+                <div className="flex items-center gap-2 animate-pulse">
+                  <div className="h-6 w-32 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                </div>
+
+                {/* Details List */}
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-3 animate-pulse">
+                      <div className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded" />
+                      <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded flex-1" />
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Description */}
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-32" />
+                  <div className="h-24 bg-slate-200 dark:bg-slate-700 rounded-2xl" />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <div className="h-14 bg-slate-200 dark:bg-slate-700 rounded-full flex-1 animate-pulse" />
+                  <div className="h-14 w-14 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
+                </div>
+              </div>
+            </div>
+
+            {/* Owner Section Skeleton */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 mb-8 animate-pulse">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-32" />
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-48" />
+                </div>
+                <div className="h-10 w-32 bg-slate-200 dark:bg-slate-700 rounded-full" />
+              </div>
+            </div>
+
+            {/* Loading Text */}
+            <div className="text-center py-8">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Loader2 className="w-5 h-5 text-[#059467] animate-spin" />
+                <p className="text-[#0d1c17] dark:text-white font-bold text-sm uppercase tracking-widest">
+                  Loading Gear Details
+                </p>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
+                Preparing rental information...
+              </p>
+            </div>
           </div>
         </div>
         <div className="hidden md:block">
@@ -222,6 +311,12 @@ export default function GearDetailPage() {
   
   // Check if current user is the owner
   const isOwner = user && owner && (owner._id === user._id || owner === user._id);
+  
+  console.log('Owner check:', {
+    user: user?._id,
+    owner: owner?._id || owner,
+    isOwner
+  });
 
   // Generate fallback profile picture if none exists
   const ownerProfilePic = owner.profilePicture || 
@@ -439,12 +534,19 @@ export default function GearDetailPage() {
                   </div>
 
                   {/* Write Review Button */}
-                  {user && !showReviewForm && (
+                  {user && !showReviewForm && !isOwner && (
                     <div className="flex flex-col gap-2">
                       <button
                         onClick={() => {
+                          console.log('Write Review clicked');
+                          console.log('User bookings:', userBookings);
+                          console.log('User bookings length:', userBookings.length);
+                          
                           if (userBookings.length === 0) {
-                            alert('You need to complete a rental of this gear before you can write a review. Book this gear and complete your rental to leave feedback!');
+                            setToast({ 
+                              message: 'You need to complete a rental of this gear before you can write a review. Book this gear and complete your rental to leave feedback!', 
+                              type: 'error' 
+                            });
                             return;
                           }
                           setShowReviewForm(true);
@@ -870,6 +972,13 @@ export default function GearDetailPage() {
       <div className="hidden md:block">
         <Footer />
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 }

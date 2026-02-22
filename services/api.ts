@@ -530,12 +530,30 @@ export const messageAPI = {
     return apiRequest(`/messages/${otherUserId}`);
   },
 
-  // Send a message
-  sendMessage: async (receiverId: string, text: string, replyToId?: string) => {
+  // Send a message with client-side ID for deduplication
+  sendMessage: async (receiverId: string, text: string, clientSideId: string, replyToId?: string) => {
     return apiRequest('/messages', {
       method: 'POST',
-      body: JSON.stringify({ receiverId, text, replyToId }),
+      body: JSON.stringify({ receiverId, text, clientSideId, replyToId }),
     });
+  },
+
+  // Send an image message
+  sendImageMessage: async (receiverId: string, imageUrl: string, clientSideId: string, imagePublicId: string, text?: string, replyToId?: string) => {
+    return apiRequest('/messages', {
+      method: 'POST',
+      body: JSON.stringify({ receiverId, image: imageUrl, imagePublicId, text, clientSideId, replyToId }),
+    });
+  },
+
+  // Get Cloudinary signature for secure uploads
+  getCloudinarySignature: async () => {
+    return apiRequest('/messages/cloudinary-sign');
+  },
+
+  // Get WebRTC configuration with TURN server credentials
+  getWebRTCConfig: async () => {
+    return apiRequest('/messages/webrtc-config');
   },
 
   // Create a match
@@ -550,6 +568,14 @@ export const messageAPI = {
   markAsRead: async (messageId: string) => {
     return apiRequest(`/messages/${messageId}/read`, {
       method: 'PUT',
+    });
+  },
+
+  // Mark multiple messages as read (batch operation)
+  markMultipleAsRead: async (messageIds: string[]) => {
+    return apiRequest('/messages/bulk-read', {
+      method: 'PUT',
+      body: JSON.stringify({ messageIds }),
     });
   },
 

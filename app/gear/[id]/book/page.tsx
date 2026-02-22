@@ -273,8 +273,115 @@ export default function BookGearPage() {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
-          <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
+          <div className="max-w-6xl mx-auto px-4 py-6 md:py-12">
+            {/* Back Button Skeleton */}
+            <div className="mb-6 animate-pulse">
+              <div className="h-10 w-24 bg-slate-200 dark:bg-slate-700 rounded-full" />
+            </div>
+
+            {/* Title Skeleton */}
+            <div className="mb-8 animate-pulse">
+              <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl w-64 mb-2" />
+              <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded-lg w-96" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+              {/* Left Column - Gear Info & Calendar */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Gear Card Skeleton */}
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 animate-pulse">
+                  <div className="flex gap-4">
+                    <div className="w-24 h-24 bg-slate-200 dark:bg-slate-700 rounded-2xl flex-shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg w-3/4" />
+                      <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-1/2" />
+                      <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-32" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Calendar Skeleton */}
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 animate-pulse">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-32" />
+                    <div className="flex gap-2">
+                      <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                      <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                    </div>
+                  </div>
+                  
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-2 mb-4">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                      <div key={i} className="h-8 bg-slate-200 dark:bg-slate-700 rounded" />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {Array.from({ length: 35 }).map((_, i) => (
+                      <div key={i} className="aspect-square bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Duration Buttons Skeleton */}
+                <div className="flex gap-3 overflow-x-auto pb-2 animate-pulse">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-12 w-24 bg-slate-200 dark:bg-slate-700 rounded-full flex-shrink-0" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Right Column - Booking Summary */}
+              <div className="lg:col-span-1">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 sticky top-24 space-y-6 animate-pulse">
+                  <div className="h-7 bg-slate-200 dark:bg-slate-700 rounded-lg w-40" />
+                  
+                  {/* Summary Items */}
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex justify-between">
+                        <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24" />
+                        <div className="h-5 bg-slate-200 dark:bg-slate-700 rounded w-20" />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                    <div className="flex justify-between mb-4">
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-20" />
+                      <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-24" />
+                    </div>
+                  </div>
+
+                  {/* Checkbox Skeleton */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 bg-slate-200 dark:bg-slate-700 rounded flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full" />
+                      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
+                    </div>
+                  </div>
+
+                  {/* Button Skeleton */}
+                  <div className="h-14 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                </div>
+              </div>
+            </div>
+
+            {/* Loading Text */}
+            <div className="text-center py-8">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Loader2 className="w-5 h-5 text-[#059467] animate-spin" />
+                <p className="text-[#0d1c17] dark:text-white font-bold text-sm uppercase tracking-widest">
+                  Loading Booking Page
+                </p>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-xs">
+                Preparing rental calendar...
+              </p>
+            </div>
+          </div>
         </div>
         <div className="hidden md:block">
           <Footer />
