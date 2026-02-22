@@ -3,7 +3,12 @@
 export interface WebRTCConfig {
   configuration: RTCConfiguration;
   hasTurnServer: boolean;
+  turnServerCount?: number;
+  stunServerCount?: number;
+  totalServers?: number;
   timestamp: number;
+  cacheStatus?: string;
+  cacheExpiresAt?: number;
 }
 
 export interface CallState {
@@ -27,7 +32,7 @@ export interface CallParticipant {
  */
 export async function getWebRTCConfiguration(): Promise<WebRTCConfig> {
   try {
-    const response = await fetch('/api/messages/webrtc-config', {
+    const response = await fetch('/api/calls/webrtc-config', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -43,7 +48,9 @@ export async function getWebRTCConfiguration(): Promise<WebRTCConfig> {
     console.log('WebRTC configuration loaded:', {
       hasStunServers: (config.configuration.iceServers?.length ?? 0) > 0,
       hasTurnServer: config.hasTurnServer,
-      iceServersCount: config.configuration.iceServers?.length ?? 0
+      iceServersCount: config.configuration.iceServers?.length ?? 0,
+      turnServerCount: config.turnServerCount || 0,
+      cacheStatus: config.cacheStatus || 'unknown'
     });
 
     return config;
