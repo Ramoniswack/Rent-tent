@@ -29,7 +29,8 @@ import {
 import { userAPI, matchAPI } from '../../services/api';
 
 interface TravelProfile {
-  _id: string;
+  _id?: string;
+  id?: string;
   name: string;
   age?: string;
   gender?: string;
@@ -189,21 +190,43 @@ const TravelMatch: React.FC = () => {
     if (currentIndex >= filteredProfiles.length) return;
     
     const likedProfile = filteredProfiles[currentIndex];
+    const profileId = likedProfile._id || likedProfile.id;
     
-    // Add to interacted users immediately to prevent re-showing
-    setInteractedUserIds(prev => [...prev, likedProfile._id]);
+    if (!profileId) {
+      console.error('Profile ID not found');
+      return;
+    }
     
     try {
-      const result = await matchAPI.likeUser(likedProfile._id);
+      const result = await matchAPI.likeUser(profileId);
       
-      if (result.matched) {
+      console.log('Like result:', result);
+      
+      if (result.matched && result.matchedUser) {
         // It's a match!
-        setMatches([...matches, likedProfile]);
-        setLastMatch(likedProfile);
+        console.log('Match detected! Showing modal for:', result.matchedUser.name);
+        
+        // Update matches list
+        setMatches([...matches, result.matchedUser]);
+        
+        // Set the matched user data from the API response
+        setLastMatch(result.matchedUser);
+        
+        // Show the match success modal
         setShowMatch(true);
-        // Don't auto-close, let user interact with the modal
+        
+        // Add to interacted users AFTER setting up the modal
+        setInteractedUserIds(prev => [...prev, profileId]);
+        
+        // Don't increment index here - the modal close handler will do it
       } else {
-        // Just liked, no match yet - smooth transition to next card
+        // Just liked, no match yet
+        console.log('Like sent, no match yet');
+        
+        // Add to interacted users
+        setInteractedUserIds(prev => [...prev, profileId]);
+        
+        // Smooth transition to next card
         setTimeout(() => {
           setCurrentIndex(currentIndex + 1);
           x.set(0);
@@ -211,6 +234,7 @@ const TravelMatch: React.FC = () => {
       }
     } catch (error) {
       console.error('Error liking user:', error);
+      // Don't add to interacted users if API call failed
       setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
         x.set(0);
@@ -222,14 +246,21 @@ const TravelMatch: React.FC = () => {
     if (currentIndex >= filteredProfiles.length) return;
     
     const passedProfile = filteredProfiles[currentIndex];
+    const profileId = passedProfile._id || passedProfile.id;
     
-    // Add to interacted users immediately to prevent re-showing
-    setInteractedUserIds(prev => [...prev, passedProfile._id]);
+    if (!profileId) {
+      console.error('Profile ID not found');
+      return;
+    }
     
     try {
-      await matchAPI.passUser(passedProfile._id);
+      await matchAPI.passUser(profileId);
+      
+      // Add to interacted users AFTER the API call succeeds
+      setInteractedUserIds(prev => [...prev, profileId]);
     } catch (error) {
       console.error('Error passing user:', error);
+      // Don't add to interacted users if API call failed
     }
     
     // Smooth transition to next card
@@ -509,13 +540,15 @@ const TravelMatch: React.FC = () => {
 
   // Filter profiles based on all match preferences
   const filteredProfiles = profiles.filter(profile => {
+    const profileId = profile._id || profile.id;
+    
     // 0. Exclude current user
-    if (profile._id === userProfile?._id) {
+    if (profileId === userProfile?._id) {
       return false;
     }
 
     // 0.1. Exclude users already interacted with (liked or passed)
-    if (interactedUserIds.includes(profile._id)) {
+    if (profileId && interactedUserIds.includes(profileId)) {
       return false;
     }
 
@@ -861,7 +894,7 @@ const TravelMatch: React.FC = () => {
 
                   {/* Main profile card */}
                   <motion.div
-                    key={currentProfile._id}
+                    key={currentProfile._id || currentProfile.id}
                     style={{ x, rotate, opacity }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
@@ -1068,12 +1101,20 @@ const TravelMatch: React.FC = () => {
               <MatchSuccess
                 isOpen={showMatch}
                 onClose={() => {
+                  console.log('Closing match modal, moving to next card');
                   setShowMatch(false);
-                  setCurrentIndex(currentIndex + 1);
-                  x.set(0);
+                  setLastMatch(null);
+                  // Move to next card after closing the modal
+                  setTimeout(() => {
+                    setCurrentIndex(currentIndex + 1);
+                    x.set(0);
+                  }, 100);
                 }}
                 onSendMessage={() => {
-                  router.push(`/messages?user=${lastMatch._id}`);
+                  console.log('Sending message to matched user:', lastMatch._id || lastMatch.id);
+                  setShowMatch(false);
+                  setLastMatch(null);
+                  router.push(`/messages?user=${lastMatch._id || lastMatch.id}`);
                 }}
                 matchedUser={{
                   name: lastMatch.name,
