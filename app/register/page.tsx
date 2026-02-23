@@ -8,8 +8,8 @@ import { uploadPublicImageToCloudinary } from '../../lib/cloudinary';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import {
-  User, Mail, Lock, RotateCcw, Calendar, MapPin, Eye, EyeOff,
-  ArrowRight, ArrowLeft, Check, AlertCircle, Upload, X, Compass
+  User, Mail, RotateCcw, Calendar, MapPin, Eye, EyeOff,
+  ArrowRight, ArrowLeft, Check, AlertCircle, Upload, X, Compass, Loader2
 } from 'lucide-react';
 
 // Types
@@ -62,6 +62,8 @@ export default function RegisterPage() {
   const [coverPreview, setCoverPreview] = useState<string>('');
   const [uploadingProfile, setUploadingProfile] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [generatedUsername, setGeneratedUsername] = useState<string>('');
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -147,6 +149,16 @@ export default function RegisterPage() {
       ...formData,
       [name]: type === 'checkbox' ? checked : value
     });
+    
+    // Generate username when name changes
+    if (name === 'name' && value.trim()) {
+      const username = value
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .substring(0, 15);
+      const randomNum = Math.floor(Math.random() * 999);
+      setGeneratedUsername(username ? `${username}${randomNum}` : '');
+    }
     
     if (error) setError('');
   };
@@ -240,6 +252,70 @@ export default function RegisterPage() {
   const removeCoverPhoto = () => {
     setFormData(prev => ({ ...prev, coverPhoto: '' }));
     setCoverPreview('');
+  };
+
+  // Auto-detect location using browser geolocation API
+  const handleDetectLocation = async () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setDetectingLocation(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          
+          // Use reverse geocoding to get location name
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`
+          );
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch location');
+          }
+
+          const data = await response.json();
+          
+          // Extract city and country
+          const city = data.address.city || data.address.town || data.address.village || data.address.state;
+          const country = data.address.country;
+          
+          const locationString = city && country ? `${city}, ${country}` : data.display_name;
+          
+          setFormData(prev => ({ ...prev, location: locationString }));
+        } catch (err: any) {
+          setError('Failed to detect location. Please enter manually.');
+          console.error('Location detection error:', err);
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (error) => {
+        setDetectingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setError('Location permission denied. Please enable location access.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setError('Location information unavailable.');
+            break;
+          case error.TIMEOUT:
+            setError('Location request timed out.');
+            break;
+          default:
+            setError('An error occurred while detecting location.');
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
   };
 
   // Navigation handlers
@@ -399,6 +475,13 @@ export default function RegisterPage() {
                       <User className="w-5 h-5" />
                     </div>
                   </div>
+                  {generatedUsername && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 pl-1 flex items-center gap-1">
+                      <span className="text-[#059467]">✓</span>
+                      Your username will be: <span className="font-semibold text-[#059467]">@{generatedUsername}</span>
+                      <span className="text-slate-400">(editable later)</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* Email */}
@@ -505,7 +588,7 @@ export default function RegisterPage() {
                   </label>
                   <div className="relative">
                     <input
-                      className="w-full h-12 px-4 rounded-2xl bg-white dark:bg-[#0f231d] border border-slate-200 dark:border-[#2a453b] text-[#0f231d] dark:text-white placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:border-[#059467] focus:ring-4 focus:ring-[#059467]/10 transition-all duration-200"
+                      className="w-full h-12 px-4 rounded-2xl bg-white dark:bg-[#0f231d] border border-slate-200 dark:border-[#2a453b] text-[#0f231d] dark:text-white placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:border-[#059467] focus:ring-4 focus:ring-[#059467]/10 transition-all duration-200 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:hover:opacity-80"
                       id="dateOfBirth"
                       name="dateOfBirth"
                       type="date"
@@ -513,9 +596,6 @@ export default function RegisterPage() {
                       onChange={handleChange}
                       required
                     />
-                    <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
-                      <Calendar className="w-5 h-5" />
-                    </div>
                   </div>
                 </div>
 
@@ -524,20 +604,42 @@ export default function RegisterPage() {
                   <label className="text-[#0f231d] dark:text-gray-200 text-sm font-medium pl-1" htmlFor="location">
                     Location
                   </label>
-                  <div className="relative">
-                    <input
-                      className="w-full h-12 px-4 rounded-2xl bg-white dark:bg-[#0f231d] border border-slate-200 dark:border-[#2a453b] text-[#0f231d] dark:text-white placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:border-[#059467] focus:ring-4 focus:ring-[#059467]/10 transition-all duration-200"
-                      id="location"
-                      name="location"
-                      placeholder="City, Country"
-                      type="text"
-                      value={formData.location}
-                      onChange={handleChange}
-                      required
-                    />
-                    <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
-                      <MapPin className="w-5 h-5" />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        className="w-full h-12 px-4 pr-12 rounded-2xl bg-white dark:bg-[#0f231d] border border-slate-200 dark:border-[#2a453b] text-[#0f231d] dark:text-white placeholder:text-slate-400 text-sm font-medium focus:outline-none focus:border-[#059467] focus:ring-4 focus:ring-[#059467]/10 transition-all duration-200"
+                        id="location"
+                        name="location"
+                        placeholder="City, Country"
+                        type="text"
+                        value={formData.location}
+                        onChange={handleChange}
+                        required
+                        disabled={detectingLocation}
+                      />
+                      <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-slate-400">
+                        <MapPin className="w-5 h-5" />
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={handleDetectLocation}
+                      disabled={detectingLocation}
+                      className="h-12 px-4 bg-[#059467] hover:bg-[#047a55] text-white rounded-2xl font-medium text-sm shadow-md shadow-[#059467]/20 hover:shadow-[#059467]/30 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      title="Auto-detect location"
+                    >
+                      {detectingLocation ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="hidden sm:inline">Detecting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Compass className="w-4 h-4" />
+                          <span className="hidden sm:inline">Detect</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
