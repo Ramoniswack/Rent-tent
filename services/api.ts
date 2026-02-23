@@ -198,7 +198,7 @@ export const gearAPI = {
     deposit: number;
   }>) => {
     return apiRequest(`/gear/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(gearData),
     });
   },

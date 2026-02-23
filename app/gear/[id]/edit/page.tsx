@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import Header from '../../../components/Header';
-import Footer from '../../../components/Footer';
-import { gearAPI } from '../../../services/api';
-import { useAuth } from '../../../hooks/useAuth';
-import { formatNPR } from '../../../lib/currency';
+import Header from '../../../../components/Header';
+import Footer from '../../../../components/Footer';
+import { gearAPI } from '../../../../services/api';
+import { useAuth } from '../../../../hooks/useAuth';
+import { formatNPR } from '../../../../lib/currency';
 import {
   Check,
   Info,
@@ -23,7 +23,7 @@ import {
   MapPin
 } from 'lucide-react';
 
-const LocationMap = dynamic(() => import('../../../components/LocationMap'), {
+const LocationMap = dynamic(() => import('../../../../components/LocationMap'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-[200px] rounded-input overflow-hidden relative shadow-inner bg-slate-200 dark:bg-slate-700 animate-pulse" />
@@ -37,11 +37,13 @@ declare global {
   }
 }
 
-export default function AddGearPage() {
+export default function EditGearPage() {
   const router = useRouter();
+  const params = useParams();
+  const gearId = params.id as string;
   const { user, status } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -70,6 +72,61 @@ export default function AddGearPage() {
     currency: 'NPR',
     // Step 4: Review (no additional fields)
   });
+
+  // Load existing gear data
+  useEffect(() => {
+    const loadGearData = async () => {
+      if (!gearId) return;
+      
+      try {
+        setLoading(true);
+        const gear = await gearAPI.getById(gearId);
+        
+        // Check if current user is the owner
+        if (user && gear.owner && gear.owner._id !== user._id) {
+          setError('You do not have permission to edit this gear');
+          setTimeout(() => router.push('/gear'), 2000);
+          return;
+        }
+        
+        // Populate form with existing data
+        setFormData({
+          title: gear.title || '',
+          description: gear.description || '',
+          category: gear.category || '',
+          condition: gear.condition || '',
+          location: gear.location || '',
+          brand: gear.specifications?.brand || '',
+          model: gear.specifications?.model || '',
+          size: gear.specifications?.size || '',
+          weight: gear.specifications?.weight || '',
+          color: gear.specifications?.color || '',
+          images: gear.images || [],
+          imageInput: '',
+          pricePerDay: gear.pricePerDay?.toString() || '',
+          minimumRentalDays: gear.minimumRentalDays?.toString() || '1',
+          deposit: gear.deposit?.toString() || '',
+          currency: gear.currency || 'NPR',
+        });
+        
+        // Set location if available
+        if (gear.coordinates) {
+          setSelectedLocation({ lat: gear.coordinates.lat, lng: gear.coordinates.lng });
+          setMapCenter([gear.coordinates.lat, gear.coordinates.lng]);
+        }
+        
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error loading gear:', err);
+        setError(err.message || 'Failed to load gear data');
+        setLoading(false);
+      }
+    };
+    
+    if (status === 'authenticated') {
+      loadGearData();
+    }
+  }, [gearId, status, user, router]);
 
   // Check authentication
   useEffect(() => {
@@ -500,17 +557,17 @@ export default function AddGearPage() {
         deposit: formData.deposit ? parseFloat(formData.deposit) : 0,
       };
 
-      console.log('Submitting gear data:', gearData);
+      console.log('Updating gear data:', gearData);
 
-      const result = await gearAPI.create(gearData);
+      const result = await gearAPI.update(gearId, gearData);
       
-      console.log('Gear created successfully:', result);
+      console.log('Gear updated successfully:', result);
       
-      // Redirect to the newly created gear page
-      router.push(`/gear/${result._id}`);
+      // Redirect to the updated gear page
+      router.push(`/gear/${gearId}`);
     } catch (err: any) {
-      console.error('Error creating gear:', err);
-      const errorMessage = err.message || 'Failed to create gear listing';
+      console.error('Error updating gear:', err);
+      const errorMessage = err.message || 'Failed to update gear listing';
       setError(errorMessage);
       setLoading(false);
       

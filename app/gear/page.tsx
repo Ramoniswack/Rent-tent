@@ -443,7 +443,7 @@ export default function GearPage() {
                 <div className="flex flex-col gap-1 w-full sm:w-40 md:w-48">
                   <div className="flex justify-between text-xs font-bold text-[#0f172a] dark:text-white">
                     <span>Price</span>
-                    <span className="text-[#059467]">${0} - ${priceRange}</span>
+                    <span className="text-[#059467]">₹{0} - ₹{priceRange}</span>
                   </div>
                   <input
                     className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"

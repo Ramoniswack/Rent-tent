@@ -907,18 +907,7 @@ export default function GearDetailPage() {
                         Security Deposit
                       </span>
                       <span className="text-sm font-medium text-[#0d1c17] dark:text-white">
-                        ${gearItem.deposit || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm text-[#0d1c17]/60 dark:text-white/60">
-                          Currency
-                        </span>
-                        <Info className="w-3.5 h-3.5 text-[#059467]/60 cursor-help" />
-                      </div>
-                      <span className="text-sm font-medium text-[#0d1c17] dark:text-white">
-                        {gearItem.currency || 'USD'}
+                        ₹{gearItem.deposit || 0}
                       </span>
                     </div>
                   </div>
@@ -937,9 +926,11 @@ export default function GearDetailPage() {
                         Book Now
                       </button>
                     )}
-                    <button className="w-full h-12 rounded-full border border-[#059467] text-[#059467] font-bold text-sm hover:bg-[#059467]/5 transition-colors">
-                      Contact Owner
-                    </button>
+                    {!isOwner && (
+                      <button className="w-full h-12 rounded-full border border-[#059467] text-[#059467] font-bold text-sm hover:bg-[#059467]/5 transition-colors">
+                        Contact Owner
+                      </button>
+                    )}
                     <button 
                       onClick={() => {
                         const reviewSection = document.getElementById('reviews-section');

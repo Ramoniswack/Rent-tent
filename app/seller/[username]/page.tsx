@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
-import { gearAPI } from '../../../services/api';
+import { gearAPI, bookingAPI } from '../../../services/api';
 import { formatNPR } from '../../../lib/currency';
 import { getCityName } from '../../../lib/location';
+import { useAuth } from '../../../hooks/useAuth';
 import {
   ArrowLeft,
   MapPin,
@@ -16,7 +17,9 @@ import {
   Loader2,
   Mail,
   User as UserIcon,
-  ShoppingBag
+  ShoppingBag,
+  Edit,
+  Calendar
 } from 'lucide-react';
 
 interface GearItem {
@@ -51,18 +54,39 @@ interface SellerData {
 export default function SellerDashboardPage() {
   const router = useRouter();
   const params = useParams();
+  const { user: currentUser } = useAuth();
   const username = params.username as string;
   
   const [sellerData, setSellerData] = useState<SellerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [rentals, setRentals] = useState<any[]>([]);
+  const [loadingRentals, setLoadingRentals] = useState(false);
+  const [activeTab, setActiveTab] = useState<'gear' | 'rentals'>('gear');
 
   useEffect(() => {
     if (username) {
       fetchSellerGear();
     }
   }, [username]);
+
+  const fetchRentals = async () => {
+    try {
+      setLoadingRentals(true);
+      const bookings = await bookingAPI.getMyBookings();
+      // Filter to only show bookings where current user is the owner (gear owner)
+      const ownerBookings = bookings.filter((booking: any) => 
+        booking.gear?.owner?._id === currentUser?._id || 
+        booking.gear?.owner === currentUser?._id
+      );
+      setRentals(ownerBookings);
+    } catch (err) {
+      console.error('Error fetching rentals:', err);
+    } finally {
+      setLoadingRentals(false);
+    }
+  };
 
   const fetchSellerGear = async () => {
     try {
@@ -71,11 +95,33 @@ export default function SellerDashboardPage() {
       const data = await gearAPI.getGearByUser(username);
       console.log('Seller data received:', data);
       setSellerData(data);
+      
+      // Fetch rentals if viewing own profile
+      if (currentUser && data.user && (
+        currentUser._id === data.user._id || 
+        currentUser.username === data.user.username
+      )) {
+        // Fetch rentals in the background
+        fetchRentalsInBackground();
+      }
     } catch (err: any) {
       console.error('Error fetching seller gear:', err);
       setError(err.message || 'Failed to load seller information');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRentalsInBackground = async () => {
+    try {
+      setLoadingRentals(true);
+      const bookings = await bookingAPI.getGearBookings();
+      console.log('Owner bookings received:', bookings);
+      setRentals(bookings);
+    } catch (err) {
+      console.error('Error fetching rentals:', err);
+    } finally {
+      setLoadingRentals(false);
     }
   };
 
@@ -152,6 +198,12 @@ export default function SellerDashboardPage() {
   const ownerProfilePic = user.profilePicture || 
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=059467&color=fff&size=200`;
 
+  // Check if current user is viewing their own profile
+  const isOwnProfile = currentUser && user && (
+    currentUser._id === user._id || 
+    currentUser.username === user.username
+  );
+
   // Get unique categories from gear
   const categories = Array.from(new Set(gear.map(item => item.category)));
 
@@ -227,34 +279,172 @@ export default function SellerDashboardPage() {
                     </span>
                   </div>
                   
-                  <button
-                    onClick={() => router.push(`/profile/${user.username}`)}
-                    className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 border border-[#059467] text-[#059467] rounded-full text-xs sm:text-sm font-medium hover:bg-[#059467]/5 transition-colors active:scale-95 touch-manipulation w-full sm:w-auto"
-                  >
-                    <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="whitespace-nowrap">View Full Profile</span>
-                  </button>
+                  {!isOwnProfile && (
+                    <>
+                      <button
+                        onClick={() => router.push(`/profile/${user.username}`)}
+                        className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 border border-[#059467] text-[#059467] rounded-full text-xs sm:text-sm font-medium hover:bg-[#059467]/5 transition-colors active:scale-95 touch-manipulation w-full sm:w-auto"
+                      >
+                        <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap">View Full Profile</span>
+                      </button>
 
-                  <button
-                    onClick={() => router.push(`/messages?user=${user._id}`)}
-                    className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#059467] text-white rounded-full text-xs sm:text-sm font-medium hover:bg-[#047854] transition-colors active:scale-95 touch-manipulation w-full sm:w-auto"
-                  >
-                    <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="whitespace-nowrap">Message</span>
-                  </button>
+                      <button
+                        onClick={() => router.push(`/messages?user=${user._id}`)}
+                        className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#059467] text-white rounded-full text-xs sm:text-sm font-medium hover:bg-[#047854] transition-colors active:scale-95 touch-manipulation w-full sm:w-auto"
+                      >
+                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap">Message</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Page Title */}
+          {/* Tab Buttons - Only visible to owner */}
+          {isOwnProfile && (
+            <div className="mb-6">
+              <div className="flex gap-2 p-1 bg-white dark:bg-[#1a2c26] rounded-full shadow-sm border border-gray-100 dark:border-[#059467]/10 w-fit">
+                <button
+                  onClick={() => setActiveTab('gear')}
+                  className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
+                    activeTab === 'gear'
+                      ? 'bg-[#059467] text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-[#059467] dark:hover:text-[#059467]'
+                  }`}
+                >
+                  Your Gear
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('rentals');
+                    if (rentals.length === 0 && !loadingRentals) {
+                      fetchRentalsInBackground();
+                    }
+                  }}
+                  className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
+                    activeTab === 'rentals'
+                      ? 'bg-[#059467] text-white shadow-md'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-[#059467] dark:hover:text-[#059467]'
+                  }`}
+                >
+                  My Rentals
+                  {rentals.length > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                      {rentals.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* My Rentals Tab Content - Only visible to owner when tab is active */}
+          {isOwnProfile && activeTab === 'rentals' && (
+            <div className="mb-6 sm:mb-8">
+              <div className="mb-4">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0d1c17] dark:text-white flex items-center gap-2 sm:gap-3">
+                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#059467]" />
+                  <span>My Rentals</span>
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Bookings from people renting your gear
+                </p>
+              </div>
+
+              {loadingRentals ? (
+                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-8 text-center border border-gray-100 dark:border-[#059467]/10">
+                  <Loader2 className="w-8 h-8 text-[#059467] animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading rentals...</p>
+                </div>
+              ) : rentals.length > 0 ? (
+                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-[#059467]/10">
+                  <div className="space-y-4">
+                    {rentals.map((rental: any) => (
+                      <div
+                        key={rental._id}
+                        onClick={() => router.push(`/bookings/${rental._id}`)}
+                        className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-[#f5f8f7] dark:bg-[#0f231d] rounded-xl hover:bg-[#e7f4f0] dark:hover:bg-[#1a2c26] transition-colors cursor-pointer"
+                      >
+                        {/* Gear Image */}
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={rental.gear?.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200&q=80'}
+                            alt={rental.gear?.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Rental Info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-sm sm:text-base text-[#0d1c17] dark:text-white truncate">
+                            {rental.gear?.title}
+                          </h4>
+                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                            Rented by {rental.renter?.name || 'User'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              rental.status === 'confirmed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                              rental.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              rental.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                            }`}>
+                              {rental.status}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(rental.startDate).toLocaleDateString()} - {new Date(rental.endDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm sm:text-base font-bold text-[#059467]">
+                            {formatNPR(rental.totalPrice || 0, false)}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {rentals.length > 10 && (
+                    <button
+                      onClick={() => router.push('/rentals/dashboard')}
+                      className="w-full mt-4 px-4 py-2.5 bg-[#059467] hover:bg-[#047854] text-white rounded-full text-sm font-medium transition-colors"
+                    >
+                      View All in Dashboard
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-8 text-center border border-gray-100 dark:border-[#059467]/10">
+                  <Calendar className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-bold text-[#0d1c17] dark:text-white mb-2">
+                    No Rentals Yet
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    When people rent your gear, their bookings will appear here.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Your Gear Tab Content - Always visible to others, visible to owner when tab is active */}
+          {(!isOwnProfile || activeTab === 'gear') && (
+            <>
+              {/* Page Title */}
           <div className="mb-4 sm:mb-6">
             <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0d1c17] dark:text-white flex items-center gap-2 sm:gap-3">
               <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#059467]" />
-              <span>Available Gear</span>
+              <span>{isOwnProfile ? 'Your Gear' : 'Available Gear'}</span>
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Browse all items listed by {user.name}
+              {isOwnProfile ? 'Manage your listed items' : `Browse all items listed by ${user.name}`}
             </p>
           </div>
 
@@ -325,9 +515,24 @@ export default function SellerDashboardPage() {
               {filteredGear.map((item) => (
                 <div
                   key={item._id}
-                  className="group bg-white dark:bg-[#1a2c26] rounded-xl overflow-hidden hover:shadow-xl hover:shadow-[#059467]/5 transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 dark:border-[#059467]/5 cursor-pointer"
+                  className="group bg-white dark:bg-[#1a2c26] rounded-xl overflow-hidden hover:shadow-xl hover:shadow-[#059467]/5 transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 dark:border-[#059467]/5 cursor-pointer relative"
                   onClick={() => router.push(`/gear/${item._id}`)}
                 >
+                  {/* Edit Button for Owner */}
+                  {isOwnProfile && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/gear/${item._id}/edit`);
+                      }}
+                      className="absolute top-3 right-3 md:top-4 md:right-4 z-10 bg-[#059467] hover:bg-[#047854] text-white p-2 md:p-2.5 rounded-full shadow-lg transition-all active:scale-95 touch-manipulation flex items-center gap-1.5 md:gap-2 group/edit"
+                      title="Edit this gear"
+                    >
+                      <Edit className="w-4 h-4 md:w-4.5 md:h-4.5" />
+                      <span className="text-xs font-medium hidden group-hover/edit:inline-block">Edit</span>
+                    </button>
+                  )}
+                  
                   <div className="p-3 md:p-4">
                     <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:rounded-[32px]">
                       <img
@@ -402,6 +607,8 @@ export default function SellerDashboardPage() {
                 {user.name} hasn't listed any gear for rent yet.
               </p>
             </div>
+          )}
+            </>
           )}
         </main>
       </div>
