@@ -269,7 +269,10 @@ function BookingDetailsPage() {
             {/* Left Column - Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Status Timeline */}
-              <BookingStatusTimeline currentStatus={mappedStatus} />
+              <BookingStatusTimeline 
+                currentStatus={mappedStatus} 
+                statusHistory={booking.statusHistory}
+              />
 
               {/* Gear Details */}
               <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">

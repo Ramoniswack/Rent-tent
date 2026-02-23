@@ -6,7 +6,7 @@ interface StatusTimelineProps {
   currentStatus: string;
   statusHistory?: Array<{
     status: string;
-    timestamp: Date;
+    timestamp: Date | string;
     note?: string;
   }>;
 }
@@ -21,8 +21,23 @@ const STATUSES = [
   { key: 'completed', label: 'Completed', icon: CheckCircle2, description: 'Rental complete' }
 ];
 
-export default function BookingStatusTimeline({ currentStatus, statusHistory }: StatusTimelineProps) {
+export default function BookingStatusTimeline({ currentStatus, statusHistory = [] }: StatusTimelineProps) {
   const currentIndex = STATUSES.findIndex(s => s.key === currentStatus);
+  
+  // Helper function to get date for a status
+  const getStatusDate = (statusKey: string): string | null => {
+    if (!statusHistory || statusHistory.length === 0) return null;
+    
+    const historyEntry = statusHistory.find(h => h.status === statusKey);
+    if (!historyEntry) return null;
+    
+    const date = new Date(historyEntry.timestamp);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
   
   return (
     <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
@@ -45,6 +60,7 @@ export default function BookingStatusTimeline({ currentStatus, statusHistory }: 
               const Icon = status.icon;
               const isCompleted = index <= currentIndex;
               const isCurrent = index === currentIndex;
+              const statusDate = getStatusDate(status.key);
               
               return (
                 <div key={status.key} className="flex flex-col items-center" style={{ width: `${100 / STATUSES.length}%` }}>
@@ -68,6 +84,11 @@ export default function BookingStatusTimeline({ currentStatus, statusHistory }: 
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       {status.description}
                     </p>
+                    {statusDate && (
+                      <p className="text-xs text-[#059467] dark:text-[#059467] font-medium mt-1">
+                        {statusDate}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -82,6 +103,7 @@ export default function BookingStatusTimeline({ currentStatus, statusHistory }: 
           const Icon = status.icon;
           const isCompleted = index <= currentIndex;
           const isCurrent = index === currentIndex;
+          const statusDate = getStatusDate(status.key);
           
           return (
             <div key={status.key} className="flex items-start gap-4">
@@ -112,6 +134,11 @@ export default function BookingStatusTimeline({ currentStatus, statusHistory }: 
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {status.description}
                 </p>
+                {statusDate && (
+                  <p className="text-xs text-[#059467] font-medium mt-1">
+                    {statusDate}
+                  </p>
+                )}
               </div>
             </div>
           );

@@ -47,10 +47,10 @@ const Footer: React.FC = () => {
         <div className="md:col-span-2 flex flex-col gap-4">
           <h4 className="text-white font-bold text-sm uppercase tracking-wider">Product</h4>
           <button
-            onClick={() => router.push('/features')}
+            onClick={() => router.push('/match')}
             className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
           >
-            Features
+            Match
           </button>
           <button
             onClick={() => router.push('/gear')}
@@ -59,10 +59,10 @@ const Footer: React.FC = () => {
             Gear Rental
           </button>
           <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Pricing
+            Messages
           </a>
           <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Mobile App
+            Map
           </a>
         </div>
 
