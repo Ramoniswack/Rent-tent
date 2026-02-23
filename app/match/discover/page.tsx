@@ -2,16 +2,18 @@
 
 import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Heart, Loader2, Star, Calendar, User, Users } from 'lucide-react';
+import { Search, MapPin, Heart, Loader2, Star, Calendar, User, Users, SlidersHorizontal } from 'lucide-react';
 import { matchAPI } from '@/services/api';
 import Header from '@/components/Header';
 import { useToast } from '@/hooks/useToast';
+import MatchFilterModal, { FilterState } from '@/components/MatchFilterModal';
 
 interface UserCard {
   id: string;
   name: string;
   username?: string;
   age: number | string;
+  gender?: string;
   location: string;
   coverImage: string;
   avatar: string;
@@ -41,6 +43,14 @@ export default function DiscoverPage() {
   const [incomingLikes, setIncomingLikes] = useState<UserCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    ageRange: [18, 60],
+    selectedGenders: [],
+    selectedTravelStyles: [],
+    selectedInterests: [],
+    locationRange: 500,
+  });
   
   const itemsPerPage = 9;
 
@@ -57,6 +67,7 @@ export default function DiscoverPage() {
           name: profile.name,
           username: profile.username,
           age: profile.age || 'N/A',
+          gender: profile.gender,
           location: profile.location || 'Unknown',
           coverImage: profile.upcomingTrips?.[0]?.coverPhoto || 
                      'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=400&fit=crop',
@@ -102,6 +113,7 @@ export default function DiscoverPage() {
         name: match.user.name,
         username: match.user.username,
         age: match.user.age || 'N/A',
+        gender: match.user.gender,
         location: match.user.location || 'Unknown',
         coverImage: match.user.upcomingTrips?.[0]?.coverPhoto || 
                    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=400&fit=crop',
@@ -135,6 +147,7 @@ export default function DiscoverPage() {
         name: like.user.name,
         username: like.user.username,
         age: like.user.age || 'N/A',
+        gender: like.user.gender,
         location: like.user.location || 'Unknown',
         coverImage: like.user.upcomingTrips?.[0]?.coverPhoto || 
                    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=400&fit=crop',
@@ -175,7 +188,73 @@ export default function DiscoverPage() {
     return [];
   };
 
-  const currentData = getCurrentData();
+  // Apply filters to current data
+  const applyFilters = (data: UserCard[]) => {
+    return data.filter(user => {
+      // Search query filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = user.name.toLowerCase().includes(query);
+        const matchesUsername = user.username?.toLowerCase().includes(query);
+        const matchesLocation = user.location.toLowerCase().includes(query);
+        const matchesInterests = user.interests?.some(interest => 
+          interest.toLowerCase().includes(query)
+        );
+        const matchesTravelStyles = user.travelStyles?.some(style => 
+          style.toLowerCase().includes(query)
+        );
+        
+        if (!matchesName && !matchesUsername && !matchesLocation && !matchesInterests && !matchesTravelStyles) {
+          return false;
+        }
+      }
+
+      // Age filter
+      const userAge = typeof user.age === 'number' ? user.age : parseInt(user.age as string);
+      if (!isNaN(userAge) && (userAge < filters.ageRange[0] || userAge > filters.ageRange[1])) {
+        return false;
+      }
+
+      // Gender filter
+      if (filters.selectedGenders.length > 0 && !filters.selectedGenders.includes('Any')) {
+        if (!user.gender) {
+          // If user has no gender set, exclude them when gender filter is active
+          return false;
+        }
+        // Check if user's gender matches any of the selected genders
+        const userGender = user.gender.toLowerCase();
+        const matchesGender = filters.selectedGenders.some(selectedGender => 
+          selectedGender.toLowerCase() === userGender
+        );
+        if (!matchesGender) return false;
+      }
+
+      // Travel style filter
+      if (filters.selectedTravelStyles.length > 0) {
+        const hasMatchingStyle = user.travelStyles?.some(style => 
+          filters.selectedTravelStyles.includes(style)
+        );
+        if (!hasMatchingStyle) return false;
+      }
+
+      // Interests filter
+      if (filters.selectedInterests.length > 0) {
+        const hasMatchingInterest = user.interests?.some(interest => 
+          filters.selectedInterests.includes(interest)
+        );
+        if (!hasMatchingInterest) return false;
+      }
+
+      // Distance filter
+      if (filters.locationRange < 500 && user.distance !== undefined) {
+        if (user.distance > filters.locationRange) return false;
+      }
+
+      return true;
+    });
+  };
+
+  const currentData = applyFilters(getCurrentData());
   const totalPages = Math.ceil(currentData.length / itemsPerPage);
   
   const paginatedUsers = currentData.slice(
@@ -259,6 +338,25 @@ export default function DiscoverPage() {
     }
   };
 
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleSearch = () => {
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.ageRange[0] !== 18 || filters.ageRange[1] !== 60) count++;
+    if (filters.selectedGenders.length > 0 && !filters.selectedGenders.includes('Any')) count++;
+    if (filters.selectedTravelStyles.length > 0) count++;
+    if (filters.selectedInterests.length > 0) count++;
+    if (filters.locationRange !== 500) count++;
+    return count;
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
       <Header />
@@ -284,12 +382,32 @@ export default function DiscoverPage() {
                 placeholder="Search by name, location, or interests..."
                 value={searchQuery}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch();
+                  }
+                }}
                 className="w-full h-14 pl-14 pr-4 bg-transparent border-none rounded-[32px] focus:ring-2 focus:ring-[#059467]/20 text-[#0d1c17] dark:text-white placeholder:text-gray-400 font-medium hover:bg-[#f5f8f7] dark:hover:bg-[#0f231d]/50 transition-colors"
               />
             </div>
-            <button className="h-14 px-8 bg-[#059467] hover:bg-[#047854] text-white rounded-[32px] font-bold shadow-lg shadow-[#059467]/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+            <button 
+              onClick={() => setShowFilterModal(true)}
+              className="relative h-14 px-6 bg-white dark:bg-[#0f231d] hover:bg-[#f5f8f7] dark:hover:bg-[#1a3830] text-[#059467] rounded-[32px] font-bold border-2 border-[#059467]/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <SlidersHorizontal className="w-5 h-5" />
+              <span className="hidden sm:inline">Filters</span>
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-6 h-6 bg-pink-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg">
+                  {getActiveFilterCount()}
+                </span>
+              )}
+            </button>
+            <button 
+              onClick={handleSearch}
+              className="h-14 px-8 bg-[#059467] hover:bg-[#047854] text-white rounded-[32px] font-bold shadow-lg shadow-[#059467]/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
               <Search className="w-5 h-5" />
-              <span>Search</span>
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
         </div>
@@ -568,6 +686,14 @@ export default function DiscoverPage() {
           </>
         )}
       </main>
+
+      {/* Filter Modal */}
+      <MatchFilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onApply={handleApplyFilters}
+        initialFilters={filters}
+      />
     </div>
   );
 }

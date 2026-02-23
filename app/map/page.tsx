@@ -235,35 +235,91 @@ function MapPage() {
             setSelectedTrip(data[0]._id);
           }
         } else {
-          // Fetch matched friends
-          const matchedFriends = await matchAPI.getMatches();
+          // Fetch matched friends and mutual connections
+          console.log('Fetching friends data...');
           
-          // Extract user objects from match data
-          const allFriends = matchedFriends
-            .map((match: any) => match.user)
-            .filter((friend: any) => friend); // Remove null/undefined
-          
-          // Set all friends (even without coordinates) so they show in the list
-          setFriends(allFriends);
-          
-          // Check if there's a user parameter in URL
-          const urlParams = new URLSearchParams(window.location.search);
-          const userIdFromUrl = urlParams.get('user');
-          
-          if (userIdFromUrl) {
-            // Find and select the friend from URL parameter
-            const friendFromUrl = allFriends.find((f: any) => f._id === userIdFromUrl || f.id === userIdFromUrl);
-            if (friendFromUrl) {
-              setSelectedFriend(friendFromUrl._id || friendFromUrl.id);
+          try {
+            const matchedFriends = await matchAPI.getMatches();
+            console.log('Matched friends response:', matchedFriends);
+            
+            // Extract user objects from match data
+            const matchedUsers = matchedFriends
+              .map((match: any) => ({
+                ...match.user,
+                connectionType: 'match' // Tag as matched user
+              }))
+              .filter((friend: any) => friend); // Remove null/undefined
+            
+            console.log('Formatted matched users:', matchedUsers);
+            
+            // Try to fetch discover profiles for mutual connections
+            let mutualUsers: any[] = [];
+            try {
+              const discoverResponse = await matchAPI.discover();
+              console.log('Discover response:', discoverResponse);
+              
+              if (discoverResponse.success && discoverResponse.profiles) {
+                const mutualConnections = discoverResponse.profiles.filter((profile: any) => 
+                  profile.connectionStatus === 'connected'
+                );
+                
+                console.log('Mutual connections found:', mutualConnections);
+                
+                // Format mutual connections
+                mutualUsers = mutualConnections.map((profile: any) => ({
+                  _id: profile.id,
+                  id: profile.id,
+                  name: profile.name,
+                  username: profile.username,
+                  age: profile.age,
+                  location: profile.location,
+                  profilePicture: profile.profilePicture,
+                  coordinates: profile.coordinates,
+                  updatedAt: profile.updatedAt,
+                  connectionType: 'mutual' // Tag as mutual connection
+                }));
+                
+                console.log('Formatted mutual users:', mutualUsers);
+              }
+            } catch (discoverError) {
+              console.error('Error fetching discover profiles:', discoverError);
+              // Continue with just matched users if discover fails
             }
-          } else if (!selectedFriend) {
-            // Select first friend with coordinates by default only if no friend is selected
-            const firstFriendWithCoords = allFriends.find(
-              (friend: any) => friend.coordinates?.lat && friend.coordinates?.lng
-            );
-            if (firstFriendWithCoords) {
-              setSelectedFriend(firstFriendWithCoords._id);
+            
+            // Combine both lists, removing duplicates (prefer matched users)
+            const matchedIds = new Set(matchedUsers.map((u: any) => u._id || u.id));
+            const uniqueMutualUsers = mutualUsers.filter((u: any) => !matchedIds.has(u._id || u.id));
+            
+            const allFriends = [...matchedUsers, ...uniqueMutualUsers];
+            
+            console.log('Total friends to display:', allFriends.length);
+            console.log('All friends:', allFriends);
+            
+            // Set all friends (even without coordinates) so they show in the list
+            setFriends(allFriends);
+            
+            // Check if there's a user parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const userIdFromUrl = urlParams.get('user');
+            
+            if (userIdFromUrl) {
+              // Find and select the friend from URL parameter
+              const friendFromUrl = allFriends.find((f: any) => f._id === userIdFromUrl || f.id === userIdFromUrl);
+              if (friendFromUrl) {
+                setSelectedFriend(friendFromUrl._id || friendFromUrl.id);
+              }
+            } else if (!selectedFriend) {
+              // Select first friend with coordinates by default only if no friend is selected
+              const firstFriendWithCoords = allFriends.find(
+                (friend: any) => friend.coordinates?.lat && friend.coordinates?.lng
+              );
+              if (firstFriendWithCoords) {
+                setSelectedFriend(firstFriendWithCoords._id);
+              }
             }
+          } catch (error) {
+            console.error('Error in friends fetching:', error);
+            throw error; // Re-throw to be caught by outer try-catch
           }
         }
       } catch (err: any) {
@@ -818,6 +874,10 @@ function MapPage() {
                     ? (new Date().getTime() - new Date(friend.updatedAt).getTime()) < 5 * 60 * 1000
                     : false;
                   
+                  // Check connection type
+                  const isMatched = friend.connectionType === 'match';
+                  const isMutual = friend.connectionType === 'mutual';
+                  
                   return (
                     <div
                       key={friend._id}
@@ -857,7 +917,7 @@ function MapPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h4 className="font-bold text-[#0d1c17] dark:text-white truncate">{friend.name}</h4>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                                 isOnline 
@@ -866,6 +926,22 @@ function MapPage() {
                               }`}>
                                 {isOnline ? 'Online' : 'Offline'}
                               </span>
+                              {isMatched && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-400 font-medium flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                                  </svg>
+                                  Matched
+                                </span>
+                              )}
+                              {isMutual && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                                  </svg>
+                                  Connected
+                                </span>
+                              )}
                             </div>
                             {!hasLocation && (
                               <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
