@@ -1069,19 +1069,23 @@ function MessagesPage() {
         }
       }
       
+      // Generate unique clientSideId to prevent duplicates
+      const clientSideId = `${currentUserId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
       // Send via WebSocket with replyToId if replying
       socket.emit('message:send', {
         senderId: currentUserId,
         receiverId: selectedMatch._id || selectedMatch.id,
         text: newMessage.trim(),
         image: imageUrl,
-        replyToId: replyingTo?._id || replyingTo?.id
+        replyToId: replyingTo?._id || replyingTo?.id,
+        clientSideId: clientSideId
       });
 
       // Optimistically add message to UI
       const optimisticMessage = {
-        _id: Date.now().toString(),
-        id: Date.now().toString(),
+        _id: clientSideId, // Use clientSideId as temporary ID
+        id: clientSideId,
         sender: currentUserId,
         senderId: currentUserId,
         text: newMessage.trim(),

@@ -203,14 +203,18 @@ const TravelMatch: React.FC = () => {
         setShowMatch(true);
         // Don't auto-close, let user interact with the modal
       } else {
-        // Just liked, no match yet
-        setCurrentIndex(currentIndex + 1);
-        x.set(0);
+        // Just liked, no match yet - smooth transition to next card
+        setTimeout(() => {
+          setCurrentIndex(currentIndex + 1);
+          x.set(0);
+        }, 200);
       }
     } catch (error) {
       console.error('Error liking user:', error);
-      setCurrentIndex(currentIndex + 1);
-      x.set(0);
+      setTimeout(() => {
+        setCurrentIndex(currentIndex + 1);
+        x.set(0);
+      }, 200);
     }
   };
 
@@ -228,8 +232,11 @@ const TravelMatch: React.FC = () => {
       console.error('Error passing user:', error);
     }
     
-    setCurrentIndex(currentIndex + 1);
-    x.set(0);
+    // Smooth transition to next card
+    setTimeout(() => {
+      setCurrentIndex(currentIndex + 1);
+      x.set(0);
+    }, 200);
   };
 
   const handleUndo = () => {
@@ -265,6 +272,7 @@ const TravelMatch: React.FC = () => {
   };
 
   const activeFilterCount = getActiveFilterCount();
+  const hasActiveFilters = activeFilterCount > 0;
 
   const handleApplyFilters = (newFilters: FilterState) => {
     setAgeRange(newFilters.ageRange);
@@ -277,17 +285,17 @@ const TravelMatch: React.FC = () => {
 
   // Navigation component that's always visible
   const NavigationBar = () => (
-    <div className="relative z-10 max-w-md mx-auto px-4 py-4">
-      <div className="flex items-center justify-center mb-6">
-        <div className="flex items-center gap-3">
+    <div className="relative z-10 max-w-md mx-auto px-4 py-6">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-slate-700/50 p-3">
+        <div className="flex items-center justify-between gap-2">
           <button 
             onClick={() => setShowFilterModal(true)}
-            className="relative w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110 group"
+            className="relative flex-1 h-12 bg-gradient-to-br from-[#059467] to-[#047a55] rounded-xl flex items-center justify-center hover:shadow-lg hover:shadow-[#059467]/30 transition-all hover:scale-105 active:scale-95 group"
             title="Edit Match Filters"
           >
-            <Filter className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-[#059467]" />
+            <Filter className="w-5 h-5 text-white" />
             {activeFilterCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#059467] text-white text-xs font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 min-w-[24px] h-6 px-2 bg-rose-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
                 {activeFilterCount}
               </span>
             )}
@@ -295,26 +303,26 @@ const TravelMatch: React.FC = () => {
           
           <button 
             onClick={() => router.push('/map?tab=friends')}
-            className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110"
+            className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 group"
             title="View Map"
           >
-            <MapPin className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <MapPin className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-[#059467]" />
           </button>
           
           <button 
              onClick={() => router.push('/match/discover')}
-            className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110"
+            className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 group"
             title="View Matches"
           >
-            <Users className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <Users className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-[#059467]" />
           </button>
           
           <button 
             onClick={() => router.push('/messages')}
-            className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110"
+            className="flex-1 h-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 group"
             title="Messages"
           >
-            <MessageCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+            <MessageCircle className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-[#059467]" />
           </button>
         </div>
       </div>
@@ -511,12 +519,21 @@ const TravelMatch: React.FC = () => {
       return false;
     }
 
+    // If no filters are active, show all nearby users (no filtering)
+    if (!hasActiveFilters) {
+      return true;
+    }
+
+    // Apply filters only when they are explicitly set
+    
     // 1. Age Filter (only if age is set on profile and filter is not default)
-    if (profile.age && (ageRange[0] !== 18 || ageRange[1] !== 60)) {
-      const profileAge = parseInt(profile.age);
-      if (!isNaN(profileAge)) {
-        if (profileAge < ageRange[0] || profileAge > ageRange[1]) {
-          return false;
+    if (ageRange[0] !== 18 || ageRange[1] !== 60) {
+      if (profile.age) {
+        const profileAge = parseInt(profile.age);
+        if (!isNaN(profileAge)) {
+          if (profileAge < ageRange[0] || profileAge > ageRange[1]) {
+            return false;
+          }
         }
       }
     }
@@ -526,7 +543,6 @@ const TravelMatch: React.FC = () => {
       if (profile.gender && !selectedGenders.includes(profile.gender)) {
         return false;
       }
-      // If profile has no gender set, still show them
     }
 
     // 3. Travel Style Filter (only if styles selected)
@@ -534,7 +550,6 @@ const TravelMatch: React.FC = () => {
       if (profile.travelStyle && !selectedTravelStyles.includes(profile.travelStyle)) {
         return false;
       }
-      // If profile has no travel style set, still show them
     }
 
     // 4. Interests Filter (at least one common interest, only if interests selected)
@@ -547,13 +562,11 @@ const TravelMatch: React.FC = () => {
           return false;
         }
       }
-      // If profile has no interests set, still show them
     }
 
-    // 5. Location Range Filter (only if both users have coordinates and range is not max)
+    // 5. Location Range Filter (only if range is not max and both users have coordinates)
     if (locationRange < 500 && userProfile?.coordinates?.lat && userProfile?.coordinates?.lng) {
       if (profile.coordinates?.lat && profile.coordinates?.lng) {
-        // Calculate distance
         const distance = calculateDistance(
           userProfile.coordinates.lat,
           userProfile.coordinates.lng,
@@ -561,12 +574,10 @@ const TravelMatch: React.FC = () => {
           profile.coordinates.lng
         );
         
-        // Filter by location range
         if (distance > locationRange) {
           return false;
         }
       }
-      // If profile has no coordinates, still show them (they might be new users)
     }
 
     return true;
@@ -578,6 +589,7 @@ const TravelMatch: React.FC = () => {
     filteredProfiles: filteredProfiles.length,
     interactedUsers: interactedUserIds.length,
     activeFilters: activeFilterCount,
+    hasActiveFilters,
     filters: {
       ageRange,
       selectedGenders,
@@ -640,12 +652,30 @@ const TravelMatch: React.FC = () => {
           <NavigationBar />
           
           <div className="relative z-10 w-full max-w-md mx-auto px-4 flex items-center justify-center" style={{ minHeight: 'calc(100vh - 300px)' }}>
-            <div className="text-center w-full">
-              <Sparkles className="w-20 h-20 text-[#059467] mx-auto mb-4 animate-pulse" />
-              <h3 className="text-[#0f231d] dark:text-white text-2xl font-bold mb-2">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 20 }}
+              className="text-center w-full"
+            >
+              <motion.div
+                animate={{ 
+                  rotate: [0, 10, -10, 10, 0],
+                  scale: [1, 1.1, 1, 1.1, 1]
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 1
+                }}
+                className="mb-6"
+              >
+                <Sparkles className="w-20 h-20 text-[#059467] mx-auto" />
+              </motion.div>
+              <h3 className="text-[#0f231d] dark:text-white text-3xl font-black mb-3">
                 {filteredProfiles.length === 0 ? "No Matches Found" : "That's Everyone!"}
               </h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-2">
+              <p className="text-slate-500 dark:text-slate-400 text-base font-medium mb-3">
                 {filteredProfiles.length === 0 
                   ? "Try adjusting your filters to see more potential matches"
                   : hasInteractedWithAll 
@@ -655,41 +685,71 @@ const TravelMatch: React.FC = () => {
               </p>
               
               {/* Debug info */}
-              <div className="mb-6 p-3 bg-slate-100 dark:bg-slate-800 rounded-lg text-xs text-slate-600 dark:text-slate-400">
-                <div>Total profiles: {profiles.length}</div>
-                <div>Filtered profiles: {filteredProfiles.length}</div>
-                <div>Interacted with: {interactedUserIds.length}</div>
-                <div>Active filters: {activeFilterCount}</div>
-              </div>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="mb-8 p-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400 shadow-lg"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="text-left">
+                    <div className="font-semibold text-slate-900 dark:text-white">Total profiles</div>
+                    <div className="text-2xl font-black text-[#059467]">{profiles.length}</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-slate-900 dark:text-white">Filtered</div>
+                    <div className="text-2xl font-black text-[#059467]">{filteredProfiles.length}</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-slate-900 dark:text-white">Interacted</div>
+                    <div className="text-2xl font-black text-[#059467]">{interactedUserIds.length}</div>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-slate-900 dark:text-white">Active filters</div>
+                    <div className="text-2xl font-black text-[#059467]">{activeFilterCount}</div>
+                  </div>
+                </div>
+              </motion.div>
               
               <div className="flex flex-col gap-3">
                 {hasInteractedWithAll && (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={handleRefreshMatches}
-                    className="h-12 px-8 bg-[#059467] hover:bg-[#047a55] text-white rounded-2xl font-bold text-base shadow-lg shadow-[#059467]/20 hover:shadow-[#059467]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+                    className="h-14 px-8 bg-gradient-to-r from-[#059467] to-[#047a55] text-white rounded-2xl font-bold text-base shadow-lg shadow-[#059467]/30 hover:shadow-xl hover:shadow-[#059467]/40 transition-all flex items-center justify-center gap-2"
                   >
                     <RotateCcw className="w-5 h-5" />
                     Refresh Match Pool
-                  </button>
+                  </motion.button>
                 )}
                 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setCurrentIndex(0)}
-                  className="h-12 px-8 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                  className="h-14 px-8 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg border-2 border-slate-200 dark:border-slate-700 transition-all"
                 >
                   Start Over
-                </button>
+                </motion.button>
                 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setShowFilterModal(true)}
-                  className="h-12 px-8 bg-white dark:bg-[#152e26] hover:bg-slate-50 dark:hover:bg-[#1a3730] text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+                  className="h-14 px-8 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg border-2 border-slate-200 dark:border-slate-700 transition-all flex items-center justify-center gap-2"
                 >
                   <Filter className="w-5 h-5" />
                   Adjust Filters
-                </button>
+                </motion.button>
                 
                 {activeFilterCount > 0 && (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
                     onClick={() => {
                       // Reset all filters to defaults
                       setAgeRange([18, 60]);
@@ -699,13 +759,13 @@ const TravelMatch: React.FC = () => {
                       setLocationRange(500);
                       setCurrentIndex(0);
                     }}
-                    className="h-12 px-8 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-bold text-base shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    className="h-14 px-8 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-2xl font-bold text-base shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all"
                   >
                     Clear All Filters
-                  </button>
+                  </motion.button>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
         <div className="hidden md:block">
@@ -738,32 +798,65 @@ const TravelMatch: React.FC = () => {
             {/* Card Container */}
             <div className="relative h-[calc(100vh-320px)] max-h-[600px] min-h-[400px] mb-6">
               {currentIndex >= filteredProfiles.length ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-pink-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl border-2 border-dashed border-pink-200 dark:border-slate-600 text-center">
-                  <Sparkles className="w-20 h-20 text-pink-400 dark:text-[#059467] mb-4 animate-pulse" />
-                  <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                  className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-[#059467]/5 via-emerald-50/50 to-teal-50/50 dark:from-slate-800/50 dark:via-slate-800/30 dark:to-slate-700/50 rounded-3xl border-2 border-dashed border-[#059467]/30 dark:border-slate-600 text-center backdrop-blur-sm"
+                >
+                  <motion.div
+                    animate={{ 
+                      rotate: [0, 10, -10, 10, 0],
+                      scale: [1, 1.1, 1, 1.1, 1]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatDelay: 1
+                    }}
+                  >
+                    <Sparkles className="w-20 h-20 text-[#059467] dark:text-emerald-400 mb-6" />
+                  </motion.div>
+                  <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-3 px-6">
                     {filteredProfiles.length === 0 ? "No Matches Found" : "That's Everyone!"}
                   </h3>
-                  <p className="text-slate-600 dark:text-slate-400 mb-6 text-center px-8">
+                  <p className="text-slate-600 dark:text-slate-400 mb-8 text-center px-8 text-base">
                     {filteredProfiles.length === 0 
                       ? "Try adjusting your filters to see more potential matches"
                       : "Check back later for new travel buddies nearby"
                     }
                   </p>
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setCurrentIndex(0)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-orange-500 text-white px-8 py-4 rounded-full font-bold hover:shadow-xl transition-all transform hover:scale-105"
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#059467] to-[#047a55] text-white px-8 py-4 rounded-2xl font-bold text-base hover:shadow-xl hover:shadow-[#059467]/30 transition-all"
                   >
-                    <RotateCcw size={20} /> Replay
-                  </button>
-                </div>
+                    <RotateCcw size={20} /> Start Over
+                  </motion.button>
+                </motion.div>
               ) : (
-                <>
+                <AnimatePresence mode="wait">
                   {/* Background cards for stack effect */}
                   {currentIndex + 2 < filteredProfiles.length && (
-                    <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-xl scale-90 opacity-30 translate-y-4" />
+                    <motion.div 
+                      key={`bg-2-${currentIndex}`}
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 0.90, opacity: 0.3 }}
+                      exit={{ scale: 0.85, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-xl translate-y-4 border border-slate-200 dark:border-slate-700" 
+                    />
                   )}
                   {currentIndex + 1 < filteredProfiles.length && (
-                    <div className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-xl scale-95 opacity-60 translate-y-2" />
+                    <motion.div 
+                      key={`bg-1-${currentIndex}`}
+                      initial={{ scale: 0.90, opacity: 0 }}
+                      animate={{ scale: 0.95, opacity: 0.6 }}
+                      exit={{ scale: 0.90, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-xl translate-y-2 border border-slate-200 dark:border-slate-700" 
+                    />
                   )}
 
                   {/* Main profile card */}
@@ -772,8 +865,22 @@ const TravelMatch: React.FC = () => {
                     style={{ x, rotate, opacity }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.7}
                     onDragEnd={handleDragEnd}
-                    className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing"
+                    initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ 
+                      scale: 0.95, 
+                      opacity: 0,
+                      transition: { duration: 0.2 }
+                    }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 400, 
+                      damping: 30,
+                      mass: 0.8
+                    }}
+                    className="absolute inset-0 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden cursor-grab active:cursor-grabbing border-2 border-white/20 dark:border-slate-700/50"
                   >
                     <div className="relative h-full">
                       <img
@@ -783,15 +890,15 @@ const TravelMatch: React.FC = () => {
                       />
                       
                       {/* Gradient overlays */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-                      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/50 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+                      <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-black/60 via-black/20 to-transparent" />
                       
                       {/* Swipe indicators */}
                       <motion.div
                         style={{ opacity: likeOpacity }}
                         className="absolute top-12 right-8 transform rotate-12"
                       >
-                        <div className="bg-emerald-500 text-white px-8 py-4 rounded-2xl font-black text-3xl border-4 border-white shadow-2xl">
+                        <div className="bg-gradient-to-br from-emerald-400 to-green-600 text-white px-8 py-4 rounded-2xl font-black text-3xl border-4 border-white shadow-2xl backdrop-blur-sm">
                           LIKE
                         </div>
                       </motion.div>
@@ -799,7 +906,7 @@ const TravelMatch: React.FC = () => {
                         style={{ opacity: nopeOpacity }}
                         className="absolute top-12 left-8 transform -rotate-12"
                       >
-                        <div className="bg-red-500 text-white px-8 py-4 rounded-2xl font-black text-3xl border-4 border-white shadow-2xl">
+                        <div className="bg-gradient-to-br from-red-400 to-rose-600 text-white px-8 py-4 rounded-2xl font-black text-3xl border-4 border-white shadow-2xl backdrop-blur-sm">
                           NOPE
                         </div>
                       </motion.div>
@@ -807,29 +914,29 @@ const TravelMatch: React.FC = () => {
                       {/* Profile info button */}
                       <button 
                         onClick={() => currentProfile.username && router.push(`/profile/${currentProfile.username}`)}
-                        className="absolute top-6 right-6 w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all"
+                        className="absolute top-6 right-6 w-12 h-12 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center border border-white/40 hover:bg-white/30 hover:scale-110 transition-all shadow-lg hover:shadow-xl"
                         title="View Profile"
                       >
-                        <Info className="w-6 h-6 text-white" />
+                        <Info className="w-6 h-6 text-white drop-shadow-lg" />
                       </button>
 
                       {/* Profile details */}
                       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                        <div className="flex items-end justify-between mb-4">
+                        <div className="flex items-end justify-between">
                           <div className="flex-1">
-                            <h2 className="text-4xl font-black mb-3 drop-shadow-lg">
+                            <h2 className="text-5xl font-black mb-3 drop-shadow-2xl tracking-tight">
                               {currentProfile.name}
                               {currentProfile.age && (
-                                <span className="text-3xl font-normal ml-2">{currentProfile.age}</span>
+                                <span className="text-4xl font-semibold ml-3 opacity-90">{currentProfile.age}</span>
                               )}
                             </h2>
                             
                             {/* Distance indicator */}
                             {userProfile?.coordinates?.lat && userProfile?.coordinates?.lng && 
                              currentProfile.coordinates?.lat && currentProfile.coordinates?.lng && (
-                              <div className="flex items-center gap-2 text-lg drop-shadow">
-                                <MapPin size={20} className="flex-shrink-0" />
-                                <span className="font-medium">
+                              <div className="flex items-center gap-2 text-xl drop-shadow-lg">
+                                <MapPin size={22} className="flex-shrink-0" />
+                                <span className="font-semibold">
                                   {(() => {
                                     const distance = calculateDistance(
                                       userProfile.coordinates.lat,
@@ -852,91 +959,108 @@ const TravelMatch: React.FC = () => {
                       </div>
                     </div>
                   </motion.div>
-                </>
+                </AnimatePresence>
               )}
             </div>
 
             {/* Action Buttons */}
             {currentIndex < filteredProfiles.length && (
-              <div className="flex items-center justify-center gap-4">
-                <button
+              <div className="flex items-center justify-center gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={handleUndo}
                   disabled={currentIndex === 0}
-                  className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 border-2 border-yellow-400 flex items-center justify-center hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg"
+                  className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center hover:shadow-lg hover:shadow-amber-500/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-md"
                   title="Undo"
                 >
-                  <RotateCcw size={22} className="text-yellow-500" />
-                </button>
+                  <RotateCcw size={22} className="text-white" strokeWidth={2.5} />
+                </motion.button>
                 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={handlePass}
-                  className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 border-2 border-red-500 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 transition-all shadow-xl hover:scale-110 active:scale-95"
+                  className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center hover:shadow-xl hover:shadow-red-500/50 transition-all shadow-lg"
                   title="Pass"
                 >
-                  <X size={32} className="text-red-500" strokeWidth={3} />
-                </button>
+                  <X size={36} className="text-white" strokeWidth={3} />
+                </motion.button>
 
-                <button
-                  className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 border-2 border-blue-500 flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all shadow-lg hover:scale-110 active:scale-95"
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center hover:shadow-lg hover:shadow-blue-500/50 transition-all shadow-md"
                   title="Super Like"
                 >
-                  <Star size={20} className="text-blue-500" fill="currentColor" />
-                </button>
+                  <Star size={22} className="text-white" fill="currentColor" />
+                </motion.button>
 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
                   onClick={handleLike}
-                  className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 border-2 border-emerald-500 flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all shadow-xl hover:scale-110 active:scale-95"
+                  className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center hover:shadow-xl hover:shadow-emerald-500/50 transition-all shadow-lg"
                   title="Like"
                 >
-                  <Heart size={32} className="text-emerald-500" fill="currentColor" strokeWidth={0} />
-                </button>
+                  <Heart size={36} className="text-white" fill="currentColor" strokeWidth={0} />
+                </motion.button>
 
-                <button
-                  className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 border-2 border-purple-500 flex items-center justify-center hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all shadow-lg hover:scale-110 active:scale-95"
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center hover:shadow-lg hover:shadow-purple-500/50 transition-all shadow-md"
                   title="Boost"
                 >
-                  <Zap size={22} className="text-purple-500" fill="currentColor" />
-                </button>
+                  <Zap size={22} className="text-white" fill="currentColor" />
+                </motion.button>
               </div>
             )}
 
             {/* Active Filters Summary */}
             {activeFilterCount > 0 && (
-              <div className="mt-4 p-3 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Active Filters:</span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 p-4 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-[#059467]" />
+                    Active Filters
+                  </span>
+                  <span className="text-xs font-semibold text-[#059467] bg-[#059467]/10 px-3 py-1 rounded-full">
                     {filteredProfiles.length} {filteredProfiles.length === 1 ? 'match' : 'matches'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
                   {(ageRange[0] !== 18 || ageRange[1] !== 60) && (
-                    <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-[#059467] to-[#047a55] text-white rounded-full text-xs font-semibold shadow-sm">
                       Age: {ageRange[0]}-{ageRange[1]}
                     </span>
                   )}
                   {selectedGenders.length > 0 && !selectedGenders.includes('Any') && (
-                    <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-[#059467] to-[#047a55] text-white rounded-full text-xs font-semibold shadow-sm">
                       Gender: {selectedGenders.join(', ')}
                     </span>
                   )}
                   {selectedTravelStyles.length > 0 && (
-                    <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
-                      Style: {selectedTravelStyles.join(', ')}
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-[#059467] to-[#047a55] text-white rounded-full text-xs font-semibold shadow-sm">
+                      Style: {selectedTravelStyles.length} selected
                     </span>
                   )}
                   {selectedInterests.length > 0 && (
-                    <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-[#059467] to-[#047a55] text-white rounded-full text-xs font-semibold shadow-sm">
                       Interests: {selectedInterests.length}
                     </span>
                   )}
                   {locationRange !== 500 && (
-                    <span className="px-2 py-1 bg-[#059467]/10 text-[#059467] rounded-full font-medium">
+                    <span className="px-3 py-1.5 bg-gradient-to-r from-[#059467] to-[#047a55] text-white rounded-full text-xs font-semibold shadow-sm">
                       Range: {locationRange === 0 ? 'Nearby' : `${locationRange}km`}
                     </span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Match Success Overlay */}
