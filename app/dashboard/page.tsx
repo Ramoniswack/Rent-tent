@@ -386,7 +386,7 @@ function DashboardPage() {
                 >
                   My Trips
                 </button>
-                <button 
+                {/* <button 
                   onClick={() => setActiveTab('public')}
                   className={`flex-1 lg:min-w-[160px] py-2.5 md:py-3 px-4 md:px-6 rounded-full font-bold text-xs md:text-sm transition-all ${
                     activeTab === 'public'
@@ -395,7 +395,7 @@ function DashboardPage() {
                   }`}
                 >
                   Public Trips
-                </button>
+                </button> */}
               </div>
 
               {/* Search & Filter Bar */}

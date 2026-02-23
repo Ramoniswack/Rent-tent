@@ -21,7 +21,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-type BookingStatus = 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+type BookingStatus = 'pending' | 'confirmed' | 'picked_up' | 'in_use' | 'returned' | 'inspected' | 'completed' | 'cancelled';
 
 function RentalDashboard() {
   const router = useRouter();
@@ -118,6 +118,9 @@ function RentalDashboard() {
   };
 
   const getStatusBadge = (status: string) => {
+    // Map old 'active' status to 'in_use' for display
+    const displayStatus = status === 'active' ? 'in_use' : status;
+    
     const badges = {
       pending: {
         bg: 'bg-[#fef3c7]',
@@ -127,12 +130,27 @@ function RentalDashboard() {
       confirmed: {
         bg: 'bg-[#d1fae5]',
         text: 'text-[#059467]',
-        label: 'Accepted'
+        label: 'Confirmed'
       },
-      active: {
+      picked_up: {
         bg: 'bg-[#dbeafe]',
         text: 'text-[#3b82f6]',
-        label: 'Active'
+        label: 'Picked Up'
+      },
+      in_use: {
+        bg: 'bg-[#e0e7ff]',
+        text: 'text-[#6366f1]',
+        label: 'In Use'
+      },
+      returned: {
+        bg: 'bg-[#fce7f3]',
+        text: 'text-[#ec4899]',
+        label: 'Returned'
+      },
+      inspected: {
+        bg: 'bg-[#f3e8ff]',
+        text: 'text-[#a855f7]',
+        label: 'Inspected'
       },
       completed: {
         bg: 'bg-[#f1f5f9]',
@@ -142,10 +160,10 @@ function RentalDashboard() {
       cancelled: {
         bg: 'bg-[#fee2e2]',
         text: 'text-[#ef4444]',
-        label: 'Declined'
+        label: 'Cancelled'
       }
     };
-    return badges[status as keyof typeof badges] || badges.pending;
+    return badges[displayStatus as keyof typeof badges] || badges.pending;
   };
 
   const formatDate = (start: string, end: string) => {

@@ -102,13 +102,7 @@ function BookingDetailsPage() {
   // Confirm status change
   const confirmStatusChange = async () => {
     try {
-      // Map new status back to old status if needed
-      let apiStatus = pendingStatus;
-      if (pendingStatus === 'in_use') {
-        apiStatus = 'active';
-      }
-      
-      await bookingAPI.updateStatus(booking._id, apiStatus);
+      await bookingAPI.updateStatus(booking._id, pendingStatus);
       setToast({ message: 'Status updated successfully', type: 'success' });
       setShowStatusChangeModal(false);
       fetchBookingDetails();
