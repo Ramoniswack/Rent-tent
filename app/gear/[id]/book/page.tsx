@@ -249,7 +249,7 @@ export default function BookGearPage() {
 
     try {
       setSubmitting(true);
-      await bookingAPI.create({
+      const newBooking = await bookingAPI.create({
         gearId: gear._id,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
@@ -259,7 +259,7 @@ export default function BookGearPage() {
       
       setToast({ message: 'Booking request submitted successfully!', type: 'success' });
       setTimeout(() => {
-        router.push('/rentals/dashboard?tab=requests');
+        router.push(`/bookings/${newBooking._id}`);
       }, 1500);
     } catch (error: any) {
       console.error('Booking error:', error);

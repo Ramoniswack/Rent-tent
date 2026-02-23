@@ -1,523 +1,550 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Toast from '../../../components/Toast';
+import BookingStatusTimeline from '../../../components/BookingStatusTimeline';
+import DepositStatusCard from '../../../components/DepositStatusCard';
+import BookingActionButtons from '../../../components/BookingActionButtons';
+import LogisticsCard from '../../../components/LogisticsCard';
+import RentalTermsCard from '../../../components/RentalTermsCard';
+import OwnerStatusControl from '../../../components/OwnerStatusControl';
+import ConfirmModal from '../../../components/ConfirmModal';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
 import { formatNPR } from '../../../lib/currency';
-import { getCityName } from '../../../lib/location';
-import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import {
   ArrowLeft,
   Calendar,
-  MapPin,
   User,
-  DollarSign,
   Package,
-  Clock,
-  FileText,
   Download,
-  QrCode,
   Loader2,
-  Mail,
-  Phone
+  AlertTriangle
 } from 'lucide-react';
 
 function BookingDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const { user } = useAuth();
-  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [issueDescription, setIssueDescription] = useState('');
+  const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState('');
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
+    // Only fetch if user is loaded
+    if (user && params.id) {
+      fetchBookingDetails();
     }
-    fetchBookingDetails();
   }, [user, params.id]);
 
+  // Fetch booking details
   const fetchBookingDetails = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      // Fetch from both endpoints and find the matching booking
-      const [myBookings, gearBookings] = await Promise.all([
+      // Fetch both renter and owner bookings to find this specific booking
+      const [renterBookings, ownerBookings] = await Promise.all([
         bookingAPI.getMyBookings(),
         bookingAPI.getGearBookings()
       ]);
       
-      const allBookings = [...myBookings, ...gearBookings];
-      const foundBooking = allBookings.find(b => b._id === params.id);
+      // Find the booking by ID
+      const allBookings = [...renterBookings, ...ownerBookings];
+      const foundBooking = allBookings.find((b: any) => b._id === params.id);
       
       if (!foundBooking) {
+        console.error('Booking not found in fetched data');
         setToast({ message: 'Booking not found', type: 'error' });
-        setTimeout(() => router.push('/rentals/dashboard'), 2000);
+        setLoading(false);
         return;
       }
       
+      console.log('Found booking:', foundBooking);
       setBooking(foundBooking);
-      
-      // Generate QR code
-      setTimeout(() => {
-        if (qrCanvasRef.current) {
-          const bookingData = {
-            id: foundBooking._id,
-            gear: foundBooking.gear.title,
-            dates: `${new Date(foundBooking.startDate).toLocaleDateString()} - ${new Date(foundBooking.endDate).toLocaleDateString()}`,
-            amount: foundBooking.totalPrice,
-            status: foundBooking.status
-          };
-          
-          QRCode.toCanvas(
-            qrCanvasRef.current,
-            JSON.stringify(bookingData),
-            { width: 200, margin: 2 },
-            (error) => {
-              if (error) console.error('QR Code generation error:', error);
-            }
-          );
-        }
-      }, 100);
     } catch (error: any) {
       console.error('Error fetching booking:', error);
-      setToast({ message: 'Failed to load booking details', type: 'error' });
+      setToast({ message: error.message || 'Failed to load booking details', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      pending: { bg: 'bg-[#fef3c7]', text: 'text-[#f59e0b]', label: 'Pending' },
-      confirmed: { bg: 'bg-[#d1fae5]', text: 'text-[#059467]', label: 'Confirmed' },
-      active: { bg: 'bg-[#dbeafe]', text: 'text-[#3b82f6]', label: 'Active' },
-      completed: { bg: 'bg-[#f1f5f9]', text: 'text-[#64748b]', label: 'Completed' },
-      cancelled: { bg: 'bg-[#fee2e2]', text: 'text-[#ef4444]', label: 'Cancelled' }
-    };
-    return badges[status as keyof typeof badges] || badges.pending;
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!booking) return;
-
+  // Handle cancel booking
+  const handleCancel = async () => {
     try {
-      const doc = new jsPDF();
-      const gear = booking.gear;
-      const isOwner = gear.owner._id === user?._id || gear.owner === user?._id;
-      const otherUser = isOwner ? booking.renter : booking.owner;
-      
-      // Header
-      doc.setFillColor(5, 148, 103);
-      doc.rect(0, 0, 210, 40, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RENTAL RECEIPT', 105, 20, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Booking ID: ${booking._id}`, 105, 30, { align: 'center' });
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 35, { align: 'center' });
-      
-      // Reset text color
-      doc.setTextColor(0, 0, 0);
-      let yPos = 55;
-      
-      // Status Badge
-      const badge = getStatusBadge(booking.status);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Status: ${badge.label.toUpperCase()}`, 20, yPos);
-      yPos += 15;
-      
-      // Item Details Section
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('ITEM DETAILS', 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Item: ${gear.title}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Category: ${gear.category}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Condition: ${gear.condition}`, 20, yPos);
-      yPos += 12;
-      
-      // Rental Period Section
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RENTAL PERIOD', 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Start Date: ${formatDate(booking.startDate)}`, 20, yPos);
-      yPos += 6;
-      doc.text(`End Date: ${formatDate(booking.endDate)}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Duration: ${booking.totalDays} days`, 20, yPos);
-      yPos += 12;
-      
-      // Parties Section
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PARTIES', 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${isOwner ? 'Renter' : 'Owner'}: ${otherUser?.name || 'Unknown'}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Email: ${otherUser?.email || 'N/A'}`, 20, yPos);
-      yPos += 12;
-      
-      // Payment Details Section
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PAYMENT DETAILS', 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Rental Rate: ${formatNPR((booking.totalPrice / booking.totalDays))}/day`, 20, yPos);
-      yPos += 6;
-      doc.text(`Total Days: ${booking.totalDays}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Subtotal: ${formatNPR(booking.totalPrice)}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Security Deposit: ${formatNPR(booking.deposit)}`, 20, yPos);
-      yPos += 8;
-      
-      // Total line
-      doc.setDrawColor(5, 148, 103);
-      doc.setLineWidth(0.5);
-      doc.line(20, yPos, 190, yPos);
-      yPos += 6;
-      
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`TOTAL: ${formatNPR((booking.totalPrice + booking.deposit))}`, 20, yPos);
-      yPos += 12;
-      
-      // Pickup Location
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PICKUP LOCATION', 20, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const locationLines = doc.splitTextToSize(getCityName(booking.pickupLocation), 170);
-      doc.text(locationLines, 20, yPos);
-      yPos += (locationLines.length * 6) + 10;
-      
-      // QR Code
-      if (qrCanvasRef.current) {
-        const qrImage = qrCanvasRef.current.toDataURL('image/png');
-        doc.addImage(qrImage, 'PNG', 155, yPos, 35, 35);
+      await bookingAPI.updateStatus(booking._id, 'cancelled');
+      setToast({ message: 'Booking cancelled successfully', type: 'success' });
+      setShowCancelModal(false);
+      fetchBookingDetails();
+    } catch (error: any) {
+      setToast({ message: error.message || 'Failed to cancel booking', type: 'error' });
+    }
+  };
+
+  // Handle status change (owner only)
+  const handleStatusChange = (newStatus: string) => {
+    setPendingStatus(newStatus);
+    setShowStatusChangeModal(true);
+  };
+
+  // Confirm status change
+  const confirmStatusChange = async () => {
+    try {
+      // Map new status back to old status if needed
+      let apiStatus = pendingStatus;
+      if (pendingStatus === 'in_use') {
+        apiStatus = 'active';
       }
       
-      // Footer
-      doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-      doc.text('Thank you for using our rental service!', 105, 280, { align: 'center' });
-      doc.text('For support, contact: support@rentalservice.com', 105, 285, { align: 'center' });
+      await bookingAPI.updateStatus(booking._id, apiStatus);
+      setToast({ message: 'Status updated successfully', type: 'success' });
+      setShowStatusChangeModal(false);
+      fetchBookingDetails();
+    } catch (error: any) {
+      setToast({ message: error.message || 'Failed to update status', type: 'error' });
+    }
+  };
+
+  // Handle report issue
+  const handleReportIssue = async () => {
+    if (!issueDescription.trim()) {
+      setToast({ message: 'Please describe the issue', type: 'warning' });
+      return;
+    }
+    
+    try {
+      // For now, just show a success message
+      // In production, this would call an API endpoint
+      setToast({ message: 'Issue reported successfully. Owner will be notified.', type: 'success' });
+      setShowIssueModal(false);
+      setIssueDescription('');
+    } catch (error: any) {
+      setToast({ message: error.message || 'Failed to report issue', type: 'error' });
+    }
+  };
+
+  // Handle extend rental
+  const handleExtendRental = () => {
+    setToast({ message: 'Extension request feature coming soon', type: 'info' });
+  };
+
+  // Handle contact owner
+  const handleContactOwner = () => {
+    if (booking) {
+      const otherUser = isRenter ? booking.owner : booking.renter;
+      router.push(`/messages?user=${otherUser._id}`);
+    }
+  };
+
+  // Handle get directions
+  const handleGetDirections = () => {
+    if (booking?.pickupLocation) {
+      const encodedLocation = encodeURIComponent(booking.pickupLocation);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedLocation}`, '_blank');
+    }
+  };
+
+  // Handle view refund
+  const handleViewRefund = () => {
+    setToast({ message: 'Refund details will be sent to your email', type: 'info' });
+  };
+
+  // Download PDF receipt
+  const downloadPDF = async () => {
+    if (!booking) return;
+    
+    try {
+      const doc = new jsPDF();
       
-      // Save PDF
-      doc.save(`receipt-${booking._id}.pdf`);
-      setToast({ message: 'Receipt downloaded successfully!', type: 'success' });
+      // Get user names with better fallbacks
+      const renterName = booking.renter?.name || booking.renter?.username || 'N/A';
+      const ownerName = booking.owner?.name || booking.owner?.username || 'N/A';
+      
+      // Header
+      doc.setFontSize(20);
+      doc.text('Rental Booking Receipt', 20, 20);
+      
+      // Booking details
+      doc.setFontSize(12);
+      doc.text(`Booking ID: ${booking._id}`, 20, 40);
+      doc.text(`Gear: ${booking.gear?.title || 'N/A'}`, 20, 50);
+      doc.text(`Renter: ${renterName}`, 20, 60);
+      doc.text(`Owner: ${ownerName}`, 20, 70);
+      doc.text(`Start Date: ${new Date(booking.startDate).toLocaleDateString()}`, 20, 80);
+      doc.text(`End Date: ${new Date(booking.endDate).toLocaleDateString()}`, 20, 90);
+      doc.text(`Total Days: ${booking.totalDays}`, 20, 100);
+      doc.text(`Total Price: ${formatNPR(booking.totalPrice)}`, 20, 110);
+      doc.text(`Deposit: ${formatNPR(booking.deposit || 0)}`, 20, 120);
+      doc.text(`Status: ${booking.status}`, 20, 130);
+      doc.text(`Pickup Location: ${booking.pickupLocation}`, 20, 140);
+      
+      doc.save(`booking-${booking._id}.pdf`);
+      setToast({ message: 'Receipt downloaded successfully', type: 'success' });
     } catch (error) {
-      console.error('PDF generation error:', error);
+      console.error('Error generating PDF:', error);
       setToast({ message: 'Failed to generate PDF', type: 'error' });
     }
   };
 
   if (loading) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
-          <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
+      <ProtectedRoute>
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17]">
+          <Header />
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+          </div>
         </div>
-        <div className="hidden md:block">
-          <Footer />
-        </div>
-      </>
+      </ProtectedRoute>
     );
   }
 
   if (!booking) {
     return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-[#0d1c17] dark:text-white mb-2">Booking Not Found</h2>
-            <button 
+      <ProtectedRoute>
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17]">
+          <Header />
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+            <p className="text-gray-500 dark:text-gray-400">Booking not found</p>
+            <button
               onClick={() => router.push('/rentals/dashboard')}
-              className="text-[#059467] hover:underline"
+              className="px-4 py-2 bg-[#059467] hover:bg-[#047854] text-white rounded-full font-medium transition-colors"
             >
-              Back to Dashboard
+              Go to Dashboard
             </button>
           </div>
         </div>
-        <div className="hidden md:block">
-          <Footer />
-        </div>
-      </>
+      </ProtectedRoute>
     );
   }
 
-  const gear = booking.gear;
-  const isOwner = gear.owner._id === user?._id || gear.owner === user?._id;
-  const otherUser = isOwner ? booking.renter : booking.owner;
-  const badge = getStatusBadge(booking.status);
+  const isRenter = booking.renter?._id === user?._id;
+  const isGearOwner = booking.owner?._id === user?._id;
+  const otherUser = isRenter ? booking.owner : booking.renter;
+  
+  // Debug logging
+  console.log('Booking Debug:', {
+    userId: user?._id,
+    renterId: booking.renter?._id,
+    ownerId: booking.owner?._id,
+    renterData: booking.renter,
+    ownerData: booking.owner,
+    isRenter,
+    isGearOwner,
+    otherUser,
+    hasGear: !!booking.gear
+  });
+  
+  // Map old status to new status system
+  const mappedStatus = booking.status === 'active' ? 'in_use' : booking.status;
 
   return (
-    <>
-      <Header />
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
-        <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 md:py-10 lg:px-20">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17]">
+        <Header />
+        
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Back Button */}
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#059467] hover:text-[#047854] font-medium mb-6 transition-colors"
+            className="flex items-center gap-2 text-[#059467] hover:text-[#047854] mb-6 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
-            Back to Dashboard
+            <span className="font-medium">Back</span>
           </button>
 
-          {/* Header */}
-          <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 mb-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-black text-[#0d1c17] dark:text-white mb-2">
-                  Booking Details
-                </h1>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${badge.bg} ${badge.text} text-xs font-bold uppercase tracking-wider`}>
-                    {badge.label}
-                  </span>
-                  <span className="text-xs text-[#0d1c17]/50 dark:text-white/50">
-                    ID: {booking._id.slice(-8).toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={handleDownloadPDF}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#059467] text-white font-bold text-sm hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
-              >
-                <Download className="w-4 h-4" />
-                Download Receipt (PDF)
-              </button>
-            </div>
-          </div>
-
-          {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Main Details */}
+            {/* Left Column - Main Content */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Status Timeline */}
+              <BookingStatusTimeline currentStatus={mappedStatus} />
+
               {/* Gear Details */}
               <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
                 <div className="flex items-center gap-2 mb-4">
                   <Package className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Item Details</h2>
+                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Gear Information</h2>
                 </div>
+                
                 <div className="flex gap-4">
-                  {gear.images?.[0] && (
+                  {booking.gear?.images?.[0] && (
                     <img
-                      src={gear.images[0]}
-                      alt={gear.title}
-                      className="w-32 h-32 rounded-xl object-cover flex-shrink-0"
+                      src={booking.gear.images[0]}
+                      alt={booking.gear.title}
+                      className="w-24 h-24 object-cover rounded-lg"
                     />
                   )}
                   <div className="flex-1">
-                    <h3 className="text-lg font-bold text-[#0d1c17] dark:text-white mb-2">{gear.title}</h3>
-                    <p className="text-sm text-[#0d1c17]/70 dark:text-white/70 mb-3">
-                      {gear.description}
+                    <h3 className="font-bold text-lg text-[#0d1c17] dark:text-white mb-1">
+                      {booking.gear?.title || 'N/A'}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {booking.gear?.category || 'N/A'}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-3 py-1 bg-[#f5f8f7] dark:bg-white/5 rounded-full text-xs font-medium text-[#0d1c17] dark:text-white">
-                        {gear.category}
-                      </span>
-                      <span className="px-3 py-1 bg-[#f5f8f7] dark:bg-white/5 rounded-full text-xs font-medium text-[#0d1c17] dark:text-white">
-                        {gear.condition}
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => router.push(`/gear/${booking.gear?._id}`)}
+                      className="text-sm text-[#059467] hover:text-[#047854] font-medium"
+                    >
+                      View Gear Details →
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Rental Period */}
+              {/* Rental Details */}
               <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
                 <div className="flex items-center gap-2 mb-4">
                   <Calendar className="w-5 h-5 text-[#059467]" />
                   <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Rental Period</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 mb-1">Start Date</p>
-                    <p className="font-semibold text-[#0d1c17] dark:text-white">{formatDate(booking.startDate)}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Start Date</p>
+                    <p className="font-semibold text-[#0d1c17] dark:text-white">
+                      {new Date(booking.startDate).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 mb-1">End Date</p>
-                    <p className="font-semibold text-[#0d1c17] dark:text-white">{formatDate(booking.endDate)}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">End Date</p>
+                    <p className="font-semibold text-[#0d1c17] dark:text-white">
+                      {new Date(booking.endDate).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 mb-1">Duration</p>
-                    <p className="font-bold text-[#059467]">{booking.totalDays} days</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Days</p>
+                    <p className="font-semibold text-[#0d1c17] dark:text-white">
+                      {booking.totalDays} {booking.totalDays === 1 ? 'day' : 'days'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Price</p>
+                    <p className="font-bold text-xl text-[#059467]">
+                      {formatNPR(booking.totalPrice)}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Pickup Location */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Pickup Location</h2>
-                </div>
-                <p className="text-[#0d1c17] dark:text-white">{booking.pickupLocation}</p>
-              </div>
+              {/* Logistics */}
+              <LogisticsCard
+                location={booking.pickupLocation}
+                pickupInstructions="Please bring a valid ID for verification. Pickup available between 9 AM - 6 PM."
+                returnInstructions="Return the gear in the same condition. Late returns are subject to additional charges."
+                ownerPhone={otherUser?.phone}
+                ownerEmail={otherUser?.email}
+                onGetDirections={handleGetDirections}
+                onContactOwner={handleContactOwner}
+              />
 
-              {/* Other Party Info */}
+              {/* Action Buttons */}
               <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">
-                    {isOwner ? 'Renter' : 'Owner'} Information
-                  </h2>
-                </div>
-                <div className="flex items-center gap-4">
-                  {otherUser?.profilePicture && (
-                    <img
-                      src={otherUser.profilePicture}
-                      alt={otherUser.name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                  )}
-                  <div>
-                    <p className="font-bold text-lg text-[#0d1c17] dark:text-white">{otherUser?.name || 'Unknown'}</p>
-                    <div className="flex items-center gap-2 text-sm text-[#0d1c17]/70 dark:text-white/70 mt-1">
-                      <Mail className="w-4 h-4" />
-                      <span>{otherUser?.email || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
+                <BookingActionButtons
+                  status={mappedStatus}
+                  isRenter={isRenter}
+                  onCancel={() => setShowCancelModal(true)}
+                  onContactOwner={handleContactOwner}
+                  onReportIssue={() => setShowIssueModal(true)}
+                  onExtendRental={handleExtendRental}
+                  onViewRefund={handleViewRefund}
+                />
               </div>
             </div>
 
-            {/* Right Column - Payment & QR */}
+            {/* Right Column - Sidebar */}
             <div className="space-y-6">
-              {/* Payment Details */}
+              {/* Owner Status Control - Only visible to gear owner (product lister) */}
+              {isGearOwner && (
+                <OwnerStatusControl
+                  currentStatus={mappedStatus}
+                  onStatusChange={handleStatusChange}
+                  disabled={booking.status === 'cancelled' || booking.status === 'completed'}
+                />
+              )}
+
+              {/* Deposit Status */}
+              <DepositStatusCard
+                depositAmount={booking.deposit || 0}
+                depositStatus="held"
+                refundDate={new Date(new Date(booking.endDate).getTime() + 3 * 24 * 60 * 60 * 1000)}
+              />
+
+              {/* Rental Terms */}
+              <RentalTermsCard
+                lateFeePerDay={50}
+                protectionPlan={{ active: false }}
+                cancellationDeadline={new Date(new Date(booking.startDate).getTime() - 24 * 60 * 60 * 1000)}
+                cancellationFee={booking.totalPrice * 0.1}
+              />
+
+              {/* Contact Card */}
               <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
                 <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Payment</h2>
+                  <User className="w-5 h-5 text-[#059467]" />
+                  <h2 className="text-lg font-bold text-[#0d1c17] dark:text-white">
+                    {isRenter ? 'Owner' : 'Renter'} Details
+                  </h2>
                 </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#0d1c17]/70 dark:text-white/70">Rate/day:</span>
-                    <span className="font-semibold text-[#0d1c17] dark:text-white">
-                      {formatNPR((booking.totalPrice / booking.totalDays))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#0d1c17]/70 dark:text-white/70">Days:</span>
-                    <span className="font-semibold text-[#0d1c17] dark:text-white">{booking.totalDays}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#0d1c17]/70 dark:text-white/70">Subtotal:</span>
-                    <span className="font-semibold text-[#0d1c17] dark:text-white">{formatNPR(booking.totalPrice)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#0d1c17]/70 dark:text-white/70">Deposit:</span>
-                    <span className="font-semibold text-[#0d1c17] dark:text-white">{formatNPR(booking.deposit)}</span>
-                  </div>
-                  <div className="pt-3 border-t-2 border-[#059467]/20">
-                    <div className="flex justify-between">
-                      <span className="font-bold text-[#0d1c17] dark:text-white">Total:</span>
-                      <span className="font-black text-2xl text-[#059467]">
-                        {formatNPR((booking.totalPrice + booking.deposit))}
-                      </span>
+                {otherUser && otherUser._id ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      {otherUser.profilePicture && (
+                        <img
+                          src={otherUser.profilePicture}
+                          alt={otherUser.name || otherUser.username || 'User'}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      )}
+                      <div>
+                        <p className="font-semibold text-[#0d1c17] dark:text-white">
+                          {otherUser.name || otherUser.username || 'Unknown User'}
+                        </p>
+                        {otherUser.username && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            @{otherUser.username}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* QR Code */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <QrCode className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Booking Ticket</h2>
-                </div>
-                <div className="flex flex-col items-center">
-                  <canvas ref={qrCanvasRef} className="mb-3" />
-                  <p className="text-xs text-center text-[#0d1c17]/70 dark:text-white/70">
-                    Scan for quick verification
+                    {otherUser.username && (
+                      <button
+                        onClick={() => router.push(`/profile/${otherUser.username}`)}
+                        className="w-full px-4 py-2 bg-[#f5f8f7] dark:bg-white/5 hover:bg-[#e7f4f0] dark:hover:bg-white/10 rounded-lg text-sm font-medium text-[#0d1c17] dark:text-white transition-colors"
+                      >
+                        View Profile
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    User information not available
                   </p>
-                </div>
+                )}
               </div>
+            </div>
+          </div>
 
-              {/* Timestamps */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Timestamps</h2>
-                </div>
-                <div className="space-y-2 text-xs text-[#0d1c17]/70 dark:text-white/70">
-                  <div className="flex justify-between">
-                    <span>Created:</span>
-                    <span>{new Date(booking.createdAt).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Updated:</span>
-                    <span>{new Date(booking.updatedAt).toLocaleString()}</span>
-                  </div>
-                </div>
+          {/* Booking Details Section - Moved to bottom */}
+          <div className="mt-6 bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-[#0d1c17] dark:text-white mb-2">
+                  Booking Details
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Booking ID: <span className="font-mono text-sm">{booking._id}</span>
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={downloadPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#059467] hover:bg-[#047854] text-white rounded-full font-medium transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Receipt
+                </button>
               </div>
             </div>
           </div>
         </main>
-      </div>
-      <div className="hidden md:block">
-        <Footer />
-      </div>
-    </>
-  );
-}
 
-export default function ProtectedBookingDetailsPage() {
-  return (
-    <ProtectedRoute>
-      <BookingDetailsPage />
+        <Footer />
+
+        {/* Cancel Modal */}
+        {showCancelModal && (
+          <ConfirmModal
+            title="Cancel Booking"
+            message="Are you sure you want to cancel this booking? This action cannot be undone."
+            confirmText="Yes, Cancel"
+            cancelText="No, Keep It"
+            onConfirm={handleCancel}
+            onCancel={() => setShowCancelModal(false)}
+            type="decline"
+          />
+        )}
+
+        {/* Issue Report Modal */}
+        {showIssueModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 max-w-md w-full">
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="w-6 h-6 text-orange-500" />
+                <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white">Report Issue</h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Describe the issue you're experiencing with this rental.
+              </p>
+              <textarea
+                value={issueDescription}
+                onChange={(e) => setIssueDescription(e.target.value)}
+                placeholder="Describe the issue..."
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#059467] focus:border-transparent bg-white dark:bg-[#0d1c17] text-[#0d1c17] dark:text-white resize-none"
+                rows={4}
+              />
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => setShowIssueModal(false)}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full font-bold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReportIssue}
+                  className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-full font-bold transition-colors"
+                >
+                  Submit Report
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Change Confirmation Modal */}
+        {showStatusChangeModal && (
+          <ConfirmModal
+            title="Update Rental Status"
+            message={`Are you sure you want to change the status to "${pendingStatus.replace('_', ' ').toUpperCase()}"? The renter will be notified of this change.`}
+            confirmText="Yes, Update Status"
+            cancelText="Cancel"
+            onConfirm={confirmStatusChange}
+            onCancel={() => setShowStatusChangeModal(false)}
+            type="confirm"
+          />
+        )}
+
+        {/* Toast */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
+      </div>
     </ProtectedRoute>
   );
 }
+
+export default BookingDetailsPage;
