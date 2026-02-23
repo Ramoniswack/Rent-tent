@@ -1,5 +1,7 @@
 // Cloudinary service for direct uploads from frontend
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 export interface CloudinarySignature {
   signature: string;
   timestamp: number;
@@ -53,7 +55,7 @@ export async function uploadImageToCloudinary(
 ): Promise<CloudinaryUploadResponse> {
   try {
     // Step 1: Get signature from backend
-    const signatureResponse = await fetch('/api/messages/cloudinary-sign', {
+    const signatureResponse = await fetch(`${API_BASE_URL}/messages/cloudinary-sign`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -62,6 +64,66 @@ export async function uploadImageToCloudinary(
     });
 
     if (!signatureResponse.ok) {
+      const errorText = await signatureResponse.text();
+      console.error('Signature request failed:', errorText);
+      throw new Error('Failed to get upload signature');
+    }
+
+    const signatureData: CloudinarySignature = await signatureResponse.json();
+
+    // Step 2: Prepare form data for Cloudinary
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('signature', signatureData.signature);
+    formData.append('timestamp', signatureData.timestamp.toString());
+    formData.append('api_key', signatureData.apiKey);
+    
+    // Add upload parameters
+    Object.entries(signatureData.uploadParams).forEach(([key, value]) => {
+      formData.append(key, value.toString());
+    });
+
+    // Step 3: Upload directly to Cloudinary
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`;
+    
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.json();
+      throw new Error(errorData.error?.message || 'Upload failed');
+    }
+
+    const uploadResult: CloudinaryUploadResponse = await uploadResponse.json();
+    return uploadResult;
+
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Uploads an image for public use (registration, etc.) - no authentication required
+ */
+export async function uploadPublicImageToCloudinary(
+  file: File,
+  onProgress?: (progress: number) => void
+): Promise<CloudinaryUploadResponse> {
+  try {
+    // Step 1: Get signature from public endpoint (no auth required)
+    const signatureResponse = await fetch(`${API_BASE_URL}/auth/cloudinary-sign`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!signatureResponse.ok) {
+      const errorText = await signatureResponse.text();
+      console.error('Signature request failed:', errorText);
       throw new Error('Failed to get upload signature');
     }
 
@@ -113,7 +175,7 @@ export function uploadImageWithProgress(
   return new Promise(async (resolve, reject) => {
     try {
       // Get signature from backend
-      const signatureResponse = await fetch('/api/messages/cloudinary-sign', {
+      const signatureResponse = await fetch(`${API_BASE_URL}/messages/cloudinary-sign`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -122,6 +184,8 @@ export function uploadImageWithProgress(
       });
 
       if (!signatureResponse.ok) {
+        const errorText = await signatureResponse.text();
+        console.error('Signature request failed:', errorText);
         throw new Error('Failed to get upload signature');
       }
 
@@ -292,7 +356,7 @@ export function generateOptimizedImageUrl(
  */
 export async function deleteImageFromCloudinary(publicId: string): Promise<void> {
   try {
-    const response = await fetch('/api/messages/cloudinary-delete', {
+    const response = await fetch(`${API_BASE_URL}/messages/cloudinary-delete`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`,

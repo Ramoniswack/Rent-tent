@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '../../../hooks/useAuth';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import {
@@ -12,7 +13,9 @@ import {
   Globe,
   Heart,
   Plane,
-  Loader2
+  Loader2,
+  Edit,
+  Settings
 } from 'lucide-react';
 import { userAPI, matchAPI } from '../../../services/api';
 
@@ -59,6 +62,7 @@ const LANGUAGE_FLAGS: { [key: string]: string } = {
 export default function PublicProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const { user: currentUser } = useAuth();
   const username = params.username as string;
   
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -68,11 +72,19 @@ export default function PublicProfilePage() {
   const [isMatched, setIsMatched] = useState(false);
   const [checkingMatch, setCheckingMatch] = useState(true);
   const [connectionCount, setConnectionCount] = useState(0);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
   useEffect(() => {
     fetchProfile();
     checkMatchStatus();
   }, [username]);
+
+  useEffect(() => {
+    // Check if viewing own profile
+    if (currentUser && profile) {
+      setIsOwnProfile(currentUser.username === profile.username || currentUser.username === username);
+    }
+  }, [currentUser, profile, username]);
 
   const checkMatchStatus = async () => {
     try {
@@ -308,28 +320,49 @@ export default function PublicProfilePage() {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  <button
-                    onClick={handleConnect}
-                    className={`px-6 py-2.5 rounded-full font-bold transition-all flex items-center gap-2 ${
-                      isConnected
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                        : 'bg-[#059467] text-white hover:bg-[#047a55]'
-                    }`}
-                  >
-                    {isConnected ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        Connected
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-4 h-4" />
-                        Connect
-                      </>
-                    )}
-                  </button>
+                  {isOwnProfile ? (
+                    // Show Edit Profile button for own profile
+                    <button
+                      onClick={() => router.push('/account?tab=profile')}
+                      className="px-6 py-2.5 bg-[#059467] text-white rounded-full font-bold hover:bg-[#047a55] transition-all flex items-center gap-2"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Profile
+                    </button>
+                  ) : (
+                    // Show Connect button for other profiles
+                    <button
+                      onClick={handleConnect}
+                      className={`px-6 py-2.5 rounded-full font-bold transition-all flex items-center gap-2 ${
+                        isConnected
+                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          : 'bg-[#059467] text-white hover:bg-[#047a55]'
+                      }`}
+                    >
+                      {isConnected ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Connected
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4" />
+                          Connect
+                        </>
+                      )}
+                    </button>
+                  )}
                   
-                  {isMatched ? (
+                  {isOwnProfile ? (
+                    // Show Settings button for own profile
+                    <button
+                      onClick={() => router.push('/account?tab=settings')}
+                      className="px-6 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </button>
+                  ) : isMatched ? (
                     <button
                       onClick={handleMessage}
                       className="px-6 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2"

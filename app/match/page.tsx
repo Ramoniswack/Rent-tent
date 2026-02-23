@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import MatchSuccess from '../../components/MatchSuccess';
+import MatchFilterModal, { FilterState } from '../../components/MatchFilterModal';
 import { 
   Heart, 
   X, 
@@ -65,6 +67,7 @@ const TravelMatch: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [profileComplete, setProfileComplete] = useState(false);
   const [interactedUserIds, setInteractedUserIds] = useState<string[]>([]);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   
   // Load filter preferences from user profile
   const [ageRange, setAgeRange] = useState<[number, number]>([18, 60]);
@@ -198,12 +201,7 @@ const TravelMatch: React.FC = () => {
         setMatches([...matches, likedProfile]);
         setLastMatch(likedProfile);
         setShowMatch(true);
-        
-        setTimeout(() => {
-          setShowMatch(false);
-          setCurrentIndex(currentIndex + 1);
-          x.set(0);
-        }, 2000);
+        // Don't auto-close, let user interact with the modal
       } else {
         // Just liked, no match yet
         setCurrentIndex(currentIndex + 1);
@@ -268,13 +266,22 @@ const TravelMatch: React.FC = () => {
 
   const activeFilterCount = getActiveFilterCount();
 
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setAgeRange(newFilters.ageRange);
+    setSelectedGenders(newFilters.selectedGenders);
+    setSelectedTravelStyles(newFilters.selectedTravelStyles);
+    setSelectedInterests(newFilters.selectedInterests);
+    setLocationRange(newFilters.locationRange);
+    setCurrentIndex(0); // Reset to first profile
+  };
+
   // Navigation component that's always visible
   const NavigationBar = () => (
     <div className="relative z-10 max-w-md mx-auto px-4 py-4">
       <div className="flex items-center justify-center mb-6">
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => router.push('/account?tab=filters')}
+            onClick={() => setShowFilterModal(true)}
             className="relative w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-all hover:scale-110 group"
             title="Edit Match Filters"
           >
@@ -674,7 +681,7 @@ const TravelMatch: React.FC = () => {
                 </button>
                 
                 <button
-                  onClick={() => router.push('/account?tab=filters')}
+                  onClick={() => setShowFilterModal(true)}
                   className="h-12 px-8 bg-white dark:bg-[#152e26] hover:bg-slate-50 dark:hover:bg-[#1a3730] text-[#0f231d] dark:text-white rounded-2xl font-bold text-base shadow-lg border border-slate-200 dark:border-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   <Filter className="w-5 h-5" />
@@ -932,41 +939,42 @@ const TravelMatch: React.FC = () => {
               </div>
             )}
 
-            {/* Match Modal */}
-            <AnimatePresence>
-              {showMatch && lastMatch && (
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0, opacity: 0 }}
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-                >
-                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm mx-4 text-center shadow-2xl">
-                    <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
-                      <Heart className="w-10 h-10 text-white" fill="white" />
-                    </div>
-                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2">
-                      It's a Match!
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-400 mb-6">
-                      You and {lastMatch.name} both want to connect
-                    </p>
-                    <button
-                      onClick={() => router.push(`/messages?user=${lastMatch._id}`)}
-                      className="w-full h-12 bg-[#059467] hover:bg-[#047a55] text-white rounded-2xl font-bold text-base shadow-lg shadow-[#059467]/20 hover:shadow-[#059467]/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 mb-3"
-                    >
-                      Send Message
-                    </button>
-                    <button
-                      onClick={() => setShowMatch(false)}
-                      className="w-full h-12 text-[#0f231d] dark:text-white rounded-2xl font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-600"
-                    >
-                      Keep Swiping
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Match Success Overlay */}
+            {showMatch && lastMatch && userProfile && (
+              <MatchSuccess
+                isOpen={showMatch}
+                onClose={() => {
+                  setShowMatch(false);
+                  setCurrentIndex(currentIndex + 1);
+                  x.set(0);
+                }}
+                onSendMessage={() => {
+                  router.push(`/messages?user=${lastMatch._id}`);
+                }}
+                matchedUser={{
+                  name: lastMatch.name,
+                  profilePicture: lastMatch.profilePicture,
+                }}
+                currentUser={{
+                  name: userProfile.name,
+                  profilePicture: userProfile.profilePicture,
+                }}
+              />
+            )}
+
+            {/* Filter Modal */}
+            <MatchFilterModal
+              isOpen={showFilterModal}
+              onClose={() => setShowFilterModal(false)}
+              onApply={handleApplyFilters}
+              initialFilters={{
+                ageRange,
+                selectedGenders,
+                selectedTravelStyles,
+                selectedInterests,
+                locationRange,
+              }}
+            />
           </div>
         </main>
       </div>

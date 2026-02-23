@@ -89,7 +89,7 @@ const TRAVEL_STYLES = ['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Trav
 const COMMON_INTERESTS = ['Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 'Meditation', 'Local Cuisine', 'Mountaineering', 'Rock Climbing', 'Camping', 'Coworking', 'Cafes', 'History', 'Language Exchange'];
 const COMMON_LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Mandarin', 'Japanese', 'Korean', 'Hindi', 'Arabic', 'Russian', 'Nepali'];
 
-type TabType = 'profile' | 'filters' | 'settings' | 'stats' | 'billing' | 'blocked';
+type TabType = 'profile' | 'settings' | 'stats' | 'billing' | 'blocked';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -168,10 +168,10 @@ export default function AccountPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tab = urlParams.get('tab');
-      // Map 'preferences' to 'filters' for backward compatibility
-      if (tab === 'preferences') {
-        setActiveTab('filters');
-      } else if (tab && ['profile', 'filters', 'settings', 'stats', 'billing', 'blocked'].includes(tab)) {
+      // Redirect 'filters' or 'preferences' to match page
+      if (tab === 'preferences' || tab === 'filters') {
+        router.push('/match');
+      } else if (tab && ['profile', 'settings', 'stats', 'billing', 'blocked'].includes(tab)) {
         setActiveTab(tab as TabType);
       }
     }
@@ -243,6 +243,13 @@ export default function AccountPage() {
       fetchUserStats();
     }
   }, [activeTab]);
+
+  // Fetch blocked users when blocked tab is active
+  useEffect(() => {
+    if (activeTab === 'blocked') {
+      fetchBlockedUsers();
+    }
+  }, [activeTab, userProfile?.username]);
 
   // Fetch blocked users when blocked tab is active
   useEffect(() => {
@@ -786,22 +793,6 @@ export default function AccountPage() {
               <span>Profile</span>
             </button>
 
-            {/* Filters Tab */}
-            <button
-              onClick={() => handleTabChange('filters')}
-              className={`relative flex items-center gap-4 px-4 py-3 rounded-xl font-medium group transition-all ${
-                activeTab === 'filters'
-                  ? 'bg-[#059467]/10 text-[#059467]'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {activeTab === 'filters' && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#059467] rounded-r-full"></div>
-              )}
-              <Filter className="w-5 h-5" />
-              <span>Filters</span>
-            </button>
-
             {/* Settings Tab */}
             <button
               onClick={() => handleTabChange('settings')}
@@ -918,17 +909,6 @@ export default function AccountPage() {
               <span>Profile</span>
             </button>
             <button
-              onClick={() => handleTabChange('filters')}
-              className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
-                activeTab === 'filters'
-                  ? 'text-[#059467] border-b-2 border-[#059467]'
-                  : 'text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              <Filter className="w-4 h-4" />
-              <span>Filters</span>
-            </button>
-            <button
               onClick={() => handleTabChange('settings')}
               className={`flex-1 min-w-[100px] flex items-center justify-center gap-2 px-4 py-4 text-sm font-semibold transition-all ${
                 activeTab === 'settings'
@@ -981,7 +961,6 @@ export default function AccountPage() {
             <div>
               <h2 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-1 md:mb-2">
                 {activeTab === 'profile' && 'Profile Settings'}
-                {activeTab === 'filters' && 'Travel Match Filters'}
                 {activeTab === 'settings' && 'Settings'}
                 {activeTab === 'stats' && 'Travel Statistics'}
                 {activeTab === 'billing' && 'Billing & Plans'}
@@ -989,11 +968,8 @@ export default function AccountPage() {
               </h2>
               <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg">
                 {activeTab === 'profile' && 'Manage your account details and view your travel statistics.'}
-                {activeTab === 'filters' && 'Set your preferences for discovering compatible travel buddies.'}
                 {activeTab === 'settings' && 'Customize your experience and notification settings.'}
                 {activeTab === 'stats' && 'View your travel history and activity.'}
-                {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
-                {activeTab === 'blocked' && 'Manage users you have blocked from messaging you.'}
                 {activeTab === 'billing' && 'Manage your subscription and payment methods.'}
                 {activeTab === 'blocked' && 'Manage users you have blocked from messaging you.'}
               </p>
@@ -1181,33 +1157,19 @@ export default function AccountPage() {
                     <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base mb-4 md:mb-6">Complete your profile to find travel buddies</p>
 
                     <div className="space-y-4 md:space-y-6">
-                      {/* Date of Birth & Age */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Date of Birth
-                          </label>
-                          <input
-                            className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
-                            type="date"
-                            name="dateOfBirth"
-                            value={formData.dateOfBirth}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Age</label>
-                          <input
-                            className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white placeholder:text-slate-400 cursor-not-allowed"
-                            type="text"
-                            name="age"
-                            value={formData.age || 'Auto-calculated'}
-                            readOnly
-                            placeholder="Auto-calculated from DOB"
-                          />
-                          <p className="text-xs text-slate-400 dark:text-slate-500">Automatically calculated from date of birth</p>
-                        </div>
+                      {/* Birthday */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          Birthday
+                        </label>
+                        <input
+                          className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 placeholder:text-slate-400"
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth}
+                          onChange={handleInputChange}
+                        />
                       </div>
 
                       {/* Location with Map Picker */}
@@ -1403,265 +1365,6 @@ export default function AccountPage() {
                   </section>
                 </div>
               </>
-            )}
-
-            {/* Filters Tab Content */}
-            {activeTab === 'filters' && (
-              <div className="col-span-12 lg:col-span-7">
-                {/* Travel Match Filters Section */}
-                <section className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/50 p-8 shadow-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Heart className="w-6 h-6 text-pink-500" />
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">Travel Match Filters</h3>
-                  </div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Set your preferences for discovering compatible travel buddies</p>
-                  
-                  <div className="space-y-6">
-                    {/* Age Range */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Age Range: <span className="text-[#059467]">{formData.matchPreferences.ageRange[0]} - {formData.matchPreferences.ageRange[1]} years</span>
-                      </label>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="flex justify-between text-xs text-slate-500 mb-2">
-                            <span>Min Age: {formData.matchPreferences.ageRange[0]}</span>
-                            <span>18 - 100</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="18"
-                            max="100"
-                            value={formData.matchPreferences.ageRange[0]}
-                            onChange={(e) => {
-                              const minAge = parseInt(e.target.value);
-                              const maxAge = formData.matchPreferences.ageRange[1];
-                              // Ensure min is not greater than max
-                              if (minAge <= maxAge) {
-                                setFormData({
-                                  ...formData,
-                                  matchPreferences: {
-                                    ...formData.matchPreferences,
-                                    ageRange: [minAge, maxAge]
-                                  }
-                                });
-                              }
-                            }}
-                            className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#059467]"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs text-slate-500 mb-2">
-                            <span>Max Age: {formData.matchPreferences.ageRange[1]}</span>
-                            <span>18 - 100</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="18"
-                            max="100"
-                            value={formData.matchPreferences.ageRange[1]}
-                            onChange={(e) => {
-                              const maxAge = parseInt(e.target.value);
-                              const minAge = formData.matchPreferences.ageRange[0];
-                              // Ensure max is not less than min
-                              if (maxAge >= minAge) {
-                                setFormData({
-                                  ...formData,
-                                  matchPreferences: {
-                                    ...formData.matchPreferences,
-                                    ageRange: [minAge, maxAge]
-                                  }
-                                });
-                              }
-                            }}
-                            className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#059467]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Gender Preference */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        Preferred Gender {formData.matchPreferences.genders.length > 0 && (
-                          <span className="text-xs text-[#059467]">({formData.matchPreferences.genders.length} selected)</span>
-                        )}
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {['Male', 'Female', 'Non-binary', 'Any'].map(gender => (
-                          <button
-                            key={gender}
-                            type="button"
-                            onClick={() => {
-                              const genders = formData.matchPreferences.genders;
-                              // If "Any" is selected, clear all others
-                              if (gender === 'Any') {
-                                setFormData({
-                                  ...formData,
-                                  matchPreferences: {
-                                    ...formData.matchPreferences,
-                                    genders: genders.includes('Any') ? [] : ['Any']
-                                  }
-                                });
-                              } else {
-                                // Remove "Any" if selecting specific gender
-                                const newGenders = genders.filter(g => g !== 'Any');
-                                setFormData({
-                                  ...formData,
-                                  matchPreferences: {
-                                    ...formData.matchPreferences,
-                                    genders: newGenders.includes(gender)
-                                      ? newGenders.filter(g => g !== gender)
-                                      : [...newGenders, gender]
-                                  }
-                                });
-                              }
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                              formData.matchPreferences.genders.includes(gender)
-                                ? 'bg-[#059467] text-white shadow-lg'
-                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                            }`}
-                          >
-                            {gender}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Select "Any" to see all genders, or choose specific preferences</p>
-                    </div>
-
-                    {/* Travel Style */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                        <Mountain className="w-4 h-4" />
-                        Preferred Travel Styles {formData.matchPreferences.travelStyles.length > 0 && (
-                          <span className="text-xs text-[#059467]">({formData.matchPreferences.travelStyles.length} selected)</span>
-                        )}
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {TRAVEL_STYLES.map(style => (
-                          <button
-                            key={style}
-                            type="button"
-                            onClick={() => {
-                              const styles = formData.matchPreferences.travelStyles;
-                              setFormData({
-                                ...formData,
-                                matchPreferences: {
-                                  ...formData.matchPreferences,
-                                  travelStyles: styles.includes(style)
-                                    ? styles.filter(s => s !== style)
-                                    : [...styles, style]
-                                }
-                              });
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                              formData.matchPreferences.travelStyles.includes(style)
-                                ? 'bg-[#059467] text-white shadow-lg'
-                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                            }`}
-                          >
-                            {style}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Select multiple styles to find travelers with similar preferences</p>
-                    </div>
-
-                    {/* Interests */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                        <Heart className="w-4 h-4" />
-                        Preferred Interests {formData.matchPreferences.interests.length > 0 && (
-                          <span className="text-xs text-[#059467]">({formData.matchPreferences.interests.length} selected)</span>
-                        )}
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {COMMON_INTERESTS.map(interest => (
-                          <button
-                            key={interest}
-                            type="button"
-                            onClick={() => {
-                              const interests = formData.matchPreferences.interests;
-                              setFormData({
-                                ...formData,
-                                matchPreferences: {
-                                  ...formData.matchPreferences,
-                                  interests: interests.includes(interest)
-                                    ? interests.filter(i => i !== interest)
-                                    : [...interests, interest]
-                                }
-                              });
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                              formData.matchPreferences.interests.includes(interest)
-                                ? 'bg-pink-500 text-white shadow-lg'
-                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                            }`}
-                          >
-                            {interest}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">More interests = better matches! Select all that apply</p>
-                    </div>
-
-                    {/* Location Range */}
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Search Radius: <span className="text-[#059467]">
-                          {formData.matchPreferences.locationRange === 0 ? 'Nearby only (< 10 km)' : 
-                           formData.matchPreferences.locationRange >= 500 ? 'Worldwide (500+ km)' : 
-                           `Within ${formData.matchPreferences.locationRange} km`}
-                        </span>
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="500"
-                        step="10"
-                        value={formData.matchPreferences.locationRange}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          matchPreferences: {
-                            ...formData.matchPreferences,
-                            locationRange: parseInt(e.target.value)
-                          }
-                        })}
-                        className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#059467]"
-                      />
-                      <div className="flex justify-between text-xs text-slate-500 mt-2">
-                        <span>Nearby</span>
-                        <span>Regional</span>
-                        <span>Worldwide</span>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
-                        {formData.matchPreferences.locationRange < 50 ? 'Perfect for finding local travel buddies' :
-                         formData.matchPreferences.locationRange < 200 ? 'Great for regional adventures' :
-                         'Ideal for international travel connections'}
-                      </p>
-                    </div>
-
-                    {/* Preview Summary */}
-                    <div className="bg-gradient-to-br from-[#059467]/10 to-pink-500/10 rounded-2xl p-5 border-2 border-dashed border-[#059467]/30">
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                        <Heart className="w-4 h-4 text-pink-500" />
-                        Your Match Preferences Summary
-                      </h4>
-                      <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                        <p>• Looking for travelers aged <strong>{formData.matchPreferences.ageRange[0]}-{formData.matchPreferences.ageRange[1]}</strong></p>
-                        <p>• Gender: <strong>{formData.matchPreferences.genders.length === 0 ? 'Any' : formData.matchPreferences.genders.join(', ')}</strong></p>
-                        <p>• Travel styles: <strong>{formData.matchPreferences.travelStyles.length === 0 ? 'Any' : formData.matchPreferences.travelStyles.join(', ')}</strong></p>
-                        <p>• Shared interests: <strong>{formData.matchPreferences.interests.length === 0 ? 'Any' : formData.matchPreferences.interests.length + ' selected'}</strong></p>
-                        <p>• Within <strong>{formData.matchPreferences.locationRange === 0 ? '10' : formData.matchPreferences.locationRange >= 500 ? '500+' : formData.matchPreferences.locationRange} km</strong> of your location</p>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              </div>
             )}
 
             {/* Settings Tab Content */}
@@ -2048,7 +1751,7 @@ export default function AccountPage() {
 
           {/* Action Buttons - Moved to Bottom */}
           <div className="flex flex-col md:flex-row gap-3 md:gap-3 w-full md:w-auto md:justify-end mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-            {(activeTab === 'profile' || activeTab === 'filters' || activeTab === 'settings' || activeTab === 'billing') && (
+            {(activeTab === 'profile' || activeTab === 'settings' || activeTab === 'billing') && (
               <>
                 <button 
                   onClick={handleCancel}
