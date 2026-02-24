@@ -100,7 +100,7 @@ export default function AddGearPage() {
         <Header />
         <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
+            <Loader2 className="w-12 h-12 text-slate-900 dark:text-[#059467] animate-spin" />
             <p className="text-[#0d1c17]/60 dark:text-white/60">Loading...</p>
           </div>
         </div>
@@ -686,7 +686,7 @@ export default function AddGearPage() {
                     title="Auto detect my location"
                   >
                     {detectingLocation ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-[#059467]" />
+                      <Loader2 className="w-5 h-5 animate-spin text-slate-900 dark:text-[#059467]" />
                     ) : (
                       <MapPin className="w-5 h-5 group-hover:text-[#059467] transition-colors" />
                     )}

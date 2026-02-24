@@ -429,7 +429,7 @@ function MapPage() {
           {!mapLoaded && (
             <div className="absolute inset-0 flex items-center justify-center bg-[#f8fafc] dark:bg-[#0f231d] z-10">
               <div className="text-center flex flex-col items-center">
-                <Loader2 className="w-10 h-10 text-[#059467] animate-spin mb-3" />
+                <Loader2 className="w-10 h-10 text-slate-900 dark:text-[#059467] animate-spin mb-3" />
                 <p className="text-slate-600 dark:text-slate-300 font-medium animate-pulse">Initializing map...</p>
               </div>
             </div>
@@ -547,7 +547,7 @@ function MapPage() {
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 custom-scrollbar">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-10">
-                <Loader2 className="w-8 h-8 text-[#059467] animate-spin mb-3" />
+                <Loader2 className="w-8 h-8 text-slate-900 dark:text-[#059467] animate-spin mb-3" />
                 <p className="text-sm font-medium text-slate-500">Loading {activeTab}...</p>
               </div>
             ) : error ? (

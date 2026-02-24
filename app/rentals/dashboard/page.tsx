@@ -18,7 +18,9 @@ import {
   Star,
   Check,
   X,
-  Loader2
+  Loader2,
+  Inbox,
+  ArrowRight
 } from 'lucide-react';
 
 type BookingStatus = 'pending' | 'confirmed' | 'picked_up' | 'in_use' | 'returned' | 'inspected' | 'completed' | 'cancelled';
@@ -53,10 +55,9 @@ function RentalDashboard() {
     fetchBookings();
   }, [user]);
 
-  // Update URL when tab changes
   const handleTabChange = (tab: 'rentals' | 'requests') => {
     setActiveTab(tab);
-    // Update URL without page reload
+    setFilterStatus('all'); // Reset filter on tab change
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
     window.history.pushState({}, '', url.toString());
@@ -67,7 +68,6 @@ function RentalDashboard() {
       setLoading(true);
       setError('');
       
-      // Fetch gear bookings (as owner)
       try {
         const rentalsData = await bookingAPI.getGearBookings();
         setMyRentals(rentalsData || []);
@@ -76,7 +76,6 @@ function RentalDashboard() {
         setMyRentals([]);
       }
 
-      // Fetch my bookings (as renter)
       try {
         const requestsData = await bookingAPI.getMyBookings();
         setMyRequests(requestsData || []);
@@ -85,7 +84,6 @@ function RentalDashboard() {
         setMyRequests([]);
       }
     } catch (error: any) {
-      console.error('Error fetching bookings:', error);
       setError(error.message || 'Failed to load bookings');
     } finally {
       setLoading(false);
@@ -107,7 +105,6 @@ function RentalDashboard() {
         type: 'success' 
       });
     } catch (error: any) {
-      console.error('Error updating status:', error);
       setToast({ 
         message: error.message || 'Failed to update booking status', 
         type: 'error' 
@@ -118,50 +115,16 @@ function RentalDashboard() {
   };
 
   const getStatusBadge = (status: string) => {
-    // Map old 'active' status to 'in_use' for display
     const displayStatus = status === 'active' ? 'in_use' : status;
-    
     const badges = {
-      pending: {
-        bg: 'bg-[#fef3c7]',
-        text: 'text-[#f59e0b]',
-        label: 'Pending'
-      },
-      confirmed: {
-        bg: 'bg-[#d1fae5]',
-        text: 'text-[#059467]',
-        label: 'Confirmed'
-      },
-      picked_up: {
-        bg: 'bg-[#dbeafe]',
-        text: 'text-[#3b82f6]',
-        label: 'Picked Up'
-      },
-      in_use: {
-        bg: 'bg-[#e0e7ff]',
-        text: 'text-[#6366f1]',
-        label: 'In Use'
-      },
-      returned: {
-        bg: 'bg-[#fce7f3]',
-        text: 'text-[#ec4899]',
-        label: 'Returned'
-      },
-      inspected: {
-        bg: 'bg-[#f3e8ff]',
-        text: 'text-[#a855f7]',
-        label: 'Inspected'
-      },
-      completed: {
-        bg: 'bg-[#f1f5f9]',
-        text: 'text-[#64748b]',
-        label: 'Completed'
-      },
-      cancelled: {
-        bg: 'bg-[#fee2e2]',
-        text: 'text-[#ef4444]',
-        label: 'Cancelled'
-      }
+      pending: { bg: 'bg-amber-100 dark:bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400', label: 'Pending' },
+      confirmed: { bg: 'bg-emerald-100 dark:bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400', label: 'Confirmed' },
+      picked_up: { bg: 'bg-blue-100 dark:bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400', label: 'Picked Up' },
+      in_use: { bg: 'bg-indigo-100 dark:bg-indigo-500/10', text: 'text-indigo-700 dark:text-indigo-400', label: 'In Use' },
+      returned: { bg: 'bg-purple-100 dark:bg-purple-500/10', text: 'text-purple-700 dark:text-purple-400', label: 'Returned' },
+      inspected: { bg: 'bg-fuchsia-100 dark:bg-fuchsia-500/10', text: 'text-fuchsia-700 dark:text-fuchsia-400', label: 'Inspected' },
+      completed: { bg: 'bg-slate-100 dark:bg-slate-500/10', text: 'text-slate-700 dark:text-slate-400', label: 'Completed' },
+      cancelled: { bg: 'bg-rose-100 dark:bg-rose-500/10', text: 'text-rose-700 dark:text-rose-400', label: 'Cancelled' }
     };
     return badges[displayStatus as keyof typeof badges] || badges.pending;
   };
@@ -184,25 +147,20 @@ function RentalDashboard() {
     return (
       <>
         <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
-          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+          <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
               <div className="space-y-2 animate-pulse">
-                <div className="h-10 bg-slate-200 dark:bg-slate-700 rounded w-48" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-64" />
+                <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg w-48" />
+                <div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-64" />
               </div>
-              <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-full w-32 animate-pulse" />
             </div>
-            <div className="flex flex-col gap-5">
-              {[1, 2, 3].map((i) => (
-                <BookingCardSkeleton key={i} />
-              ))}
+            <div className="flex flex-col gap-4">
+              {[1, 2, 3].map((i) => <BookingCardSkeleton key={i} />)}
             </div>
           </main>
         </div>
-        <div className="hidden md:block">
-          <Footer />
-        </div>
+        <div className="hidden md:block"><Footer /></div>
       </>
     );
   }
@@ -210,20 +168,13 @@ function RentalDashboard() {
   return (
     <>
       <Header />
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {confirmModal && (
         <ConfirmModal
-          title={confirmModal.status === 'confirmed' ? 'Accept Booking Request?' : 'Decline Booking Request?'}
+          title={confirmModal.status === 'confirmed' ? 'Accept Request?' : 'Decline Request?'}
           message={confirmModal.status === 'confirmed' 
             ? 'Are you sure you want to accept this booking request? The renter will be notified.'
-            : 'Are you sure you want to decline this booking request? This action cannot be undone.'
-          }
+            : 'Are you sure you want to decline this booking request? This action cannot be undone.'}
           confirmText={confirmModal.status === 'confirmed' ? 'Accept' : 'Decline'}
           cancelText="Cancel"
           type={confirmModal.type}
@@ -231,137 +182,108 @@ function RentalDashboard() {
           onCancel={() => setConfirmModal(null)}
         />
       )}
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
-        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+      
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+        <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+          
           {/* Header Section */}
-          <div className="flex flex-col gap-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl md:text-4xl font-black tracking-tight text-[#0d1c17] dark:text-white mb-1">
-                  Dashboard
-                </h1>
-                <p className="text-[#0d1c17]/60 dark:text-white/60 text-xs md:text-base hidden md:block">
-                  Manage your gear rentals and requests in one place.
-                </p>
-              </div>
-              {/* Refresh Button - Desktop */}
-              <button
-                onClick={handleRefresh}
-                disabled={refreshing}
-                className="hidden md:flex px-4 py-2 bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors items-center gap-2"
-              >
-                <Loader2 className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                {refreshing ? 'Refreshing...' : 'Refresh'}
-              </button>
-            </div>
-
-            {error && (
-              <p className="text-red-500 text-sm">
-                {error} - <button onClick={handleRefresh} className="underline">Try again</button>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                Activity
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                Manage your gear rentals and booking requests.
               </p>
-            )}
-
-            {/* Segment Controller - Mobile Optimized */}
-            <div className="bg-[#e7f4f0] dark:bg-white/10 p-1 rounded-full flex relative">
-              <button
-                onClick={() => handleTabChange('rentals')}
-                className={`relative z-10 flex-1 px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 text-center ${
-                  activeTab === 'rentals'
-                    ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
-                    : 'text-[#0d1c17]/70 dark:text-white/70 hover:text-[#0d1c17] dark:hover:text-white'
-                }`}
-              >
-                <span className="hidden sm:inline">My Rentals</span>
-                <span className="sm:hidden">Rentals</span>
-              </button>
-              <button
-                onClick={() => handleTabChange('requests')}
-                className={`relative z-10 flex-1 px-3 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 ${
-                  activeTab === 'requests'
-                    ? 'bg-white dark:bg-[#059467] text-[#059467] dark:text-white shadow-sm'
-                    : 'text-[#0d1c17]/70 dark:text-white/70 hover:text-[#0d1c17] dark:hover:text-white'
-                }`}
-              >
-                <span className="hidden sm:inline">My Gear Requests</span>
-                <span className="sm:hidden">Requests</span>
-                {myRequests.filter(r => r.status === 'pending').length > 0 && (
-                  <span className="size-1.5 sm:size-2 bg-[#ef4444] rounded-full animate-pulse"></span>
-                )}
-              </button>
             </div>
-
-            {/* Refresh Button - Mobile */}
+            
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="md:hidden w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+              className="w-full md:w-auto px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 shadow-sm"
             >
-              <Loader2 className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Refreshing...' : 'Refresh'}
+              <Loader2 className={`w-4 h-4 text-slate-900 dark:text-[#059467] ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Syncing...' : 'Refresh'}
             </button>
           </div>
 
-          {/* Filters - Mobile Optimized */}
-          <div className="flex flex-wrap gap-2 mb-6">
+          {error && (
+            <div className="p-4 mb-6 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={handleRefresh} className="font-bold hover:underline">Retry</button>
+            </div>
+          )}
+
+          {/* Segment Controller (iOS Style) */}
+          <div className="bg-slate-200/50 dark:bg-slate-800 p-1 rounded-xl flex relative mb-6">
             <button
-              onClick={() => setFilterStatus('all')}
-              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-transform active:scale-95 ${
-                filterStatus === 'all'
-                  ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
-                  : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
+              onClick={() => handleTabChange('rentals')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                activeTab === 'rentals'
+                  ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
-              All
+              My Gear (Owner)
             </button>
             <button
-              onClick={() => setFilterStatus('pending')}
-              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 sm:gap-2 ${
-                filterStatus === 'pending'
-                  ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
-                  : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
+              onClick={() => handleTabChange('requests')}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+                activeTab === 'requests'
+                  ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
               }`}
             >
-              Pending
-              {pendingCount > 0 && (
-                <span className="bg-[#f59e0b] text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full min-w-[16px] sm:min-w-[18px] text-center">
-                  {pendingCount}
-                </span>
+              My Trips (Renter)
+              {activeTab === 'rentals' && pendingCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
               )}
             </button>
-            <button
-              onClick={() => setFilterStatus('confirmed')}
-              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                filterStatus === 'confirmed'
-                  ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
-                  : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
-              }`}
-            >
-              Accepted
-            </button>
-            <button
-              onClick={() => setFilterStatus('completed')}
-              className={`px-3 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors ${
-                filterStatus === 'completed'
-                  ? 'bg-[#0d1c17] dark:bg-[#059467] text-white'
-                  : 'bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17]/70 dark:text-white/70 hover:bg-[#f8fcfb] dark:hover:bg-white/10'
-              }`}
-            >
-              Completed
-            </button>
           </div>
 
-          {/* Booking Cards Container */}
-          <div className="flex flex-col gap-4 pb-20 md:pb-0">
+          {/* Scrollable Filters */}
+          <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2 -mx-4 px-4 md:mx-0 md:px-0 mb-6 snap-x">
+            {['all', 'pending', 'confirmed', 'completed'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilterStatus(status as any)}
+                className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${
+                  filterStatus === status
+                    ? 'bg-[#059467] text-white shadow-md shadow-[#059467]/20'
+                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                <span className="capitalize">{status === 'confirmed' ? 'Accepted' : status}</span>
+                {status === 'pending' && pendingCount > 0 && filterStatus !== 'pending' && (
+                  <span className="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Unified Booking Cards Container */}
+          <div className="flex flex-col gap-4">
             {filteredBookings.length === 0 ? (
-              <div className="text-center py-12 md:py-16 bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] border border-[#e7f4f0] dark:border-white/5">
-                <p className="text-[#0d1c17]/60 dark:text-white/60 font-medium mb-2 text-sm md:text-base">
-                  No {filterStatus !== 'all' ? filterStatus : ''} bookings found
-                </p>
-                <p className="text-xs md:text-sm text-[#0d1c17]/40 dark:text-white/40 px-4">
+              <div className="text-center py-16 px-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed">
+                <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Inbox className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                  No {filterStatus !== 'all' ? filterStatus : ''} bookings
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mb-6">
                   {activeTab === 'rentals' 
-                    ? 'Start listing your gear to receive rental requests'
-                    : 'Browse available gear to make your first rental request'}
+                    ? 'When someone requests to rent your gear, it will show up here.'
+                    : 'Browse available gear and request to rent it for your next adventure.'}
                 </p>
+                <button
+                  onClick={() => router.push('/gear')}
+                  className="px-6 py-2.5 bg-[#059467] text-white rounded-xl text-sm font-bold shadow-md shadow-[#059467]/20 hover:-translate-y-0.5 transition-all inline-flex items-center gap-2"
+                >
+                  Browse Gear <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             ) : (
               filteredBookings.map((booking) => {
@@ -370,238 +292,107 @@ function RentalDashboard() {
                 const otherUser = isOwner ? booking.renter : booking.owner;
                 const gear = booking.gear;
                 
-                // Skip if gear is null or undefined
-                if (!gear) {
-                  return null;
-                }
+                if (!gear) return null;
                 
                 return (
                   <article
                     key={booking._id}
                     onClick={() => router.push(`/bookings/${booking._id}`)}
-                    className={`bg-white dark:bg-white/5 rounded-2xl md:rounded-[24px] p-4 md:p-5 shadow-sm border border-[#e7f4f0]/60 dark:border-white/5 hover:shadow-md transition-shadow duration-300 flex flex-col gap-4 group cursor-pointer ${
-                      booking.status === 'completed' ? 'opacity-80 hover:opacity-100' : ''
+                    className={`bg-white dark:bg-slate-800 rounded-2xl p-4 md:p-5 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all cursor-pointer group flex flex-col md:flex-row gap-4 md:gap-6 ${
+                      booking.status === 'cancelled' ? 'opacity-75 grayscale-[0.5]' : ''
                     }`}
                   >
-                    {/* Mobile Layout */}
-                    <div className="flex gap-3 md:hidden">
-                      {/* Thumbnail */}
-                      <div
-                        className={`shrink-0 relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 cursor-pointer ${
-                          booking.status === 'completed' ? 'grayscale-[0.5] group-hover:grayscale-0' : ''
-                        } ${booking.status === 'cancelled' ? 'grayscale' : ''}`}
-                        onClick={() => router.push(`/gear/${gear._id}`)}
-                      >
+                    {/* Top/Left: Image & Core Info */}
+                    <div className="flex gap-4 flex-1 min-w-0">
+                      <div className="shrink-0 w-20 h-20 md:w-28 md:h-28 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 relative">
                         <img
                           alt={gear.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           src={gear.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400'}
                         />
-                        {booking.status === 'cancelled' && (
-                          <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]"></div>
-                        )}
                       </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start gap-2 mb-1">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${badge.bg} ${badge.text} text-[10px] font-bold uppercase tracking-wider`}>
-                            {booking.status === 'completed' && <Check className="w-2.5 h-2.5" />}
-                            {booking.status === 'cancelled' && <X className="w-2.5 h-2.5" />}
-                            {booking.status === 'pending' && <span className="size-1 rounded-full bg-current"></span>}
-                            {booking.status === 'confirmed' && <span className="size-1 rounded-full bg-current"></span>}
-                            {badge.label}
-                          </span>
-                        </div>
-                        <h3
-                          className={`text-sm font-bold leading-tight line-clamp-1 cursor-pointer hover:text-[#059467] transition-colors mb-1 ${
-                            booking.status === 'cancelled' ? 'text-[#0d1c17]/80 dark:text-white/80' : 'text-[#0d1c17] dark:text-white'
-                          }`}
-                          onClick={() => router.push(`/gear/${gear._id}`)}
-                        >
-                          {gear.title}
-                        </h3>
-                        <div className={`text-right ${booking.status === 'cancelled' ? 'opacity-50' : ''}`}>
-                          <p className="text-[10px] text-[#0d1c17]/50 dark:text-white/50 font-medium uppercase tracking-wide">
-                            {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Earnings' : 'Cost'}
-                          </p>
-                          <p className={`text-base font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
-                            {formatNPR(booking.totalPrice)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Mobile Details */}
-                    <div className="flex flex-col gap-2 text-xs text-[#0d1c17]/60 dark:text-white/60 md:hidden">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>{formatDate(booking.startDate, booking.endDate)}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />
-                        <span>
-                          {isOwner ? 'From: ' : 'Renter: '}
-                          <span className="text-[#0d1c17] dark:text-white font-medium">
-                            {otherUser?.name || 'Unknown'}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mobile Actions */}
-                    <div className="flex gap-2 md:hidden" onClick={(e) => e.stopPropagation()}>
-                      {booking.status === 'pending' && isOwner && (
-                        <>
-                          <button
-                            onClick={() => setConfirmModal({ bookingId: booking._id, status: 'cancelled', type: 'decline' })}
-                            className="flex-1 h-9 px-3 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-xs hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                          >
-                            Decline
-                          </button>
-                          <button
-                            onClick={() => setConfirmModal({ bookingId: booking._id, status: 'confirmed', type: 'confirm' })}
-                            className="flex-1 h-9 px-4 rounded-full bg-[#059467] text-white font-bold text-xs hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
-                          >
-                            Accept
-                          </button>
-                        </>
-                      )}
-                      {booking.status === 'confirmed' && (
-                        <button
-                          onClick={() => router.push('/messages')}
-                          className="flex-1 h-9 px-4 rounded-full bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17] dark:text-white font-bold text-xs hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center justify-center gap-1.5"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          Message
-                        </button>
-                      )}
-                      {booking.status === 'completed' && !booking.rating && (
-                        <button
-                          onClick={() => router.push(`/gear/${gear._id}`)}
-                          className="flex-1 h-9 px-4 rounded-full bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] dark:text-[#059467] font-bold text-xs hover:bg-[#dbece6] dark:hover:bg-[#059467]/30 transition-colors flex items-center justify-center gap-1"
-                        >
-                          <Star className="w-3.5 h-3.5" />
-                          Review
-                        </button>
-                      )}
-                      {booking.status === 'cancelled' && (
-                        <button className="flex-1 h-9 px-3 rounded-full text-[#0d1c17]/40 dark:text-white/40 font-medium text-xs hover:text-[#0d1c17] dark:hover:text-white transition-colors">
-                          Archive
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Desktop Layout */}
-                    <div className="hidden md:flex gap-6 items-center">
-                      {/* Thumbnail */}
-                      <div
-                        className={`shrink-0 relative w-[120px] aspect-square rounded-2xl overflow-hidden bg-gray-100 dark:bg-white/5 cursor-pointer ${
-                          booking.status === 'completed' ? 'grayscale-[0.5] group-hover:grayscale-0' : ''
-                        } ${booking.status === 'cancelled' ? 'grayscale' : ''}`}
-                        onClick={() => router.push(`/gear/${gear._id}`)}
-                      >
-                        <img
-                          alt={gear.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          src={gear.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400'}
-                        />
-                        {booking.status === 'cancelled' && (
-                          <div className="absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-[1px]"></div>
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 flex flex-col gap-2">
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full ${badge.bg} ${badge.text} text-xs font-bold uppercase tracking-wider`}>
-                            {booking.status === 'completed' && <Check className="w-3.5 h-3.5" />}
-                            {booking.status === 'cancelled' && <X className="w-3.5 h-3.5" />}
-                            {booking.status === 'pending' && <span className="size-1.5 rounded-full bg-current"></span>}
-                            {booking.status === 'confirmed' && <span className="size-1.5 rounded-full bg-current"></span>}
-                            {badge.label}
-                          </span>
-                          <span className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium">
-                            Request #{booking._id.slice(-6).toUpperCase()}
-                          </span>
-                        </div>
-                        <h3
-                          className={`text-[18px] font-bold leading-tight truncate cursor-pointer hover:text-[#059467] transition-colors ${
-                            booking.status === 'cancelled' ? 'text-[#0d1c17]/80 dark:text-white/80' : 'text-[#0d1c17] dark:text-white'
-                          }`}
-                          onClick={() => router.push(`/gear/${gear._id}`)}
-                        >
-                          {gear.title}
-                        </h3>
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-y-1 gap-x-4 text-sm text-[#0d1c17]/60 dark:text-white/60 mt-1">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4" />
-                            <span>{formatDate(booking.startDate, booking.endDate)}</span>
+                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full ${badge.bg} ${badge.text} text-[10px] font-bold uppercase tracking-wider`}>
+                              {booking.status === 'completed' && <Check className="w-3 h-3" />}
+                              {booking.status === 'cancelled' && <X className="w-3 h-3" />}
+                              {booking.status === 'pending' && <span className="w-1.5 h-1.5 rounded-full bg-current"></span>}
+                              {badge.label}
+                            </span>
+                            <span className="text-xs text-slate-400 font-medium hidden sm:inline-block">
+                              #{booking._id.slice(-6).toUpperCase()}
+                            </span>
                           </div>
-                          <div className="hidden sm:block w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                          <h3 className="text-base md:text-lg font-bold text-slate-900 dark:text-white truncate mb-2 group-hover:text-[#059467] transition-colors">
+                            {gear.title}
+                          </h3>
+                        </div>
+
+                        <div className="flex flex-col gap-1 md:gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                           <div className="flex items-center gap-1.5">
-                            <User className="w-4 h-4" />
-                            <span>
-                              {isOwner ? 'Request from: ' : 'Renter: '}
-                              <span className="text-[#0d1c17] dark:text-white font-medium">
-                                {otherUser?.name || 'Unknown'}
-                              </span>
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span className="truncate">{formatDate(booking.startDate, booking.endDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5" />
+                            <span className="truncate">
+                              {isOwner ? 'From: ' : 'Owner: '}
+                              <span className="text-slate-700 dark:text-slate-300">{otherUser?.name || 'Unknown User'}</span>
                             </span>
                           </div>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Action Side */}
-                      <div className="flex flex-col items-end gap-2 pl-4 border-l border-[#f0f7f5] dark:border-white/10 min-w-[160px]" onClick={(e) => e.stopPropagation()}>
-                        <div className={`text-right ${booking.status === 'cancelled' ? 'opacity-50' : ''}`}>
-                          <p className="text-xs text-[#0d1c17]/50 dark:text-white/50 font-medium mb-0.5 uppercase tracking-wide">
-                            {booking.status === 'completed' ? 'Earned' : booking.status === 'cancelled' ? 'Potential' : isOwner ? 'Total Earnings' : 'Total Cost'}
-                          </p>
-                          <p className={`text-[20px] font-bold text-[#0d1c17] dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-[#ef4444]' : ''}`}>
-                            {formatNPR(booking.totalPrice)}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {booking.status === 'pending' && isOwner && (
-                            <>
-                              <button
-                                onClick={() => setConfirmModal({ bookingId: booking._id, status: 'cancelled', type: 'decline' })}
-                                className="h-10 px-4 rounded-full border border-gray-200 dark:border-gray-600 text-[#0d1c17]/70 dark:text-white/70 font-bold text-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                              >
-                                Decline
-                              </button>
-                              <button
-                                onClick={() => setConfirmModal({ bookingId: booking._id, status: 'confirmed', type: 'confirm' })}
-                                className="h-10 px-5 rounded-full bg-[#059467] text-white font-bold text-sm hover:bg-[#047854] transition-colors shadow-lg shadow-[#059467]/20"
-                              >
-                                Accept
-                              </button>
-                            </>
-                          )}
-                          {booking.status === 'confirmed' && (
+                    {/* Bottom/Right: Price & Actions */}
+                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-700/50 md:pl-6 md:border-l min-w-[160px]" onClick={(e) => e.stopPropagation()}>
+                      
+                      {/* Price Block */}
+                      <div className="text-left md:text-right">
+                        <p className="text-[10px] md:text-xs text-slate-500 font-bold uppercase tracking-wider mb-0.5">
+                          {booking.status === 'completed' ? 'Earned' : isOwner ? 'Est. Earnings' : 'Total Cost'}
+                        </p>
+                        <p className={`text-lg md:text-xl font-black text-slate-900 dark:text-white ${booking.status === 'cancelled' ? 'line-through decoration-rose-500' : ''}`}>
+                          {formatNPR(booking.totalPrice)}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 w-full md:w-auto">
+                        {booking.status === 'pending' && isOwner && (
+                          <>
                             <button
-                              onClick={() => router.push('/messages')}
-                              className="h-10 px-5 rounded-full bg-white dark:bg-white/5 border border-[#e7f4f0] dark:border-white/10 text-[#0d1c17] dark:text-white font-bold text-sm hover:bg-[#f8fcfb] dark:hover:bg-white/10 transition-colors flex items-center gap-2"
+                              onClick={() => setConfirmModal({ bookingId: booking._id, status: 'cancelled', type: 'decline' })}
+                              className="flex-1 md:flex-none px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                             >
-                              <MessageCircle className="w-4 h-4" />
-                              Message
+                              Decline
                             </button>
-                          )}
-                          {booking.status === 'completed' && !booking.rating && (
                             <button
-                              onClick={() => router.push(`/gear/${gear._id}`)}
-                              className="h-10 px-5 rounded-full bg-[#e7f4f0] dark:bg-[#059467]/20 text-[#059467] dark:text-[#059467] font-bold text-sm hover:bg-[#dbece6] dark:hover:bg-[#059467]/30 transition-colors flex items-center gap-1"
+                              onClick={() => setConfirmModal({ bookingId: booking._id, status: 'confirmed', type: 'confirm' })}
+                              className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-[#059467] text-white font-bold text-xs hover:bg-[#047854] shadow-md shadow-[#059467]/20 transition-all"
                             >
-                              <Star className="w-4 h-4" />
-                              Leave Review
+                              Accept
                             </button>
-                          )}
-                          {booking.status === 'cancelled' && (
-                            <button className="h-10 px-4 rounded-full text-[#0d1c17]/40 dark:text-white/40 font-medium text-sm hover:text-[#0d1c17] dark:hover:text-white transition-colors">
-                              Archive
-                            </button>
-                          )}
-                        </div>
+                          </>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <button
+                            onClick={() => router.push('/messages')}
+                            className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" /> Message
+                          </button>
+                        )}
+                        {booking.status === 'completed' && !booking.rating && (
+                          <button
+                            onClick={() => router.push(`/gear/${gear._id}`)}
+                            className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-[#059467] font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <Star className="w-3.5 h-3.5" /> Review
+                          </button>
+                        )}
                       </div>
                     </div>
                   </article>
@@ -609,31 +400,16 @@ function RentalDashboard() {
               })
             )}
           </div>
-
-          {/* Footer Call to action */}
-          {filteredBookings.length > 0 && (
-            <div className="mt-8 md:mt-12 text-center pb-20 md:pb-12">
-              <p className="text-[#0d1c17]/50 dark:text-white/50 text-xs md:text-sm mb-3 md:mb-4">
-                You've reached the end of your {activeTab === 'rentals' ? 'rentals' : 'requests'} list.
-              </p>
-              <button
-                onClick={() => router.push('/gear')}
-                className="inline-flex items-center gap-2 text-[#059467] font-bold hover:underline cursor-pointer text-sm md:text-base"
-              >
-                <span>Browse available gear</span>
-                <span className="text-sm">→</span>
-              </button>
-            </div>
-          )}
         </main>
       </div>
-      <div className="hidden md:block">
-        <Footer />
-      </div>
+
+      <style jsx global>{`
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </>
   );
 }
-
 
 export default function ProtectedRentalDashboard() {
   return (

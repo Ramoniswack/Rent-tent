@@ -359,7 +359,7 @@ function NotificationsPage() {
           <div className="bg-white dark:bg-[#132a24] rounded-xl sm:rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
             {loading ? (
               <div className="flex items-center justify-center py-16 sm:py-20">
-                <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+                <Loader2 className="w-8 h-8 text-slate-900 dark:text-[#059467] animate-spin" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 sm:py-20 px-4">
@@ -400,7 +400,6 @@ function NotificationsPage() {
                         : 'bg-[#059467]/5 dark:bg-[#059467]/10'
                     }`}
                   >
-                    {/* Checkbox */}
                     <input
                       type="checkbox"
                       checked={selectedNotifications.has(notification._id)}
@@ -417,7 +416,6 @@ function NotificationsPage() {
                       onClick={(e) => e.stopPropagation()}
                     />
 
-                    {/* Icon/Avatar */}
                     <div className="flex-shrink-0">
                       {notification.sender?.profilePicture ? (
                         <img
@@ -432,7 +430,6 @@ function NotificationsPage() {
                       )}
                     </div>
 
-                    {/* Content */}
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => handleNotificationClick(notification)}
@@ -448,7 +445,6 @@ function NotificationsPage() {
                       </p>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
                       {!notification.read && (
                         <button
@@ -505,7 +501,6 @@ function NotificationsPage() {
           )}
         </main>
 
-        {/* Footer - Hidden on Mobile */}
         <div className="hidden md:block">
           <Footer />
         </div>

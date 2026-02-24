@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -24,7 +24,9 @@ import {
   Package,
   Download,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  ExternalLink,
+  MessageCircle
 } from 'lucide-react';
 
 function BookingDetailsPage() {
@@ -41,47 +43,40 @@ function BookingDetailsPage() {
   const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState('');
 
-  useEffect(() => {
-    // Only fetch if user is loaded
-    if (user && params.id) {
-      fetchBookingDetails();
-    }
-  }, [user, params.id]);
-
-  // Fetch booking details
-  const fetchBookingDetails = async () => {
-    if (!user) return;
+  const fetchBookingDetails = useCallback(async () => {
+    if (!user || !params.id) return;
     
     try {
       setLoading(true);
-      // Fetch both renter and owner bookings to find this specific booking
       const [renterBookings, ownerBookings] = await Promise.all([
         bookingAPI.getMyBookings(),
         bookingAPI.getGearBookings()
       ]);
       
-      // Find the booking by ID
       const allBookings = [...renterBookings, ...ownerBookings];
       const foundBooking = allBookings.find((b: any) => b._id === params.id);
       
       if (!foundBooking) {
-        console.error('Booking not found in fetched data');
         setToast({ message: 'Booking not found', type: 'error' });
-        setLoading(false);
-        return;
+      } else {
+        setBooking(foundBooking);
       }
-      
-      console.log('Found booking:', foundBooking);
-      setBooking(foundBooking);
     } catch (error: any) {
-      console.error('Error fetching booking:', error);
       setToast({ message: error.message || 'Failed to load booking details', type: 'error' });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, params.id]);
 
-  // Handle cancel booking
+  useEffect(() => {
+    fetchBookingDetails();
+  }, [fetchBookingDetails]);
+
+  const isRenter = useMemo(() => booking?.renter?._id === user?._id, [booking, user]);
+  const isGearOwner = useMemo(() => booking?.owner?._id === user?._id, [booking, user]);
+  const otherUser = useMemo(() => isRenter ? booking?.owner : booking?.renter, [isRenter, booking]);
+  const mappedStatus = useMemo(() => booking?.status === 'active' ? 'in_use' : booking?.status, [booking]);
+
   const handleCancel = async () => {
     try {
       await bookingAPI.updateStatus(booking._id, 'cancelled');
@@ -93,13 +88,11 @@ function BookingDetailsPage() {
     }
   };
 
-  // Handle status change (owner only)
   const handleStatusChange = (newStatus: string) => {
     setPendingStatus(newStatus);
     setShowStatusChangeModal(true);
   };
 
-  // Confirm status change
   const confirmStatusChange = async () => {
     try {
       await bookingAPI.updateStatus(booking._id, pendingStatus);
@@ -111,83 +104,84 @@ function BookingDetailsPage() {
     }
   };
 
-  // Handle report issue
   const handleReportIssue = async () => {
     if (!issueDescription.trim()) {
       setToast({ message: 'Please describe the issue', type: 'warning' });
       return;
     }
-    
-    try {
-      // For now, just show a success message
-      // In production, this would call an API endpoint
-      setToast({ message: 'Issue reported successfully. Owner will be notified.', type: 'success' });
-      setShowIssueModal(false);
-      setIssueDescription('');
-    } catch (error: any) {
-      setToast({ message: error.message || 'Failed to report issue', type: 'error' });
-    }
+    setToast({ message: 'Issue reported successfully. Support will review it.', type: 'success' });
+    setShowIssueModal(false);
+    setIssueDescription('');
   };
 
-  // Handle extend rental
-  const handleExtendRental = () => {
-    setToast({ message: 'Extension request feature coming soon', type: 'info' });
-  };
-
-  // Handle contact owner
   const handleContactOwner = () => {
-    if (booking) {
-      const otherUser = isRenter ? booking.owner : booking.renter;
+    if (booking && otherUser?._id) {
       router.push(`/messages?user=${otherUser._id}`);
     }
   };
 
-  // Handle get directions
   const handleGetDirections = () => {
     if (booking?.pickupLocation) {
-      const encodedLocation = encodeURIComponent(booking.pickupLocation);
-      window.open(`https://www.google.com/maps/search/?api=1&query=${encodedLocation}`, '_blank');
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.pickupLocation)}`, '_blank');
     }
   };
 
-  // Handle view refund
-  const handleViewRefund = () => {
-    setToast({ message: 'Refund details will be sent to your email', type: 'info' });
-  };
-
-  // Download PDF receipt
   const downloadPDF = async () => {
     if (!booking) return;
-    
     try {
       const doc = new jsPDF();
+      const margin = 20;
       
-      // Get user names with better fallbacks
-      const renterName = booking.renter?.name || booking.renter?.username || 'N/A';
-      const ownerName = booking.owner?.name || booking.owner?.username || 'N/A';
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(5, 148, 103); // Theme Green
+      doc.text('Gear Nepal Rental Receipt', margin, 30);
       
-      // Header
-      doc.setFontSize(20);
-      doc.text('Rental Booking Receipt', 20, 20);
+      doc.setDrawColor(231, 244, 240);
+      doc.line(margin, 35, 190, 35);
       
-      // Booking details
       doc.setFontSize(12);
-      doc.text(`Booking ID: ${booking._id}`, 20, 40);
-      doc.text(`Gear: ${booking.gear?.title || 'N/A'}`, 20, 50);
-      doc.text(`Renter: ${renterName}`, 20, 60);
-      doc.text(`Owner: ${ownerName}`, 20, 70);
-      doc.text(`Start Date: ${new Date(booking.startDate).toLocaleDateString()}`, 20, 80);
-      doc.text(`End Date: ${new Date(booking.endDate).toLocaleDateString()}`, 20, 90);
-      doc.text(`Total Days: ${booking.totalDays}`, 20, 100);
-      doc.text(`Total Price: ${formatNPR(booking.totalPrice)}`, 20, 110);
-      doc.text(`Deposit: ${formatNPR(booking.deposit || 0)}`, 20, 120);
-      doc.text(`Status: ${booking.status}`, 20, 130);
-      doc.text(`Pickup Location: ${booking.pickupLocation}`, 20, 140);
+      doc.setTextColor(100);
+      doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`, margin, 45);
+      doc.text(`Booking ID: ${booking._id}`, margin, 52);
       
-      doc.save(`booking-${booking._id}.pdf`);
+      doc.setTextColor(0);
+      doc.setFontSize(14);
+      doc.text('Booking Summary', margin, 70);
+      
+      const details = [
+        ['Gear:', booking.gear?.title || 'N/A'],
+        ['Renter:', booking.renter?.name || booking.renter?.username || 'N/A'],
+        ['Owner:', booking.owner?.name || booking.owner?.username || 'N/A'],
+        ['Duration:', `${booking.totalDays} Days`],
+        ['Start Date:', new Date(booking.startDate).toLocaleDateString()],
+        ['End Date:', new Date(booking.endDate).toLocaleDateString()],
+        ['Status:', booking.status.toUpperCase()]
+      ];
+
+      let yPos = 80;
+      details.forEach(([label, value]) => {
+        doc.setFont("helvetica", "bold");
+        doc.text(label, margin, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.text(value, 70, yPos);
+        yPos += 10;
+      });
+
+      doc.setDrawColor(5, 148, 103);
+      doc.setFillColor(245, 248, 247);
+      doc.rect(margin, yPos + 5, 170, 35, 'F');
+      
+      doc.setFont("helvetica", "bold");
+      doc.text('Financial Totals', margin + 5, yPos + 15);
+      doc.text('Total Rental Price:', margin + 5, yPos + 25);
+      doc.text(formatNPR(booking.totalPrice), 150, yPos + 25);
+      doc.text('Security Deposit (Held):', margin + 5, yPos + 33);
+      doc.text(formatNPR(booking.deposit || 0), 150, yPos + 33);
+
+      doc.save(`Receipt-${booking._id.substring(0, 8)}.pdf`);
       setToast({ message: 'Receipt downloaded successfully', type: 'success' });
     } catch (error) {
-      console.error('Error generating PDF:', error);
       setToast({ message: 'Failed to generate PDF', type: 'error' });
     }
   };
@@ -195,10 +189,11 @@ function BookingDetailsPage() {
   if (loading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17]">
+        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17] transition-colors duration-300">
           <Header />
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+            <Loader2 className="w-10 h-10 text-[#059467] animate-spin" />
+            <p className="text-sm font-medium text-gray-500 animate-pulse">Syncing booking data...</p>
           </div>
         </div>
       </ProtectedRoute>
@@ -210,13 +205,19 @@ function BookingDetailsPage() {
       <ProtectedRoute>
         <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17]">
           <Header />
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-            <p className="text-gray-500 dark:text-gray-400">Booking not found</p>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center">
+              <Package className="w-10 h-10 text-gray-400" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Booking Not Found</h2>
+              <p className="text-gray-500 dark:text-gray-400">The rental you are looking for might have been removed or the ID is incorrect.</p>
+            </div>
             <button
               onClick={() => router.push('/rentals/dashboard')}
-              className="px-4 py-2 bg-[#059467] hover:bg-[#047854] text-white rounded-full font-medium transition-colors"
+              className="px-8 py-3 bg-[#059467] hover:bg-[#047854] text-white rounded-full font-bold shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
             >
-              Go to Dashboard
+              Back to Dashboard
             </button>
           </div>
         </div>
@@ -224,314 +225,291 @@ function BookingDetailsPage() {
     );
   }
 
-  const isRenter = booking.renter?._id === user?._id;
-  const isGearOwner = booking.owner?._id === user?._id;
-  const otherUser = isRenter ? booking.owner : booking.renter;
-  
-  // Debug logging
-  console.log('Booking Debug:', {
-    userId: user?._id,
-    renterId: booking.renter?._id,
-    ownerId: booking.owner?._id,
-    renterData: booking.renter,
-    ownerData: booking.owner,
-    isRenter,
-    isGearOwner,
-    otherUser,
-    hasGear: !!booking.gear
-  });
-  
-  // Map old status to new status system
-  const mappedStatus = booking.status === 'active' ? 'in_use' : booking.status;
-
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17]">
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0d1c17] transition-colors duration-300">
         <Header />
         
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#059467] hover:text-[#047854] mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
-          </button>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
+          {/* Header Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+            <button
+              onClick={() => router.back()}
+              className="group flex items-center gap-2 text-[#059467] font-bold py-2 px-1 transition-all"
+            >
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <span>Back</span>
+            </button>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={downloadPDF}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-white/5 border border-emerald-500/20 text-[#059467] dark:text-emerald-400 rounded-xl font-bold text-sm hover:bg-emerald-50 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                Receipt PDF
+              </button>
+              <button
+                onClick={handleContactOwner}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#059467] hover:bg-[#047854] text-white rounded-xl font-bold text-sm shadow-md transition-all"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Chat with {isRenter ? 'Owner' : 'Renter'}
+              </button>
+            </div>
+          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column - Main Content */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Status Timeline */}
-              <BookingStatusTimeline 
-                currentStatus={mappedStatus} 
-                statusHistory={booking.statusHistory}
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Main Content Area */}
+            <div className="lg:col-span-8 space-y-8">
+              
+              {/* Visual Workflow Timeline */}
+              <section>
+                 <BookingStatusTimeline 
+                  currentStatus={mappedStatus} 
+                  statusHistory={booking.statusHistory}
+                />
+              </section>
 
-              {/* Gear Details */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Package className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Gear Information</h2>
-                </div>
-                
-                <div className="flex gap-4">
-                  {booking.gear?.images?.[0] && (
-                    <img
-                      src={booking.gear.images[0]}
-                      alt={booking.gear.title}
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-[#0d1c17] dark:text-white mb-1">
-                      {booking.gear?.title || 'N/A'}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {booking.gear?.category || 'N/A'}
-                    </p>
-                    <button
-                      onClick={() => router.push(`/gear/${booking.gear?._id}`)}
-                      className="text-sm text-[#059467] hover:text-[#047854] font-medium"
-                    >
-                      View Gear Details →
-                    </button>
+              {/* Gear Information Card */}
+              <div className="bg-white dark:bg-[#1a2c26] rounded-3xl overflow-hidden shadow-sm border border-[#e7f4f0] dark:border-white/5 transition-all hover:shadow-md">
+                <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start">
+                  <div className="w-full md:w-48 h-48 rounded-2xl overflow-hidden shadow-inner bg-slate-100 dark:bg-black/20 shrink-0">
+                    {booking.gear?.images?.[0] ? (
+                      <img
+                        src={booking.gear.images[0]}
+                        alt={booking.gear.title}
+                        className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400"><Package size={40} /></div>
+                    )}
                   </div>
-                </div>
-              </div>
-
-              {/* Rental Details */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-xl font-bold text-[#0d1c17] dark:text-white">Rental Period</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Start Date</p>
-                    <p className="font-semibold text-[#0d1c17] dark:text-white">
-                      {new Date(booking.startDate).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
+                  
+                  <div className="flex-1 space-y-4 w-full">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest">
+                      <Package className="w-4 h-4" />
+                      {booking.gear?.category || 'General Gear'}
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight">
+                      {booking.gear?.title || 'Gear Item'}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 leading-relaxed">
+                      {booking.gear?.description || 'No additional description provided by the owner.'}
                     </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">End Date</p>
-                    <p className="font-semibold text-[#0d1c17] dark:text-white">
-                      {new Date(booking.endDate).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Days</p>
-                    <p className="font-semibold text-[#0d1c17] dark:text-white">
-                      {booking.totalDays} {booking.totalDays === 1 ? 'day' : 'days'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Price</p>
-                    <p className="font-bold text-xl text-[#059467]">
-                      {formatNPR(booking.totalPrice)}
-                    </p>
+                    <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex flex-wrap gap-4">
+                      <button
+                        onClick={() => router.push(`/gear/${booking.gear?._id}`)}
+                        className="flex items-center gap-2 text-sm font-bold text-[#059467] hover:underline"
+                      >
+                        View Public Listing <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Logistics */}
+              {/* Rental Meta Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 border border-slate-100 dark:border-white/5 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg"><Calendar className="w-5 h-5 text-emerald-500" /></div>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Rental Duration</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Pick-up Date</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{new Date(booking.startDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">Return Date</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{new Date(booking.endDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}</span>
+                    </div>
+                    <div className="pt-3 border-t border-slate-50 dark:border-white/5 flex justify-between items-center font-bold">
+                      <span className="text-emerald-600">Total Rental</span>
+                      <span className="text-lg text-slate-900 dark:text-white">{booking.totalDays} Days</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-emerald-600 dark:bg-emerald-900/30 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/20">
+                  <h3 className="font-bold mb-6 flex items-center gap-2 opacity-90"><Package size={18} /> Pricing Details</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm opacity-80">
+                      <span>Rate (Per Day)</span>
+                      <span>{formatNPR(booking.totalPrice / booking.totalDays)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm opacity-80">
+                      <span>Service Fee</span>
+                      <span>Included</span>
+                    </div>
+                    <div className="pt-4 mt-2 border-t border-white/20 flex justify-between items-end">
+                      <span className="text-sm opacity-90 font-medium">Total Paid</span>
+                      <span className="text-3xl font-black">{formatNPR(booking.totalPrice)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location & Instructions */}
               <LogisticsCard
                 location={booking.pickupLocation}
-                pickupInstructions="Please bring a valid ID for verification. Pickup available between 9 AM - 6 PM."
-                returnInstructions="Return the gear in the same condition. Late returns are subject to additional charges."
+                pickupInstructions="Ensure you inspect the gear before taking it. Record a video of the item's condition for safety."
+                returnInstructions="Clean the gear before return. Check all accessories are included in the bag."
                 ownerPhone={otherUser?.phone}
                 ownerEmail={otherUser?.email}
                 onGetDirections={handleGetDirections}
                 onContactOwner={handleContactOwner}
               />
 
-              {/* Action Buttons */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
+              {/* Renter Actions Footer */}
+              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-white/5">
                 <BookingActionButtons
                   status={mappedStatus}
                   isRenter={isRenter}
                   onCancel={() => setShowCancelModal(true)}
                   onContactOwner={handleContactOwner}
                   onReportIssue={() => setShowIssueModal(true)}
-                  onExtendRental={handleExtendRental}
-                  onViewRefund={handleViewRefund}
+                  onExtendRental={() => setToast({message: 'Feature in development', type: 'info'})}
+                  onViewRefund={() => setToast({message: 'Check your email for refund status', type: 'info'})}
                 />
               </div>
             </div>
 
-            {/* Right Column - Sidebar */}
-            <div className="space-y-6">
-              {/* Owner Status Control - Only visible to gear owner (product lister) */}
+            {/* Sidebar Controls */}
+            <aside className="lg:col-span-4 space-y-8">
+              
+              {/* Exclusive Owner Control Panel */}
               {isGearOwner && (
-                <OwnerStatusControl
-                  currentStatus={mappedStatus}
-                  onStatusChange={handleStatusChange}
-                  disabled={booking.status === 'cancelled' || booking.status === 'completed'}
-                />
+                <div className=" top-8 space-y-8">
+                  <OwnerStatusControl
+                    currentStatus={mappedStatus}
+                    onStatusChange={handleStatusChange}
+                    disabled={['cancelled', 'completed'].includes(booking.status)}
+                  />
+                </div>
               )}
 
-              {/* Deposit Status */}
+              {/* Financial Security Card */}
               <DepositStatusCard
                 depositAmount={booking.deposit || 0}
                 depositStatus="held"
                 refundDate={new Date(new Date(booking.endDate).getTime() + 3 * 24 * 60 * 60 * 1000)}
               />
 
-              {/* Rental Terms */}
-              <RentalTermsCard
-                lateFeePerDay={50}
-                protectionPlan={{ active: false }}
-                cancellationDeadline={new Date(new Date(booking.startDate).getTime() - 24 * 60 * 60 * 1000)}
-                cancellationFee={booking.totalPrice * 0.1}
-              />
-
-              {/* Contact Card */}
-              <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="w-5 h-5 text-[#059467]" />
-                  <h2 className="text-lg font-bold text-[#0d1c17] dark:text-white">
-                    {isRenter ? 'Owner' : 'Renter'} Details
+              {/* User Connection Card */}
+              <div className="bg-white dark:bg-[#1a2c26] rounded-3xl p-6 shadow-sm border border-slate-100 dark:border-white/5 group">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-slate-100 dark:bg-white/5 rounded-xl group-hover:rotate-12 transition-transform"><User className="w-5 h-5 text-slate-500" /></div>
+                  <h2 className="font-black text-lg text-slate-900 dark:text-white">
+                    {isRenter ? 'Meet the Owner' : 'About Renter'}
                   </h2>
                 </div>
-                {otherUser && otherUser._id ? (
-                  <>
-                    <div className="flex items-center gap-3 mb-4">
-                      {otherUser.profilePicture && (
-                        <img
-                          src={otherUser.profilePicture}
-                          alt={otherUser.name || otherUser.username || 'User'}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                      )}
-                      <div>
-                        <p className="font-semibold text-[#0d1c17] dark:text-white">
-                          {otherUser.name || otherUser.username || 'Unknown User'}
-                        </p>
-                        {otherUser.username && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            @{otherUser.username}
-                          </p>
+                
+                {otherUser?._id ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-white/5 overflow-hidden border-2 border-emerald-500/20">
+                        {otherUser.profilePicture ? (
+                          <img src={otherUser.profilePicture} alt="User" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-emerald-500 font-bold text-xl">
+                            {otherUser.name?.charAt(0) || 'G'}
+                          </div>
                         )}
                       </div>
+                      <div>
+                        <p className="font-black text-slate-900 dark:text-white">{otherUser.name || 'G-User'}</p>
+                        <p className="text-xs text-gray-400 font-bold">Member since 2025</p>
+                      </div>
                     </div>
-                    {otherUser.username && (
-                      <button
-                        onClick={() => router.push(`/profile/${otherUser.username}`)}
-                        className="w-full px-4 py-2 bg-[#f5f8f7] dark:bg-white/5 hover:bg-[#e7f4f0] dark:hover:bg-white/10 rounded-lg text-sm font-medium text-[#0d1c17] dark:text-white transition-colors"
-                      >
-                        View Profile
-                      </button>
-                    )}
-                  </>
+                    <button
+                      onClick={() => router.push(`/profile/${otherUser.username}`)}
+                      className="w-full py-3 bg-slate-50 dark:bg-white/5 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-2xl text-sm font-black text-slate-900 dark:text-white transition-all border border-slate-100 dark:border-white/5"
+                    >
+                      View Full Profile
+                    </button>
+                  </div>
                 ) : (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    User information not available
-                  </p>
+                  <p className="text-sm text-gray-500 py-4">Participant data unavailable</p>
                 )}
               </div>
-            </div>
-          </div>
 
-          {/* Booking Details Section - Moved to bottom */}
-          <div className="mt-6 bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold text-[#0d1c17] dark:text-white mb-2">
-                  Booking Details
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Booking ID: <span className="font-mono text-sm">{booking._id}</span>
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={downloadPDF}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#059467] hover:bg-[#047854] text-white rounded-full font-medium transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Receipt
-                </button>
-              </div>
-            </div>
+              {/* Terms Sidebar */}
+              <RentalTermsCard
+                lateFeePerDay={50}
+                protectionPlan={{ active: !!booking.protectionPlan }}
+                cancellationDeadline={new Date(new Date(booking.startDate).getTime() - 24 * 60 * 60 * 1000)}
+                cancellationFee={booking.totalPrice * 0.15}
+              />
+            </aside>
           </div>
         </main>
 
         <Footer />
 
-        {/* Cancel Modal */}
+        {/* Dynamic Modals */}
         {showCancelModal && (
           <ConfirmModal
-            title="Cancel Booking"
-            message="Are you sure you want to cancel this booking? This action cannot be undone."
-            confirmText="Yes, Cancel"
-            cancelText="No, Keep It"
+            title="Terminate Booking?"
+            message="Stopping this booking now may involve cancellation fees if the rental period is close or already started. Proceed?"
+            confirmText="Stop Booking"
+            cancelText="Go Back"
             onConfirm={handleCancel}
             onCancel={() => setShowCancelModal(false)}
             type="decline"
           />
         )}
 
-        {/* Issue Report Modal */}
         {showIssueModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 max-w-md w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle className="w-6 h-6 text-orange-500" />
-                <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white">Report Issue</h3>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white dark:bg-[#1a2c26] rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scaleIn">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-orange-100 dark:bg-orange-500/10 rounded-2xl">
+                  <AlertTriangle className="w-6 h-6 text-orange-500" />
+                </div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white">Flag Issue</h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Describe the issue you're experiencing with this rental.
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                Describe the problem clearly. Include details about damage, late delivery, or missing components. Support will mediate the dispute.
               </p>
               <textarea
                 value={issueDescription}
                 onChange={(e) => setIssueDescription(e.target.value)}
-                placeholder="Describe the issue..."
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#059467] focus:border-transparent bg-white dark:bg-[#0d1c17] text-[#0d1c17] dark:text-white resize-none"
+                placeholder="E.g. Item lens is scratched..."
+                className="w-full px-5 py-4 border-2 border-gray-100 dark:border-white/10 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 bg-slate-50 dark:bg-[#0d1c17] text-slate-900 dark:text-white transition-all resize-none outline-none"
                 rows={4}
               />
-              <div className="flex gap-3 mt-4">
+              <div className="grid grid-cols-2 gap-4 mt-8">
                 <button
                   onClick={() => setShowIssueModal(false)}
-                  className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-full font-bold hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                  className="px-4 py-3 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-2xl font-black transition-all hover:bg-gray-200"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleReportIssue}
-                  className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-full font-bold transition-colors"
+                  className="px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black shadow-lg shadow-orange-500/30 transition-all hover:scale-105"
                 >
-                  Submit Report
+                  Report
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Status Change Confirmation Modal */}
         {showStatusChangeModal && (
           <ConfirmModal
-            title="Update Rental Status"
-            message={`Are you sure you want to change the status to "${pendingStatus.replace('_', ' ').toUpperCase()}"? The renter will be notified of this change.`}
-            confirmText="Yes, Update Status"
-            cancelText="Cancel"
+            title="Update Lifecycle"
+            message={`Move this rental to "${pendingStatus.replace('_', ' ').toUpperCase()}"? This triggers notifications and financial updates.`}
+            confirmText="Update Now"
+            cancelText="Wait"
             onConfirm={confirmStatusChange}
             onCancel={() => setShowStatusChangeModal(false)}
             type="confirm"
           />
         )}
 
-        {/* Toast */}
         {toast && (
           <Toast
             message={toast.message}
@@ -540,6 +518,13 @@ function BookingDetailsPage() {
           />
         )}
       </div>
+
+      <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fadeIn { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-scaleIn { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
     </ProtectedRoute>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
@@ -19,7 +19,9 @@ import {
   User as UserIcon,
   ShoppingBag,
   Edit,
-  Calendar
+  Calendar,
+  ChevronRight,
+  TrendingUp
 } from 'lucide-react';
 
 interface GearItem {
@@ -65,557 +67,322 @@ export default function SellerDashboardPage() {
   const [loadingRentals, setLoadingRentals] = useState(false);
   const [activeTab, setActiveTab] = useState<'gear' | 'rentals'>('gear');
 
-  useEffect(() => {
-    if (username) {
-      fetchSellerGear();
-    }
-  }, [username]);
+  const isOwnProfile = useMemo(() => {
+    return currentUser && sellerData?.user && (
+      currentUser._id === sellerData.user._id || 
+      currentUser.username === sellerData.user.username
+    );
+  }, [currentUser, sellerData]);
 
-  const fetchRentals = async () => {
-    try {
-      setLoadingRentals(true);
-      const bookings = await bookingAPI.getMyBookings();
-      // Filter to only show bookings where current user is the owner (gear owner)
-      const ownerBookings = bookings.filter((booking: any) => 
-        booking.gear?.owner?._id === currentUser?._id || 
-        booking.gear?.owner === currentUser?._id
-      );
-      setRentals(ownerBookings);
-    } catch (err) {
-      console.error('Error fetching rentals:', err);
-    } finally {
-      setLoadingRentals(false);
-    }
-  };
-
-  const fetchSellerGear = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await gearAPI.getGearByUser(username);
-      console.log('Seller data received:', data);
-      setSellerData(data);
-      
-      // Fetch rentals if viewing own profile
-      if (currentUser && data.user && (
-        currentUser._id === data.user._id || 
-        currentUser.username === data.user.username
-      )) {
-        // Fetch rentals in the background
-        fetchRentalsInBackground();
-      }
-    } catch (err: any) {
-      console.error('Error fetching seller gear:', err);
-      setError(err.message || 'Failed to load seller information');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRentalsInBackground = async () => {
+  const fetchRentals = useCallback(async () => {
     try {
       setLoadingRentals(true);
       const bookings = await bookingAPI.getGearBookings();
-      console.log('Owner bookings received:', bookings);
       setRentals(bookings);
     } catch (err) {
       console.error('Error fetching rentals:', err);
     } finally {
       setLoadingRentals(false);
     }
-  };
+  }, []);
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      'Camping': 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-      'Photography': 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-      'Tech': 'bg-gray-800/10 text-gray-700 dark:text-gray-300 dark:bg-gray-700/50 border-gray-800/10',
-      'Office': 'bg-orange-500/10 text-orange-600 border-orange-500/20',
-      'Sports': 'bg-teal-500/10 text-teal-600 border-teal-500/20',
-      'Audio': 'bg-purple-500/10 text-purple-600 border-purple-500/20'
-    };
-    return colors[category] || 'bg-gray-500/10 text-gray-600 border-gray-500/20';
-  };
+  const fetchSellerGear = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await gearAPI.getGearByUser(username);
+      setSellerData(data);
+      
+      if (currentUser && (currentUser._id === data.user._id || currentUser.username === data.user.username)) {
+        fetchRentals();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load seller information');
+    } finally {
+      setLoading(false);
+    }
+  }, [username, currentUser, fetchRentals]);
 
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center px-4">
-          <div className="flex flex-col items-center gap-3 sm:gap-4">
-            <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-[#059467] animate-spin" />
-            <p className="text-sm sm:text-base text-[#0d1c17]/60 dark:text-white/60">Loading seller dashboard...</p>
-          </div>
-        </div>
-        <div className="hidden md:block">
-          <Footer />
-        </div>
-      </>
-    );
-  }
+  useEffect(() => {
+    if (username) fetchSellerGear();
+  }, [fetchSellerGear]);
 
-  if (error || !sellerData) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex items-center justify-center px-3 sm:px-4 py-8">
-          <div className="text-center max-w-md w-full">
-            <div className="mb-6">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-red-500 dark:text-red-400" />
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-[#0d1c17] dark:text-white mb-2">
-                Seller Not Found
-              </h2>
-              <p className="text-sm sm:text-base text-[#0d1c17]/60 dark:text-white/60 mb-6 px-4">
-                {error || 'This seller does not exist or has no gear listed.'}
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center px-4">
-              <button
-                onClick={() => router.push('/gear')}
-                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-[#059467] text-white rounded-full text-sm sm:text-base font-medium hover:bg-[#047854] transition-colors active:scale-95 touch-manipulation"
-              >
-                Browse All Gear
-              </button>
-              <button
-                onClick={() => router.back()}
-                className="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 border border-slate-300 dark:border-slate-600 text-[#0d1c17] dark:text-white rounded-full text-sm sm:text-base font-medium hover:bg-slate-50 dark:hover:bg-white/5 transition-colors active:scale-95 touch-manipulation"
-              >
-                Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-        <div className="hidden md:block">
-          <Footer />
-        </div>
-      </>
-    );
-  }
+  const categories = useMemo(() => 
+    Array.from(new Set(sellerData?.gear.map(item => item.category) || [])),
+  [sellerData]);
 
-  const { user, gear } = sellerData;
-  const ownerProfilePic = user.profilePicture || 
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=059467&color=fff&size=200`;
+  const filteredGear = useMemo(() => 
+    selectedCategory 
+      ? sellerData?.gear.filter(item => item.category === selectedCategory)
+      : sellerData?.gear,
+  [selectedCategory, sellerData]);
 
-  // Check if current user is viewing their own profile
-  const isOwnProfile = currentUser && user && (
-    currentUser._id === user._id || 
-    currentUser.username === user.username
+  const avgRating = useMemo(() => {
+    if (!sellerData?.gear.length) return '0.0';
+    const total = sellerData.gear.reduce((sum, item) => sum + (item.rating || 0), 0);
+    return (total / sellerData.gear.length).toFixed(1);
+  }, [sellerData]);
+
+  if (loading) return (
+    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
+      <Header />
+      <div className="flex-grow flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-12 h-12 text-slate-900 dark:text-[#059467] animate-spin" />
+        <p className="font-bold text-[#059467] animate-pulse uppercase tracking-widest text-xs">Syncing Dashboard...</p>
+      </div>
+    </div>
   );
 
-  // Get unique categories from gear
-  const categories = Array.from(new Set(gear.map(item => item.category)));
-
-  // Filter gear by selected category
-  const filteredGear = selectedCategory 
-    ? gear.filter(item => item.category === selectedCategory)
-    : gear;
-
-  // Calculate average rating
-  const avgRating = gear.length > 0 
-    ? (gear.reduce((sum, item) => sum + (item.rating || 0), 0) / gear.length).toFixed(1)
-    : '0.0';
-
   return (
-    <>
+    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col selection:bg-[#059467] selection:text-white">
       <Header />
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-24 md:pb-8">
-        <main className="flex-grow w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 lg:px-20 py-4 sm:py-6 md:py-10">
-          {/* Back Button */}
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-[#059467] hover:text-[#047854] font-medium mb-4 sm:mb-6 transition-colors active:scale-95 touch-manipulation"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="text-sm sm:text-base">Back</span>
-          </button>
+      
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 animate-fadeIn">
+        {/* Breadcrumb / Back */}
+        <button
+          onClick={() => router.back()}
+          className="group flex items-center gap-2 text-[#059467] font-bold mb-8 transition-all active:scale-95"
+        >
+          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <span>Back to Discovery</span>
+        </button>
 
-          {/* Seller Profile Header */}
-          <div className="bg-white dark:bg-[#1a2c26] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-gray-100 dark:border-[#059467]/10 mb-6 sm:mb-8">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6">
-              {/* Profile Picture */}
-              <div className="relative flex-shrink-0">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-full overflow-hidden ring-2 sm:ring-4 ring-[#059467]/20 shadow-lg">
-                  <img
-                    src={ownerProfilePic}
-                    alt={user.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=059467&color=fff&size=200`;
-                    }}
-                  />
-                </div>
-                <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-white dark:bg-[#1a2c26] rounded-full p-1 sm:p-1.5 shadow-md">
-                  <BadgeCheck className="w-4 h-4 sm:w-6 sm:h-6 text-[#059467]" />
-                </div>
+        {/* Profile Identity Card */}
+        <section className="bg-white dark:bg-[#1a2c26] rounded-[2rem] p-6 md:p-10 shadow-xl shadow-emerald-900/5 border border-white/50 dark:border-white/5 mb-10 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#059467]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-10">
+            <div className="relative">
+              <div className="w-24 h-24 md:w-40 md:h-40 rounded-[2.5rem] overflow-hidden shadow-2xl rotate-3 group-hover:rotate-0 transition-transform duration-500 ring-4 ring-white dark:ring-white/10">
+                <img 
+                  src={sellerData?.user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(sellerData?.user.name || '')}&background=059467&color=fff&size=200`} 
+                  className="w-full h-full object-cover" 
+                  alt="Profile"
+                />
               </div>
+              <div className="absolute -bottom-2 -right-2 bg-white dark:bg-[#1a2c26] p-2 rounded-2xl shadow-lg">
+                <BadgeCheck className="w-6 h-6 text-[#059467]" />
+              </div>
+            </div>
 
-              {/* Seller Info */}
-              <div className="flex-1 text-center md:text-left w-full">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#0d1c17] dark:text-white mb-1 sm:mb-2">
-                  {user.name}
+            <div className="flex-1 text-center md:text-left space-y-4">
+              <div>
+                <h1 className="text-3xl md:text-5xl font-black text-[#0d1c17] dark:text-white mb-1">
+                  {sellerData?.user.name}
                 </h1>
-                <p className="text-[#059467] font-medium text-sm sm:text-base mb-2 sm:mb-3">@{user.username}</p>
-                
-                {user.location && (
-                  <div className="flex items-center justify-center md:justify-start gap-1.5 sm:gap-2 text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
-                    <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm">{getCityName(user.location)}</span>
-                  </div>
-                )}
-
-                {user.bio && (
-                  <p className="text-sm sm:text-base text-[#0d1c17]/70 dark:text-white/70 max-w-2xl mb-3 sm:mb-4 line-clamp-3 sm:line-clamp-none">
-                    {user.bio}
-                  </p>
-                )}
-
-                <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3">
-                  <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#059467]/10 rounded-full w-full sm:w-auto justify-center">
-                    <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#059467]" />
-                    <span className="text-xs sm:text-sm font-bold text-[#059467]">
-                      {gear.length} {gear.length === 1 ? 'Item' : 'Items'} Listed
-                    </span>
-                  </div>
-                  
-                  {!isOwnProfile && (
-                    <>
-                      <button
-                        onClick={() => router.push(`/profile/${user.username}`)}
-                        className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 border border-[#059467] text-[#059467] rounded-full text-xs sm:text-sm font-medium hover:bg-[#059467]/5 transition-colors active:scale-95 touch-manipulation w-full sm:w-auto"
-                      >
-                        <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap">View Full Profile</span>
-                      </button>
-
-                      <button
-                        onClick={() => router.push(`/messages?user=${user._id}`)}
-                        className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-[#059467] text-white rounded-full text-xs sm:text-sm font-medium hover:bg-[#047854] transition-colors active:scale-95 touch-manipulation w-full sm:w-auto"
-                      >
-                        <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap">Message</span>
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tab Buttons - Only visible to owner */}
-          {isOwnProfile && (
-            <div className="mb-6">
-              <div className="flex gap-2 p-1 bg-white dark:bg-[#1a2c26] rounded-full shadow-sm border border-gray-100 dark:border-[#059467]/10 w-fit">
-                <button
-                  onClick={() => setActiveTab('gear')}
-                  className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
-                    activeTab === 'gear'
-                      ? 'bg-[#059467] text-white shadow-md'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-[#059467] dark:hover:text-[#059467]'
-                  }`}
-                >
-                  Your Gear
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab('rentals');
-                    if (rentals.length === 0 && !loadingRentals) {
-                      fetchRentalsInBackground();
-                    }
-                  }}
-                  className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
-                    activeTab === 'rentals'
-                      ? 'bg-[#059467] text-white shadow-md'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-[#059467] dark:hover:text-[#059467]'
-                  }`}
-                >
-                  My Rentals
-                  {rentals.length > 0 && (
-                    <span className="ml-2 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                      {rentals.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* My Rentals Tab Content - Only visible to owner when tab is active */}
-          {isOwnProfile && activeTab === 'rentals' && (
-            <div className="mb-6 sm:mb-8">
-              <div className="mb-4">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0d1c17] dark:text-white flex items-center gap-2 sm:gap-3">
-                  <Calendar className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#059467]" />
-                  <span>My Rentals</span>
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Bookings from people renting your gear
-                </p>
+                <p className="text-[#059467] font-black text-sm uppercase tracking-[0.2em]">@{sellerData?.user.username}</p>
               </div>
 
-              {loadingRentals ? (
-                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-8 text-center border border-gray-100 dark:border-[#059467]/10">
-                  <Loader2 className="w-8 h-8 text-[#059467] animate-spin mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading rentals...</p>
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-4 py-2 rounded-xl text-sm font-bold">
+                  <MapPin size={16} className="text-[#059467]" />
+                  {getCityName(sellerData?.user.location || 'Kathmandu, Nepal')}
                 </div>
-              ) : rentals.length > 0 ? (
-                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-[#059467]/10">
-                  <div className="space-y-4">
-                    {rentals.map((rental: any) => (
-                      <div
-                        key={rental._id}
-                        onClick={() => router.push(`/bookings/${rental._id}`)}
-                        className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-[#f5f8f7] dark:bg-[#0f231d] rounded-xl hover:bg-[#e7f4f0] dark:hover:bg-[#1a2c26] transition-colors cursor-pointer"
-                      >
-                        {/* Gear Image */}
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden flex-shrink-0">
-                          <img
-                            src={rental.gear?.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200&q=80'}
-                            alt={rental.gear?.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-
-                        {/* Rental Info */}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-sm sm:text-base text-[#0d1c17] dark:text-white truncate">
-                            {rental.gear?.title}
-                          </h4>
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                            Rented by {rental.renter?.name || 'User'}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                              rental.status === 'confirmed' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                              rental.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                              rental.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                              'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-                            }`}>
-                              {rental.status}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {new Date(rental.startDate).toLocaleDateString()} - {new Date(rental.endDate).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Price */}
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm sm:text-base font-bold text-[#059467]">
-                            {formatNPR(rental.totalPrice || 0, false)}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Total</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {rentals.length > 10 && (
-                    <button
-                      onClick={() => router.push('/rentals/dashboard')}
-                      className="w-full mt-4 px-4 py-2.5 bg-[#059467] hover:bg-[#047854] text-white rounded-full text-sm font-medium transition-colors"
-                    >
-                      View All in Dashboard
-                    </button>
-                  )}
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 px-4 py-2 rounded-xl text-sm font-bold">
+                  <Star size={16} className="text-amber-500 fill-amber-500" />
+                  {avgRating} Seller Rating
                 </div>
-              ) : (
-                <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-8 text-center border border-gray-100 dark:border-[#059467]/10">
-                  <Calendar className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-[#0d1c17] dark:text-white mb-2">
-                    No Rentals Yet
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    When people rent your gear, their bookings will appear here.
-                  </p>
+              </div>
+
+              <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base max-w-2xl leading-relaxed font-medium">
+                {sellerData?.user.bio || "No bio provided. This seller prefers to let their gear do the talking."}
+              </p>
+
+              {!isOwnProfile && (
+                <div className="flex flex-wrap gap-4 pt-4 justify-center md:justify-start">
+                  <button
+                    onClick={() => router.push(`/messages?user=${sellerData?.user._id}`)}
+                    className="flex items-center gap-2 px-8 py-3.5 bg-[#059467] text-white rounded-2xl font-black shadow-lg shadow-emerald-500/20 hover:bg-[#06ac77] transition-all active:scale-95"
+                  >
+                    <Mail size={18} /> Send Message
+                  </button>
                 </div>
               )}
             </div>
-          )}
-
-          {/* Your Gear Tab Content - Always visible to others, visible to owner when tab is active */}
-          {(!isOwnProfile || activeTab === 'gear') && (
-            <>
-              {/* Page Title */}
-          <div className="mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0d1c17] dark:text-white flex items-center gap-2 sm:gap-3">
-              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-[#059467]" />
-              <span>{isOwnProfile ? 'Your Gear' : 'Available Gear'}</span>
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {isOwnProfile ? 'Manage your listed items' : `Browse all items listed by ${user.name}`}
-            </p>
           </div>
+        </section>
 
-          {/* Stats and Filters */}
-          {gear.length > 0 && (
-            <div className="bg-white dark:bg-[#1a2c26] rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-sm border border-gray-100 dark:border-[#059467]/10 mb-4 sm:mb-6">
-              <div className="flex flex-col gap-4">
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 md:flex md:flex-wrap md:items-center md:gap-6">
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
-                    <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[#059467] flex-shrink-0" />
-                    <div className="text-center sm:text-left">
-                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Total Items</p>
-                      <p className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">{gear.length}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
-                    <Star className="w-4 h-4 sm:w-5 sm:h-5 text-[#f59e0b] fill-[#f59e0b] flex-shrink-0" />
-                    <div className="text-center sm:text-left">
-                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Avg Rating</p>
-                      <p className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">{avgRating}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1 sm:gap-2">
-                    <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-[#059467] flex-shrink-0" />
-                    <div className="text-center sm:text-left">
-                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">Categories</p>
-                      <p className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">{categories.length}</p>
-                    </div>
-                  </div>
+        {/* Dynamic Dashboard Content */}
+        {isOwnProfile ? (
+          <div className="space-y-10">
+            {/* Owner Tab Switcher */}
+            <div className="flex p-1.5 bg-white dark:bg-[#1a2c26] rounded-2xl w-fit shadow-sm border border-slate-100 dark:border-white/5">
+              {(['gear', 'rentals'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-8 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
+                    activeTab === tab 
+                      ? 'bg-[#059467] text-white shadow-lg' 
+                      : 'text-slate-400 hover:text-[#059467]'
+                  }`}
+                >
+                  {tab === 'gear' ? 'Inventory' : 'Active Rentals'}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'rentals' ? (
+              <div className="animate-slideUp">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-black dark:text-white flex items-center gap-3">
+                    <TrendingUp className="text-[#059467]" /> Rental Operations
+                  </h2>
                 </div>
-
-                {/* Category Filter */}
-                {categories.length > 1 && (
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                    <button
-                      onClick={() => setSelectedCategory('')}
-                      className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors active:scale-95 touch-manipulation ${
-                        !selectedCategory
-                          ? 'bg-[#059467] text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      All ({gear.length})
-                    </button>
-                    {categories.map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors active:scale-95 touch-manipulation ${
-                          selectedCategory === category
-                            ? 'bg-[#059467] text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
+                {rentals.length > 0 ? (
+                  <div className="grid gap-4">
+                    {rentals.map((rental) => (
+                      <div 
+                        key={rental._id}
+                        onClick={() => router.push(`/bookings/${rental._id}`)}
+                        className="group flex flex-col md:flex-row items-center gap-6 p-6 bg-white dark:bg-[#1a2c26] rounded-3xl border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer shadow-sm hover:shadow-xl"
                       >
-                        {category} ({gear.filter(g => g.category === category).length})
-                      </button>
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 shadow-inner">
+                          <img src={rental.gear?.images?.[0]} className="w-full h-full object-cover" alt="Gear" />
+                        </div>
+                        <div className="flex-1 text-center md:text-left space-y-1">
+                          <h4 className="font-black text-lg dark:text-white group-hover:text-[#059467] transition-colors">{rental.gear?.title}</h4>
+                          <p className="text-sm text-slate-500 font-bold uppercase tracking-wider">Rented by {rental.renter?.name}</p>
+                          <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
+                            <span className="text-xs font-black px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-full uppercase tracking-tighter">
+                              Status: {rental.status}
+                            </span>
+                            <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                              <Calendar size={12} /> {new Date(rental.startDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-[#059467]">{formatNPR(rental.totalPrice)}</p>
+                          <ChevronRight className="ml-auto text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </div>
                     ))}
+                  </div>
+                ) : (
+                  <div className="py-20 text-center bg-white dark:bg-[#1a2c26] rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/5">
+                    <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold dark:text-white">No active rentals found</h3>
+                    <p className="text-slate-500">Listed gear waiting for its next adventure.</p>
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            ) : (
+              <InventoryGrid 
+                gear={filteredGear || []} 
+                isOwn={true} 
+                categories={categories} 
+                selectedCat={selectedCategory} 
+                setCat={setSelectedCategory} 
+                router={router}
+              />
+            )}
+          </div>
+        ) : (
+          <InventoryGrid 
+            gear={filteredGear || []} 
+            isOwn={false} 
+            categories={categories} 
+            selectedCat={selectedCategory} 
+            setCat={setSelectedCategory} 
+            router={router}
+          />
+        )}
+      </main>
+      
+      <Footer />
+      
+      <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-slideUp { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
+    </div>
+  );
+}
 
-          {/* Gear Grid */}
-          {filteredGear.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-8">
-              {filteredGear.map((item) => (
-                <div
-                  key={item._id}
-                  className="group bg-white dark:bg-[#1a2c26] rounded-xl overflow-hidden hover:shadow-xl hover:shadow-[#059467]/5 transition-all duration-300 transform hover:-translate-y-1 border border-gray-100 dark:border-[#059467]/5 cursor-pointer relative"
-                  onClick={() => router.push(`/gear/${item._id}`)}
-                >
-                  {/* Edit Button for Owner */}
-                  {isOwnProfile && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/gear/${item._id}/edit`);
-                      }}
-                      className="absolute top-3 right-3 md:top-4 md:right-4 z-10 bg-[#059467] hover:bg-[#047854] text-white p-2 md:p-2.5 rounded-full shadow-lg transition-all active:scale-95 touch-manipulation flex items-center gap-1.5 md:gap-2 group/edit"
-                      title="Edit this gear"
-                    >
-                      <Edit className="w-4 h-4 md:w-4.5 md:h-4.5" />
-                      <span className="text-xs font-medium hidden group-hover/edit:inline-block">Edit</span>
-                    </button>
-                  )}
-                  
-                  <div className="p-3 md:p-4">
-                    <div className="relative aspect-square w-full overflow-hidden rounded-2xl md:rounded-[32px]">
-                      <img
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        src={item.images?.[0] || 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&q=80'}
-                      />
-                      {item.available && (
-                        <div className="absolute top-2 md:top-4 right-2 md:right-4 bg-white/90 backdrop-blur-sm px-2 md:px-3 py-0.5 md:py-1 rounded-full flex items-center gap-1 md:gap-1.5 shadow-sm">
-                          <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[#059467] animate-pulse" />
-                          <span className="text-[10px] md:text-xs font-bold text-[#059467]">Available</span>
-                        </div>
-                      )}
-                      <div className="absolute bottom-2 md:bottom-4 left-2 md:left-4">
-                        <span className={`${getCategoryColor(item.category)} px-2 md:px-3 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs font-bold backdrop-blur-md border`}>
-                          {item.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+/* Sub-component for Gear Grid to keep the main component clean */
+function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }: any) {
+  return (
+    <div className="animate-slideUp">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+        <div>
+          <h2 className="text-2xl font-black dark:text-white flex items-center gap-3">
+            <ShoppingBag className="text-[#059467]" /> {isOwn ? 'Your Inventory' : 'Available Gear'}
+          </h2>
+          <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.1em]">{gear.length} Items Listed</p>
+        </div>
+        
+        {/* Category Pill Filters */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setCat('')}
+            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+              !selectedCat ? 'bg-[#059467] text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-[#1a2c26] text-slate-400 hover:bg-slate-50'
+            }`}
+          >
+            All Items
+          </button>
+          {categories.map((cat: string) => (
+            <button
+              key={cat}
+              onClick={() => setCat(cat)}
+              className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+                selectedCat === cat ? 'bg-[#059467] text-white shadow-lg' : 'bg-white dark:bg-[#1a2c26] text-slate-400 hover:bg-slate-50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
 
-                  <div className="px-4 md:px-6 pb-4 md:pb-6 pt-2">
-                    <div className="flex justify-between items-start mb-2 md:mb-3">
-                      <h3 className="text-base md:text-lg font-bold text-[#0d1c17] dark:text-white leading-tight pr-2 md:pr-4">
-                        {item.title}
-                      </h3>
-                      <div className="flex items-center gap-0.5 md:gap-1 bg-yellow-50 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg flex-shrink-0">
-                        <Star className="w-3 h-3 md:w-3.5 md:h-3.5 text-[#f59e0b] fill-[#f59e0b]" />
-                        <span className="text-xs md:text-sm font-bold text-[#0d1c17]">{item.rating || 4.5}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-end justify-between border-t border-gray-50 dark:border-white/5 pt-3 md:pt-4 mt-2">
-                      <div className="flex items-center gap-1.5 md:gap-2 text-gray-500 dark:text-gray-400">
-                        <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
-                        <span className="text-xs md:text-sm font-medium truncate">{getCityName(item.location)}</span>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <span className="block text-lg md:text-xl font-black text-[#059467]">
-                          {formatNPR(item.pricePerDay, false)}
-                          <span className="text-xs md:text-sm font-medium text-gray-400 dark:text-gray-500">/day</span>
-                        </span>
-                      </div>
-                    </div>
+      {gear.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {gear.map((item: any) => (
+            <div 
+              key={item._id}
+              onClick={() => router.push(`/gear/${item._id}`)}
+              className="group bg-white dark:bg-[#1a2c26] rounded-[2.5rem] overflow-hidden border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer shadow-sm hover:shadow-2xl hover:-translate-y-2"
+            >
+              <div className="relative aspect-square overflow-hidden m-4 rounded-[2rem]">
+                <img src={item.images?.[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={item.title} />
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20">
+                  <p className="text-[#059467] font-black text-sm">{formatNPR(item.pricePerDay)}<span className="text-[10px] text-slate-400">/day</span></p>
+                </div>
+                {isOwn && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); router.push(`/gear/${item._id}/edit`); }}
+                    className="absolute bottom-4 right-4 p-4 bg-white/90 backdrop-blur-md text-[#059467] rounded-2xl shadow-xl hover:bg-[#059467] hover:text-white transition-all transform hover:scale-110"
+                  >
+                    <Edit size={20} />
+                  </button>
+                )}
+              </div>
+              <div className="p-8 pt-2 space-y-4">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-black text-xl text-[#0d1c17] dark:text-white leading-tight group-hover:text-[#059467] transition-colors">{item.title}</h3>
+                  <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg">
+                    <Star size={12} className="text-amber-500 fill-amber-500" />
+                    <span className="text-xs font-black text-amber-700">{item.rating || 4.5}</span>
                   </div>
                 </div>
-              ))}
+                <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
+                  <MapPin size={14} className="text-emerald-500" />
+                  {getCityName(item.location)}
+                </div>
+              </div>
             </div>
-          ) : selectedCategory ? (
-            <div className="bg-white dark:bg-[#1a2c26] rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center border border-gray-100 dark:border-[#059467]/10">
-              <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 dark:text-gray-600 mx-auto mb-3 sm:mb-4" />
-              <h3 className="text-lg sm:text-xl font-bold text-[#0d1c17] dark:text-white mb-2">
-                No {selectedCategory} Items
-              </h3>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-4">
-                {user.name} doesn't have any {selectedCategory} gear listed.
-              </p>
-              <button
-                onClick={() => setSelectedCategory('')}
-                className="px-5 sm:px-6 py-2 sm:py-2.5 bg-[#059467] text-white rounded-full text-sm sm:text-base font-medium hover:bg-[#047854] transition-colors active:scale-95 touch-manipulation"
-              >
-                View All Items
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-[#1a2c26] rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center border border-gray-100 dark:border-[#059467]/10">
-              <Package className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 dark:text-gray-600 mx-auto mb-3 sm:mb-4" />
-              <h3 className="text-lg sm:text-xl font-bold text-[#0d1c17] dark:text-white mb-2">
-                No Gear Listed Yet
-              </h3>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-                {user.name} hasn't listed any gear for rent yet.
-              </p>
-            </div>
-          )}
-            </>
-          )}
-        </main>
-      </div>
-      
-      <div className="hidden md:block">
-        <Footer />
-      </div>
-    </>
+          ))}
+        </div>
+      ) : (
+        <div className="py-32 text-center bg-white dark:bg-[#1a2c26] rounded-[3rem] border border-slate-100 dark:border-white/5">
+          <Package size={64} className="mx-auto text-slate-200 mb-6" />
+          <h3 className="text-2xl font-black dark:text-white">Inventory is empty</h3>
+          <p className="text-slate-400">No gear matching this category was found.</p>
+        </div>
+      )}
+    </div>
   );
 }

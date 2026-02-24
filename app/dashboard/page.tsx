@@ -16,7 +16,8 @@ import {
   ArrowRight,
   Loader2,
   Users,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 
 interface Trip {
@@ -56,25 +57,11 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchTrips();
   }, [activeTab]);
-
-  // Close filter menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (showFilterMenu && !target.closest('.filter-menu-container')) {
-        setShowFilterMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showFilterMenu]);
 
   const fetchTrips = async () => {
     try {
@@ -82,7 +69,6 @@ function DashboardPage() {
       setError('');
       
       if (activeTab === 'public') {
-        // Fetch public trips
         const response = await fetch('http://localhost:5000/api/trips/public', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -93,7 +79,6 @@ function DashboardPage() {
         const data = await response.json();
         setPublicTrips(data);
       } else {
-        // Fetch user's trips
         const data = await tripAPI.getAll();
         setTrips(data);
       }
@@ -147,7 +132,6 @@ function DashboardPage() {
   };
 
   const getDefaultImage = (destination: string) => {
-    // Default images based on destination keywords
     const images: Record<string, string> = {
       japan: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&q=80',
       iceland: 'https://images.unsplash.com/photo-1504829857797-ddff29c27927?w=800&q=80',
@@ -168,12 +152,10 @@ function DashboardPage() {
     const currentTrips = activeTab === 'public' ? publicTrips : trips;
     let filtered = currentTrips;
 
-    // Filter by status
     if (statusFilter !== 'all') {
       filtered = filtered.filter(trip => trip.status === statusFilter);
     }
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(trip =>
         trip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -186,20 +168,7 @@ function DashboardPage() {
   };
 
   const filteredTrips = filterTrips();
-
-  // Calculate stats (only for user's trips)
-  const stats = {
-    total: trips.length,
-    active: trips.filter(t => t.status === 'traveling').length,
-    completed: trips.filter(t => t.status === 'completed').length,
-    countries: new Set(trips.map(t => t.country)).size,
-    totalDays: trips.reduce((sum, trip) => {
-      const start = new Date(trip.startDate);
-      const end = new Date(trip.endDate);
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      return sum + days;
-    }, 0)
-  };
+  const filterOptions = ['all', 'planning', 'traveling', 'completed'];
 
   if (loading) {
     return (
@@ -207,7 +176,14 @@ function DashboardPage() {
         <Header />
         <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
           <main className="mx-auto w-full max-w-[1440px] px-4 md:px-6 lg:px-20 py-6 md:py-12">
-            {/* Hero Title Skeleton - Hidden on Mobile */}
+            
+            {/* Skeleton Mobile Hero Section */}
+            <div className="md:hidden mb-6 space-y-2">
+              <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg w-48 animate-pulse" />
+              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg w-64 animate-pulse" />
+            </div>
+
+            {/* Skeleton Desktop Hero */}
             <div className="hidden md:flex mb-6 md:mb-12 flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
               <div className="space-y-3 animate-pulse">
                 <div className="h-12 md:h-14 bg-slate-200 dark:bg-slate-700 rounded-xl w-64 md:w-80" />
@@ -217,21 +193,17 @@ function DashboardPage() {
             </div>
 
             {/* Navigation & Search Skeleton */}
-            <div className="flex flex-col gap-4 md:gap-6 mb-6 md:mb-10">
-              <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 md:gap-6">
-                {/* Tab Switcher Skeleton */}
-                <div className="bg-[#059467]/5 p-1.5 rounded-full flex w-full lg:w-auto animate-pulse">
-                  <div className="flex-1 lg:min-w-[160px] h-10 md:h-12 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                  <div className="flex-1 lg:min-w-[160px] h-10 md:h-12 bg-slate-200 dark:bg-slate-700 rounded-full ml-2" />
-                </div>
+            <div className="flex flex-col gap-4 mb-6 md:mb-10">
+              {/* Search Bar Skeleton */}
+              <div className="w-full lg:max-w-xl">
+                <div className="h-12 md:h-14 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
+              </div>
 
-                {/* Search Bar Skeleton */}
-                <div className="flex items-center gap-2 md:gap-3 w-full lg:max-w-xl">
-                  <div className="relative flex-1">
-                    <div className="h-12 md:h-14 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
-                  </div>
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse flex-shrink-0" />
-                </div>
+              {/* Filter Chips Skeleton */}
+              <div className="flex gap-2 overflow-hidden">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-9 w-24 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse flex-shrink-0" />
+                ))}
               </div>
             </div>
 
@@ -242,21 +214,16 @@ function DashboardPage() {
                   key={i}
                   className="bg-white dark:bg-slate-800 rounded-3xl md:rounded-[2.5rem] shadow-xl shadow-slate-900/5 dark:shadow-black/20 overflow-hidden flex flex-col animate-pulse"
                 >
-                  {/* Image Skeleton */}
                   <div className="relative aspect-[4/3] bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800">
-                    {/* Status Badge Skeleton */}
                     <div className="absolute top-3 md:top-6 left-3 md:left-6 w-20 md:w-24 h-6 md:h-7 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md rounded-full" />
+                    {/* Glassmorphic Delete Skeleton */}
+                    <div className="absolute top-3 md:top-6 right-3 md:right-6 w-8 h-8 md:w-10 md:h-10 bg-white/30 backdrop-blur-md rounded-full" />
                   </div>
-
-                  {/* Content Skeleton */}
                   <div className="p-4 md:p-6 lg:p-8 flex-1 flex flex-col">
-                    {/* Title Skeleton */}
                     <div className="space-y-2 mb-3 md:mb-4">
                       <div className="h-6 md:h-7 bg-slate-200 dark:bg-slate-700 rounded-lg w-full" />
                       <div className="h-6 md:h-7 bg-slate-200 dark:bg-slate-700 rounded-lg w-3/4" />
                     </div>
-
-                    {/* Details Skeleton */}
                     <div className="flex flex-col gap-2 mb-4 md:mb-8">
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 md:w-5 md:h-5 bg-slate-200 dark:bg-slate-700 rounded" />
@@ -267,46 +234,19 @@ function DashboardPage() {
                         <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-40 md:w-48" />
                       </div>
                     </div>
-
-                    {/* Footer Skeleton */}
                     <div className="mt-auto flex items-center justify-between border-t border-slate-200 dark:border-slate-700 pt-4 md:pt-6">
-                      {/* Avatars Skeleton */}
                       <div className="flex -space-x-2 md:-space-x-3">
                         {[1, 2, 3].map((j) => (
-                          <div 
-                            key={j}
-                            className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-800"
-                          />
+                          <div key={j} className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-800" />
                         ))}
                       </div>
-                      {/* Button Skeleton */}
                       <div className="h-4 md:h-5 w-16 md:w-20 bg-slate-200 dark:bg-slate-700 rounded" />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Loading Text */}
-            <div className="mt-12 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Loader2 className="w-5 h-5 text-[#059467] animate-spin" />
-                <p className="text-[#0f231d] dark:text-white font-bold text-sm uppercase tracking-widest">
-                  Loading Your Journeys
-                </p>
-              </div>
-              <p className="text-slate-500 dark:text-slate-400 text-xs">
-                Preparing your travel dashboard...
-              </p>
-            </div>
           </main>
-        </div>
-
-        {/* Floating Action Button Skeleton - Mobile Only */}
-        <div className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 bg-slate-200 dark:bg-slate-700 rounded-full shadow-2xl animate-pulse" />
-
-        <div className="hidden md:block">
-          <Footer />
         </div>
       </>
     );
@@ -316,9 +256,19 @@ function DashboardPage() {
     <>
       <Header />
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] pb-20 md:pb-0">
-        {/* Main Layout Container */}
         <main className="mx-auto w-full max-w-[1440px] px-4 md:px-6 lg:px-20 py-6 md:py-12">
-          {/* Hero Title Section - Hidden on Mobile */}
+          
+          {/* Mobile Hero Section */}
+          <div className="md:hidden mb-6">
+            <h1 className="text-2xl font-black text-[#0f172a] dark:text-white mb-1">
+              Where to next, {user?.name?.split(' ')[0] || 'Traveler'}?
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+              Manage your itineraries across Nepal
+            </p>
+          </div>
+
+          {/* Desktop Hero Title Section */}
           <div className="hidden md:flex mb-6 md:mb-12 flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
             <div>
               <h1 className="text-3xl md:text-5xl lg:text-[48px] font-black text-[#0f172a] dark:text-white mb-1 md:mb-2">
@@ -338,185 +288,71 @@ function DashboardPage() {
           </div>
 
           {/* Navigation & Search Section */}
-          <div className="flex flex-col gap-4 md:gap-6 mb-6 md:mb-10">
-            {/* Active Filters Display */}
-            {(statusFilter !== 'all' || searchQuery) && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Active filters:</span>
-                {statusFilter !== 'all' && (
-                  <button
-                    onClick={() => setStatusFilter('all')}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#059467]/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#059467]/20 transition-colors"
-                  >
-                    Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
+          <div className="flex flex-col gap-4 mb-6 md:mb-10">
+            {/* Search Bar */}
+            <div className="flex items-center w-full lg:max-w-xl">
+              <div className="relative flex-1 group">
+                <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-[#059467] transition-colors" />
+                <input
+                  className="w-full pl-10 md:pl-12 pr-10 md:pr-12 py-3 md:py-4 bg-white dark:bg-slate-800 border-none rounded-full shadow-sm ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-[#059467] outline-none transition-all placeholder:text-slate-400 dark:text-white text-sm md:text-base"
+                  placeholder="Search trips..."
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
                 {searchQuery && (
-                  <button
+                  <button 
                     onClick={() => setSearchQuery('')}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#059467]/10 text-[#059467] rounded-full text-sm font-medium hover:bg-[#059467]/20 transition-colors"
+                    className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                   >
-                    Search: "{searchQuery}"
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4" />
                   </button>
                 )}
+              </div>
+            </div>
+
+            {/* Horizontal Filter Chips */}
+            <div className="flex overflow-x-auto gap-2 pb-2 -mx-4 px-4 md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {filterOptions.map((status) => (
                 <button
-                  onClick={() => {
-                    setStatusFilter('all');
-                    setSearchQuery('');
-                  }}
-                  className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-[#059467] transition-colors"
-                >
-                  Clear all
-                </button>
-              </div>
-            )}
-            
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 md:gap-6">
-              {/* Segmented Pill Switcher */}
-              <div className="bg-[#059467]/5 p-1.5 rounded-full flex w-full lg:w-auto">
-                <button 
-                  onClick={() => setActiveTab('all')}
-                  className={`flex-1 lg:min-w-[160px] py-2.5 md:py-3 px-4 md:px-6 rounded-full font-bold text-xs md:text-sm transition-all ${
-                    activeTab === 'all'
-                      ? 'bg-[#059467] text-white shadow-md'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-[#0f172a] dark:hover:text-white'
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
+                    statusFilter === status
+                      ? 'bg-[#059467] text-white ring-2 ring-[#059467] ring-offset-1 dark:ring-offset-slate-900'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 ring-1 ring-slate-200 dark:ring-slate-700'
                   }`}
                 >
-                  My Trips
+                  {status === 'all' ? 'All Trips' : status.charAt(0).toUpperCase() + status.slice(1)}
                 </button>
-                {/* <button 
-                  onClick={() => setActiveTab('public')}
-                  className={`flex-1 lg:min-w-[160px] py-2.5 md:py-3 px-4 md:px-6 rounded-full font-bold text-xs md:text-sm transition-all ${
-                    activeTab === 'public'
-                      ? 'bg-[#059467] text-white shadow-md'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-[#0f172a] dark:hover:text-white'
-                  }`}
-                >
-                  Public Trips
-                </button> */}
-              </div>
-
-              {/* Search & Filter Bar */}
-              <div className="flex items-center gap-2 md:gap-3 w-full lg:max-w-xl">
-                <div className="relative flex-1 group">
-                  <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-[#059467] transition-colors" />
-                  <input
-                    className="w-full pl-10 md:pl-12 pr-3 md:pr-4 py-3 md:py-4 bg-white dark:bg-slate-800 border-none rounded-full shadow-sm ring-1 ring-slate-200 dark:ring-slate-700 focus:ring-2 focus:ring-[#059467] outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-[#0f172a] dark:text-white text-sm md:text-base"
-                    placeholder="Search trips..."
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                
-                {/* Filter Dropdown */}
-                <div className="relative filter-menu-container flex-shrink-0">
-                  <button 
-                    onClick={() => setShowFilterMenu(!showFilterMenu)}
-                    className={`bg-white dark:bg-slate-800 p-3 md:p-4 rounded-full shadow-sm ring-1 transition-all flex items-center justify-center ${
-                      statusFilter !== 'all' 
-                        ? 'ring-[#059467] text-[#059467]' 
-                        : 'ring-slate-200 dark:ring-slate-700 text-slate-600 dark:text-slate-400 hover:ring-[#059467]/30'
-                    }`}
-                  >
-                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                  </button>
-
-                  {/* Filter Menu */}
-                  {showFilterMenu && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl ring-1 ring-slate-200 dark:ring-slate-700 z-50 overflow-hidden">
-                      <div className="p-2">
-                        <div className="px-3 py-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          Filter by Status
-                        </div>
-                        <button
-                          onClick={() => {
-                            setStatusFilter('all');
-                            setShowFilterMenu(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                            statusFilter === 'all'
-                              ? 'bg-[#059467] text-white'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          All Trips
-                        </button>
-                        <button
-                          onClick={() => {
-                            setStatusFilter('planning');
-                            setShowFilterMenu(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                            statusFilter === 'planning'
-                              ? 'bg-[#059467] text-white'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          Planning
-                        </button>
-                        <button
-                          onClick={() => {
-                            setStatusFilter('traveling');
-                            setShowFilterMenu(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                            statusFilter === 'traveling'
-                              ? 'bg-[#059467] text-white'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          Traveling
-                        </button>
-                        <button
-                          onClick={() => {
-                            setStatusFilter('completed');
-                            setShowFilterMenu(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                            statusFilter === 'completed'
-                              ? 'bg-[#059467] text-white'
-                              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                          }`}
-                        >
-                          Completed
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        )}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400">
+              {error}
+            </div>
+          )}
 
-        {/* Empty State */}
-        {filteredTrips.length === 0 && !loading && (
-          <div className="text-center py-20">
-            <p className="text-slate-500 dark:text-slate-400 text-lg mb-4">
-              {searchQuery ? 'No trips found matching your search.' : 'No trips yet. Start planning your first adventure!'}
-            </p>
-            {!searchQuery && (
-              <button 
-                onClick={() => router.push('/trips/new')}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-full font-bold hover:bg-[#047854] transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Create Your First Trip
-              </button>
-            )}
-          </div>
-        )}
+          {/* Empty State */}
+          {filteredTrips.length === 0 && !loading && (
+            <div className="text-center py-20">
+              <p className="text-slate-500 dark:text-slate-400 text-lg mb-4">
+                {searchQuery ? 'No trips found matching your search.' : 'No trips yet. Start planning your first adventure!'}
+              </p>
+              {!searchQuery && (
+                <button 
+                  onClick={() => router.push('/trips/new')}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-full font-bold hover:bg-[#047854] transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create Your First Trip
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Trip Card Grid (3-Column Desktop) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
@@ -560,44 +396,19 @@ function DashboardPage() {
                       </span>
                     </div>
 
-                    {/* Public Badge */}
-                    {activeTab === 'public' && (
-                      <div className="absolute top-3 md:top-6 right-3 md:right-6 bg-blue-500/90 backdrop-blur-md px-3 md:px-4 py-1 md:py-1.5 rounded-full flex items-center gap-1.5 md:gap-2">
-                        <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-[10px] md:text-xs font-bold text-white uppercase tracking-wider">Public</span>
-                      </div>
-                    )}
-
-                    {/* Hover Actions - Only for user's trips */}
+                    {/* Touch-Friendly Action Button */}
                     {activeTab !== 'public' && (
-                      <div className="action-overlay opacity-0 absolute inset-0 bg-[#0f172a]/20 backdrop-blur-[2px] md:flex items-center justify-center gap-4 transition-opacity duration-300 hidden">
+                      <div className="absolute top-3 md:top-6 right-3 md:right-6">
                         <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/trips/${trip._id}`);
-                          }}
-                          className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 text-[#0f172a] dark:text-white hover:bg-[#059467] hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 shadow-lg"
-                        >
-                          <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTrip(e, trip._id);
-                          }}
+                          onClick={(e) => handleDeleteTrip(e, trip._id)}
                           disabled={deletingId === trip._id}
-                          className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 text-red-500 hover:bg-red-500 hover:text-white transition-all transform translate-y-4 group-hover:translate-y-0 shadow-lg delay-75 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 dark:bg-black/20 backdrop-blur-md text-white hover:bg-red-500 hover:text-white shadow-sm ring-1 ring-white/30 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                          aria-label="Delete Trip"
                         >
                           {deletingId === trip._id ? (
-                            <Loader2 className="w-5 h-5 mx-auto animate-spin" />
+                            <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                           ) : (
-                            <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
+                            <Trash2 className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
                           )}
                         </button>
                       </div>
@@ -639,13 +450,6 @@ function DashboardPage() {
                                 </span>
                               </div>
                             )}
-                            {idx === 0 && (
-                              <div className="absolute -top-1 md:-top-2 -right-0.5 md:-right-1 bg-yellow-400 text-white rounded-full p-0.5 shadow-sm border border-white dark:border-slate-800">
-                                <svg className="w-2.5 h-2.5 md:w-3 md:h-3" fill="currentColor" viewBox="0 0 20 20">
-                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                </svg>
-                              </div>
-                            )}
                           </div>
                         ))}
                         {remainingCount > 0 && (
@@ -664,26 +468,24 @@ function DashboardPage() {
               );
             })}
           </div>
-      </main>
-    </div>
-    
-    {/* Floating Action Button - Mobile Only */}
-    <button
-      onClick={() => router.push('/trips/new')}
-      className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 bg-[#059467] hover:bg-[#047854] text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
-      aria-label="Create new trip"
-    >
-      <Plus className="w-7 h-7" strokeWidth={2.5} />
-    </button>
-    
-    {/* Footer - Hidden on mobile */}
-    <div className="hidden md:block">
-      <Footer />
-    </div>
-  </>
+        </main>
+      </div>
+      
+      {/* Floating Action Button - Mobile Only */}
+      <button
+        onClick={() => router.push('/trips/new')}
+        className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 bg-[#059467] hover:bg-[#047854] text-white rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+        aria-label="Create new trip"
+      >
+        <Plus className="w-7 h-7" strokeWidth={2.5} />
+      </button>
+      
+      <div className="hidden md:block">
+        <Footer />
+      </div>
+    </>
   );
 }
-
 
 export default function ProtectedDashboardPage() {
   return (

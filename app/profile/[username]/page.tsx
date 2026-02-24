@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../hooks/useAuth';
 import Header from '../../../components/Header';
@@ -15,7 +15,9 @@ import {
   Plane,
   Loader2,
   Edit,
-  Settings
+  Settings,
+  MessageSquare,
+  Compass
 } from 'lucide-react';
 import { userAPI, matchAPI } from '../../../services/api';
 
@@ -39,24 +41,14 @@ interface UserProfile {
     trips: number;
     connections: number;
   };
-  followers?: number;
+  followers?: string[];
 }
 
-const LANGUAGE_FLAGS: { [key: string]: string } = {
-  'English': '🇺🇸',
-  'Spanish': '🇪🇸',
-  'French': '🇫🇷',
-  'German': '🇩🇪',
-  'Italian': '🇮🇹',
-  'Portuguese': '🇵🇹',
-  'Mandarin': '🇨🇳',
-  'Japanese': '🇯🇵',
-  'Korean': '🇰🇷',
-  'Hindi': '🇮🇳',
-  'Arabic': '🇸🇦',
-  'Russian': '🇷🇺',
-  'Nepali': '🇳🇵',
-  'Indonesian': '🇮🇩'
+const LANGUAGE_FLAGS: Record<string, string> = {
+  'English': '🇺🇸', 'Spanish': '🇪🇸', 'French': '🇫🇷', 'German': '🇩🇪',
+  'Italian': '🇮🇹', 'Portuguese': '🇵🇹', 'Mandarin': '🇨🇳', 'Japanese': '🇯🇵',
+  'Korean': '🇰🇷', 'Hindi': '🇮🇳', 'Arabic': '🇸🇦', 'Russian': '🇷🇺',
+  'Nepali': '🇳🇵', 'Indonesian': '🇮🇩'
 };
 
 export default function PublicProfilePage() {
@@ -72,425 +64,239 @@ export default function PublicProfilePage() {
   const [isMatched, setIsMatched] = useState(false);
   const [checkingMatch, setCheckingMatch] = useState(true);
   const [connectionCount, setConnectionCount] = useState(0);
-  const [isOwnProfile, setIsOwnProfile] = useState(false);
 
-  useEffect(() => {
-    fetchProfile();
-    checkMatchStatus();
-  }, [username]);
+  const isOwnProfile = useMemo(() => {
+    return currentUser?.username === username || currentUser?.username === profile?.username;
+  }, [currentUser, username, profile]);
 
-  useEffect(() => {
-    // Check if viewing own profile
-    if (currentUser && profile) {
-      setIsOwnProfile(currentUser.username === profile.username || currentUser.username === username);
-    }
-  }, [currentUser, profile, username]);
-
-  const checkMatchStatus = async () => {
+  const checkStatus = useCallback(async (targetId: string) => {
     try {
       setCheckingMatch(true);
-      const matches = await matchAPI.getMatches();
-      const users = await userAPI.getAllUsers();
-      const targetUser = users.find((u: any) => u.username === username);
+      const [matches, followStatus] = await Promise.all([
+        matchAPI.getMatches(),
+        userAPI.getFollowStatus(targetId)
+      ]);
       
-      if (targetUser) {
-        const isMatch = matches.some((match: any) => 
-          match._id === targetUser._id || match.user?._id === targetUser._id
-        );
-        setIsMatched(isMatch);
-        
-        // Check connection status
-        try {
-          const followStatus = await userAPI.getFollowStatus(targetUser._id);
-          setIsConnected(followStatus.isFollowing);
-          setConnectionCount(followStatus.followerCount);
-        } catch (error) {
-          console.error('Error checking connection status:', error);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking match status:', error);
+      const matched = matches.some((m: any) => m._id === targetId || m.user?._id === targetId);
+      setIsMatched(matched);
+      setIsConnected(followStatus.isFollowing);
+      setConnectionCount(followStatus.followerCount);
+    } catch (err) {
+      console.error('Status check failed:', err);
     } finally {
       setCheckingMatch(false);
     }
-  };
+  }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       setLoading(true);
-      setError('');
-      
-      // Try to fetch user by username using the new endpoint
-      try {
-        const user = await userAPI.getUserByUsername(username);
-        
-        // Get real connection count from user data
-        const realConnectionCount = user.followers?.length || 0;
-        setConnectionCount(realConnectionCount);
-        
-        setProfile({
-          ...user,
-          stats: {
-            trips: user.upcomingTrips?.length || 0,
-            connections: realConnectionCount
-          },
-          followers: realConnectionCount,
-          photos: []
-        });
-      } catch (apiError: any) {
-        // If the new endpoint fails, fall back to the old method
-        console.log('Falling back to getAllUsers method');
-        const users = await userAPI.getAllUsers();
-        const user = users.find((u: any) => u.username === username);
-        
-        if (user) {
-          // Get real connection count from user data
-          const realConnectionCount = user.followers?.length || 0;
-          setConnectionCount(realConnectionCount);
-          
-          setProfile({
-            ...user,
-            stats: {
-              trips: user.upcomingTrips?.length || 0,
-              connections: realConnectionCount
-            },
-            followers: realConnectionCount,
-            photos: []
-          });
-        } else {
-          setError('User not found');
-        }
-      }
+      const user = await userAPI.getUserByUsername(username);
+      setProfile(user);
+      setConnectionCount(user.followers?.length || 0);
+      await checkStatus(user._id);
     } catch (err: any) {
-      const errorMessage = err?.message || 'Failed to load profile';
-      setError(errorMessage);
+      setError(err.message || 'User not found');
     } finally {
       setLoading(false);
     }
-  };
+  }, [username, checkStatus]);
+
+  useEffect(() => {
+    if (username) fetchProfile();
+  }, [fetchProfile]);
 
   const handleConnect = async () => {
     if (!profile) return;
-    
     try {
-      console.log('Connect button clicked, current state:', isConnected);
+      const result = isConnected 
+        ? await userAPI.unfollowUser(profile._id) 
+        : await userAPI.followUser(profile._id);
       
-      if (isConnected) {
-        // Disconnect
-        const result = await userAPI.unfollowUser(profile._id);
-        setIsConnected(false);
-        setConnectionCount(result.followerCount);
-        setProfile({
-          ...profile,
-          stats: {
-            ...profile.stats!,
-            connections: result.followerCount
-          },
-          followers: result.followerCount
-        });
-      } else {
-        // Connect
-        const result = await userAPI.followUser(profile._id);
-        setIsConnected(true);
-        setConnectionCount(result.followerCount);
-        setProfile({
-          ...profile,
-          stats: {
-            ...profile.stats!,
-            connections: result.followerCount
-          },
-          followers: result.followerCount
-        });
-      }
-      
-      console.log('Connect action completed successfully');
-    } catch (error: any) {
-      console.error('Error connecting/disconnecting user:', error);
-      alert(error.message || 'Failed to update connection status');
+      setIsConnected(!isConnected);
+      setConnectionCount(result.followerCount);
+    } catch (err: any) {
+      alert(err.message || 'Connection update failed');
     }
   };
 
-  const handleMessage = () => {
-    router.push(`/messages?user=${profile?._id}`);
-  };
+  if (loading) return (
+    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
+      <Header />
+      <div className="flex-grow flex flex-col items-center justify-center gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-slate-900 dark:text-[#059467]" />
+        <p className="font-black text-[#059467] animate-pulse text-xs tracking-widest uppercase">Syncing Explorer Profile...</p>
+      </div>
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gradient-to-br from-[#f5f8f7] via-white to-[#e8f5f1] dark:from-[#0f231d] dark:via-[#152e26] dark:to-[#0f231d] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-10 h-10 animate-spin text-[#059467]" />
-            <p className="text-slate-500 dark:text-slate-400 font-semibold">Loading profile...</p>
-          </div>
+  if (error || !profile) return (
+    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d] flex flex-col">
+      <Header />
+      <div className="flex-grow flex items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-4">
+          <Compass className="w-16 h-16 mx-auto text-slate-300 animate-bounce" />
+          <h2 className="text-3xl font-black text-slate-900 dark:text-white">Profile Lost at Sea</h2>
+          <p className="text-slate-500">{error || 'This explorer has vanished from our logs.'}</p>
+          <button onClick={() => router.push('/home')} className="px-8 py-3 bg-[#059467] text-white rounded-2xl font-black">Return Home</button>
         </div>
-        <Footer />
-      </>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <>
-        <Header />
-        <div className="min-h-screen bg-gradient-to-br from-[#f5f8f7] via-white to-[#e8f5f1] dark:from-[#0f231d] dark:via-[#152e26] dark:to-[#0f231d] flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Profile Not Found</h2>
-            <p className="text-slate-500 dark:text-slate-400">{error || 'This user does not exist'}</p>
-          </div>
-        </div>
-        <Footer />
-      </>
-    );
-  }
+      </div>
+      <Footer />
+    </div>
+  );
 
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-b from-[#f5f8f7] to-white dark:from-[#0f231d] dark:to-[#0d1c17] selection:bg-[#059467] selection:text-white">
       <Header />
       
-      <main className="min-h-screen bg-gradient-to-br from-[#f5f8f7] via-white to-[#e8f5f1] dark:from-[#0f231d] dark:via-[#152e26] dark:to-[#0f231d] pb-24 md:pb-20">
-        {/* Cover Photo */}
-        <div className="relative h-64 md:h-80 w-full bg-gradient-to-br from-[#059467] to-[#047854]">
-          {profile.coverPhoto && (
-            <img
-              src={profile.coverPhoto}
-              alt="Cover"
-              className="w-full h-full object-cover"
-            />
+      <main className="pb-20 animate-fadeIn">
+        {/* Cover Hero */}
+        <div className="relative h-72 md:h-96 w-full overflow-hidden">
+          {profile.coverPhoto ? (
+            <img src={profile.coverPhoto} alt="Cover" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-[#059467] to-[#047854] opacity-90" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         </div>
 
-        {/* Profile Content */}
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-20 relative">
-          {/* Profile Header Card */}
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl p-6 md:p-8 mb-6">
-            <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-              {/* Profile Picture */}
-              <div className="relative flex-shrink-0">
-                <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white dark:border-slate-900 shadow-xl overflow-hidden bg-white">
+        {/* Profile Identity Card */}
+        <div className="max-w-5xl mx-auto px-4 relative -mt-24 md:-mt-32">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl p-8 border border-slate-100 dark:border-white/5">
+            <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+              {/* Avatar Section */}
+              <div className="relative group shrink-0">
+                <div className="w-36 h-36 md:w-48 md:h-48 rounded-[2.5rem] overflow-hidden border-8 border-white dark:border-slate-900 shadow-2xl bg-slate-100 transition-transform duration-500 group-hover:scale-105">
                   {profile.profilePicture ? (
-                    <img
-                      src={profile.profilePicture}
-                      alt={profile.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={profile.profilePicture} alt={profile.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-[#059467] to-[#047854] flex items-center justify-center text-white text-5xl font-bold">
-                      {profile.name.charAt(0).toUpperCase()}
+                    <div className="w-full h-full bg-[#059467] flex items-center justify-center text-white text-6xl font-black">
+                      {profile.name.charAt(0)}
                     </div>
                   )}
                 </div>
-                <div className="absolute bottom-2 right-2 w-8 h-8 bg-[#059467] rounded-full border-4 border-white dark:border-slate-900 flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#059467] rounded-2xl border-4 border-white dark:border-slate-900 flex items-center justify-center shadow-lg">
+                  <Check className="w-5 h-5 text-white stroke-[4px]" />
                 </div>
               </div>
 
-              {/* Profile Info */}
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-2">
-                  {profile.name}
-                </h1>
-                
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-4">
-                  {profile.location && (
-                    <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm font-medium">{profile.location}</span>
-                    </div>
-                  )}
-                  {profile.age && (
-                    <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                      {profile.age} years old
-                    </span>
-                  )}
-                  {profile.gender && (
-                    <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
-                      {profile.gender}
-                    </span>
-                  )}
+              {/* Info & Actions */}
+              <div className="flex-1 text-center md:text-left space-y-4">
+                <div className="space-y-1">
+                  <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">{profile.name}</h1>
+                  <p className="text-[#059467] font-black uppercase tracking-[0.2em] text-sm">@{profile.username}</p>
                 </div>
 
-                {/* Bio */}
-                {profile.bio && (
-                  <p className="text-slate-600 dark:text-slate-400 mb-4 max-w-2xl">
-                    {profile.bio}
-                  </p>
-                )}
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-slate-500 dark:text-slate-400 font-bold text-sm">
+                  {profile.location && <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-white/5 px-3 py-1.5 rounded-xl"><MapPin size={14} className="text-[#059467]" />{profile.location}</div>}
+                  {profile.age && <span>• {profile.age} Yrs</span>}
+                  {profile.gender && <span>• {profile.gender}</span>}
+                </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+                <p className="text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed italic">"{profile.bio || 'Adventure is out there, just waiting to be logged.'}"</p>
+
+                <div className="flex flex-wrap gap-3 pt-4 justify-center md:justify-start">
                   {isOwnProfile ? (
-                    // Show Edit Profile button for own profile
-                    <button
-                      onClick={() => router.push('/account?tab=profile')}
-                      className="px-6 py-2.5 bg-[#059467] text-white rounded-full font-bold hover:bg-[#047a55] transition-all flex items-center gap-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                      Edit Profile
+                    <button onClick={() => router.push('/account?tab=profile')} className="px-8 py-3.5 bg-[#059467] text-white rounded-2xl font-black shadow-lg shadow-emerald-500/20 flex items-center gap-2 hover:bg-[#06ac77] transition-all active:scale-95">
+                      <Edit size={18} /> Edit Profile
                     </button>
                   ) : (
-                    // Show Connect button for other profiles
-                    <button
-                      onClick={handleConnect}
-                      className={`px-6 py-2.5 rounded-full font-bold transition-all flex items-center gap-2 ${
-                        isConnected
-                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                          : 'bg-[#059467] text-white hover:bg-[#047a55]'
-                      }`}
-                    >
-                      {isConnected ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          Connected
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4" />
-                          Connect
-                        </>
+                    <>
+                      <button onClick={handleConnect} className={`px-8 py-3.5 rounded-2xl font-black flex items-center gap-2 transition-all active:scale-95 shadow-lg ${isConnected ? 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white' : 'bg-[#059467] text-white shadow-emerald-500/20'}`}>
+                        {isConnected ? <><Check size={18} /> Following</> : <><UserPlus size={18} /> Connect</>}
+                      </button>
+                      {isMatched && (
+                        <button onClick={() => router.push(`/messages?user=${profile._id}`)} className="px-8 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 text-slate-700 dark:text-white rounded-2xl font-black flex items-center gap-2 hover:bg-slate-50 transition-all">
+                          <MessageSquare size={18} /> Message
+                        </button>
                       )}
-                    </button>
-                  )}
-                  
-                  {isOwnProfile ? (
-                    // Show Settings button for own profile
-                    <button
-                      onClick={() => router.push('/account?tab=settings')}
-                      className="px-6 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Settings
-                    </button>
-                  ) : isMatched ? (
-                    <button
-                      onClick={handleMessage}
-                      className="px-6 py-2.5 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
-                    >
-                      <Mail className="w-4 h-4" />
-                      Message
-                    </button>
-                  ) : !checkingMatch && (
-                    <div className="px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full font-medium text-sm flex items-center gap-2">
-                      <UserPlus className="w-4 h-4" />
-                      Match to message
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="flex md:flex-col gap-8 md:gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {profile.stats?.trips || 0}
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Trips
-                  </div>
+              {/* Stats Bar */}
+              <div className="flex md:flex-col gap-10 md:gap-6 text-center md:border-l border-slate-100 dark:border-white/5 md:pl-10">
+                <div className="group cursor-pointer">
+                  <div className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-[#059467] transition-colors">{profile.stats?.trips || 0}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Trips</div>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {profile.stats?.connections || profile.followers || 0}
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Connections
-                  </div>
+                <div className="group cursor-pointer">
+                  <div className="text-3xl font-black text-slate-900 dark:text-white group-hover:text-[#059467] transition-colors">{connectionCount}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Connections</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Column */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Travel Style */}
-              {profile.travelStyle && (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Plane className="w-5 h-5 text-[#059467]" />
-                    Travel Style
-                  </h3>
-                  <span className="inline-block px-4 py-2 bg-[#059467]/10 text-[#059467] rounded-full text-sm font-semibold">
-                    {profile.travelStyle}
-                  </span>
-                </div>
-              )}
-
-              {/* Languages */}
-              {profile.languages && profile.languages.length > 0 && (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-[#059467]" />
-                    Languages
-                  </h3>
-                  <div className="space-y-2">
-                    {profile.languages.map((language) => (
-                      <div key={language} className="flex items-center gap-2">
-                        <span className="text-lg">{LANGUAGE_FLAGS[language] || '🌐'}</span>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                          {language}
-                        </span>
+          {/* Detailed Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">
+            {/* Sidebar Info */}
+            <div className="lg:col-span-4 space-y-8">
+              <section className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-50 dark:border-white/5">
+                <h3 className="text-xl font-black dark:text-white mb-6 flex items-center gap-3"><Compass className="text-[#059467]" /> Explorer DNA</h3>
+                <div className="space-y-6">
+                  {profile.travelStyle && (
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-2">Primary Style</span>
+                      <span className="px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 text-[#059467] rounded-xl text-sm font-black">{profile.travelStyle}</span>
+                    </div>
+                  )}
+                  {profile.languages && profile.languages.length > 0 && (
+                    <div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-3">Communication</span>
+                      <div className="flex flex-wrap gap-2">
+                        {profile.languages.map(lang => (
+                          <div key={lang} className="flex items-center gap-2 bg-slate-50 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-white/5">
+                            <span className="text-base">{LANGUAGE_FLAGS[lang] || '🌐'}</span>
+                            <span className="text-xs font-bold dark:text-white">{lang}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </section>
             </div>
 
-            {/* Right Column */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Interests */}
+            {/* Main Content Area */}
+            <div className="lg:col-span-8 space-y-8">
+              {/* Interests Pill Box */}
               {profile.interests && profile.interests.length > 0 && (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Heart className="w-5 h-5 text-[#059467]" />
-                    Travel Interests
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.interests.map((interest) => (
-                      <span
-                        key={interest}
-                        className="px-4 py-2 bg-[#059467] text-white rounded-full text-sm font-semibold"
-                      >
-                        #{interest}
+                <section className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-50 dark:border-white/5">
+                  <h3 className="text-xl font-black dark:text-white mb-6 flex items-center gap-3"><Heart className="text-[#059467]" /> Passions</h3>
+                  <div className="flex flex-wrap gap-3">
+                    {profile.interests.map(interest => (
+                      <span key={interest} className="px-5 py-2.5 bg-[#059467] text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-500/10 hover:scale-105 transition-transform cursor-default">
+                        #{interest.toUpperCase()}
                       </span>
                     ))}
                   </div>
-                </div>
+                </section>
               )}
 
-              {/* Upcoming Trips */}
+              {/* Expedition Log (Upcoming Trips) */}
               {profile.upcomingTrips && profile.upcomingTrips.length > 0 && (
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-6">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Plane className="w-5 h-5 text-[#059467]" />
-                    Upcoming Trips
-                  </h3>
-                  <div className="space-y-3">
-                    {profile.upcomingTrips.map((trip, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl"
-                      >
-                        <div className="w-12 h-12 rounded-lg bg-[#059467]/10 flex items-center justify-center flex-shrink-0">
-                          <MapPin className="w-6 h-6 text-[#059467]" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-slate-900 dark:text-white">
-                            {trip.destination || trip}
-                          </h4>
-                          {trip.startDate && (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">
-                              {new Date(trip.startDate).toLocaleDateString()}
+                <section className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] shadow-sm border border-slate-50 dark:border-white/5">
+                  <h3 className="text-xl font-black dark:text-white mb-6 flex items-center gap-3"><Plane className="text-[#059467]" /> Next Expeditions</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {profile.upcomingTrips.map((trip, idx) => (
+                      <div key={idx} className="group p-5 bg-slate-50 dark:bg-white/5 rounded-3xl border border-transparent hover:border-emerald-500/20 transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center shadow-sm group-hover:rotate-12 transition-transform">
+                            <MapPin className="text-[#059467]" size={20} />
+                          </div>
+                          <div>
+                            <h4 className="font-black text-slate-900 dark:text-white truncate max-w-[150px]">{trip.destination || trip}</h4>
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                              {trip.startDate ? new Date(trip.startDate).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : 'Setting Dates...'}
                             </p>
-                          )}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
+                </section>
               )}
             </div>
           </div>
@@ -500,6 +306,14 @@ export default function PublicProfilePage() {
       <div className="hidden md:block">
         <Footer />
       </div>
-    </>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
+    </div>
   );
 }

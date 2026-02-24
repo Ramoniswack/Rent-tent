@@ -1225,7 +1225,7 @@ function MessagesPage() {
         {!isConnected && currentUserId && (
           <div className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center py-2.5 text-sm font-semibold shadow-lg animate-pulse">
             <div className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
               Connecting to real-time messaging...
             </div>
           </div>
@@ -2062,7 +2062,7 @@ function MessagesPage() {
                     disabled={(!newMessage.trim() && !selectedImage) || sending}
                   >
                     {sending ? (
-                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <Loader2 className="w-6 h-6 animate-spin text-white" />
                     ) : (
                       <Send className="w-6 h-6" />
                     )}

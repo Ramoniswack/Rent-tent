@@ -227,7 +227,7 @@ export default function AdminPage() {
   if (loading && !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#059467]" />
+        <Loader2 className="w-8 h-8 animate-spin text-slate-900 dark:text-[#059467]" />
       </div>
     );
   }
