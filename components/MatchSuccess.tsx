@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, MessageCircle, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -26,12 +27,20 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
   matchedUser,
   currentUser,
 }) => {
+  // 1. Setup mounting state for React Portal (prevents Next.js hydration errors)
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    if (isOpen) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && mounted) {
       // Trigger confetti burst on mount
       const duration = 3000;
       const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+      // 2. Bumped confetti z-index so it renders OVER the portal modal
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 999999 };
 
       const randomInRange = (min: number, max: number) => {
         return Math.random() * (max - min) + min;
@@ -46,7 +55,6 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
 
         const particleCount = 50 * (timeLeft / duration);
 
-        // Fire confetti from multiple positions
         confetti({
           ...defaults,
           particleCount,
@@ -63,16 +71,21 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
 
       return () => clearInterval(interval);
     }
-  }, [isOpen]);
+  }, [isOpen, mounted]);
 
-  return (
+  // Don't attempt to render the portal until the component has mounted on the client
+  if (!mounted) return null;
+
+  // 3. Wrap the return in createPortal to force it to the absolute top of the DOM
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9998] flex items-center justify-center px-4"
+          // 4. Boosted modal z-index to 100,000 to clear any navigation bars
+          className="fixed inset-0 z-[100000] flex items-center justify-center px-4"
           onClick={onClose}
         >
           {/* Blurred background overlay */}
@@ -80,7 +93,7 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
             initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
             animate={{ opacity: 1, backdropFilter: 'blur(12px)' }}
             exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            className="absolute inset-0 bg-black/60"
+            className="absolute inset-0 bg-black/60 pointer-events-none"
           />
 
           {/* Main content */}
@@ -88,11 +101,7 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
             initial={{ scale: 0.5, opacity: 0, y: 50 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.5, opacity: 0, y: 50 }}
-            transition={{
-              type: 'spring',
-              damping: 20,
-              stiffness: 300,
-            }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             className="relative z-10 w-full max-w-md"
             onClick={(e) => e.stopPropagation()}
           >
@@ -100,6 +109,7 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-slate-700/50">
               {/* Close button */}
               <button
+                type="button"
                 onClick={onClose}
                 className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95"
                 aria-label="Close"
@@ -110,7 +120,7 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
               {/* Top section with gradient background */}
               <div className="relative bg-gradient-to-br from-pink-500 via-rose-500 to-orange-500 pt-12 pb-8 px-6">
                 {/* Animated particles background */}
-                <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   {[...Array(20)].map((_, i) => (
                     <motion.div
                       key={i}
@@ -156,23 +166,12 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
                   <motion.div
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
-                    transition={{
-                      delay: 0.5,
-                      type: 'spring',
-                      stiffness: 200,
-                      damping: 10,
-                    }}
+                    transition={{ delay: 0.5, type: 'spring', stiffness: 200, damping: 10 }}
                     className="absolute z-20"
                   >
                     <motion.div
-                      animate={{
-                        scale: [1, 1.2, 1],
-                      }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        repeatType: 'reverse',
-                      }}
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1, repeat: Infinity, repeatType: 'reverse' }}
                       className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl"
                     >
                       <Heart className="w-8 h-8 text-rose-500" fill="currentColor" />
@@ -201,7 +200,7 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.6 }}
-                  className="text-center"
+                  className="text-center relative z-20"
                 >
                   <h2 className="text-5xl font-black text-white mb-2 drop-shadow-lg tracking-tight">
                     It's a Match!
@@ -222,25 +221,27 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7 }}
-                className="p-6 space-y-3"
+                className="p-6 space-y-3 relative z-30"
               >
                 {/* Send Message button */}
                 <motion.button
+                  type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onSendMessage}
-                  className="w-full h-14 bg-gradient-to-r from-[#059467] to-[#047a55] hover:from-[#047a55] hover:to-[#036644] text-white rounded-2xl font-bold text-lg shadow-lg shadow-[#059467]/30 flex items-center justify-center gap-3 transition-all"
+                  className="w-full h-14 bg-gradient-to-r from-[#059467] to-[#047a55] hover:from-[#047a55] hover:to-[#036644] text-white rounded-2xl font-bold text-lg shadow-lg shadow-[#059467]/30 flex items-center justify-center gap-3 transition-all cursor-pointer"
                 >
                   <MessageCircle className="w-5 h-5" />
                   Send a Message
                 </motion.button>
 
-                {/* Keep Exploring button (ghost variant) */}
+                {/* Keep Exploring button */}
                 <motion.button
+                  type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onClose}
-                  className="w-full h-14 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-bold text-lg border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center gap-3 transition-all"
+                  className="w-full h-14 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl font-bold text-lg border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center gap-3 transition-all cursor-pointer"
                 >
                   Keep Exploring
                 </motion.button>
@@ -249,7 +250,8 @@ const MatchSuccess: React.FC<MatchSuccessProps> = ({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body // Forces the modal to mount directly to the HTML Body
   );
 };
 

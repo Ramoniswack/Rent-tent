@@ -415,6 +415,11 @@ export const matchAPI = {
     return apiRequest('/matches/likes');
   },
 
+  // Get users current user has liked (sent likes)
+  getSentLikes: async () => {
+    return apiRequest('/matches/sent');
+  },
+
   // Get all user IDs that current user has interacted with (liked or passed)
   getInteractedUsers: async () => {
     return apiRequest('/matches/interacted');

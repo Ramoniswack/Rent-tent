@@ -41,6 +41,7 @@ export default function DiscoverPage() {
   const [users, setUsers] = useState<UserCard[]>([]);
   const [matches, setMatches] = useState<UserCard[]>([]);
   const [incomingLikes, setIncomingLikes] = useState<UserCard[]>([]);
+  const [outgoingLikes, setOutgoingLikes] = useState<UserCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -86,8 +87,6 @@ export default function DiscoverPage() {
       }
     } catch (err: any) {
       console.error('Error fetching discover profiles:', err);
-      
-      // Check for specific error messages
       if (err.message?.includes('Location not set') || err.message?.includes('location')) {
         setError('Please set your location in Account Settings to discover nearby travelers.');
       } else if (err.message?.includes('Unauthorized') || err.message?.includes('log in')) {
@@ -169,6 +168,40 @@ export default function DiscoverPage() {
     }
   };
 
+  // Fetch outgoing likes
+  const fetchOutgoingLikes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await matchAPI.getSentLikes();
+      
+      const formattedLikes: UserCard[] = response.map((like: any) => ({
+        id: like.user._id,
+        name: like.user.name,
+        username: like.user.username,
+        age: like.user.age || 'N/A',
+        gender: like.user.gender,
+        location: like.user.location || 'Unknown',
+        coverImage: like.user.upcomingTrips?.[0]?.coverPhoto || 
+                   'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=400&fit=crop',
+        avatar: like.user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(like.user.name)}&background=059467`,
+        travelStyles: Array.isArray(like.user.travelStyle) ? like.user.travelStyle : 
+                     like.user.travelStyle ? [like.user.travelStyle] : [],
+        connectionStatus: 'sent',
+        bio: like.user.bio,
+        upcomingTrips: like.user.upcomingTrips || [],
+        interests: like.user.interests || [],
+        totalConnections: like.user.totalConnections || 0
+      }));
+      setOutgoingLikes(formattedLikes);
+    } catch (err: any) {
+      console.error('Error fetching outgoing likes:', err);
+      setError(err.message || 'Failed to load outgoing likes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load data based on active tab
   useEffect(() => {
     if (activeTab === 'discover') {
@@ -177,75 +210,90 @@ export default function DiscoverPage() {
       fetchMatches();
     } else if (activeTab === 'incoming') {
       fetchIncomingLikes();
+    } else if (activeTab === 'outgoing') {
+      fetchOutgoingLikes();
     }
   }, [activeTab]);
 
-  // Get current data based on active tab
+  // Fetch counts for all tabs on initial load (for badge numbers)
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const [likesRes, matchesRes, sentLikesRes] = await Promise.all([
+          matchAPI.getLikes(),
+          matchAPI.getMatches(),
+          matchAPI.getSentLikes()
+        ]);
+
+        const formatUser = (user: any, status: 'pending' | 'connected' | 'sent') => ({
+          id: user._id,
+          name: user.name,
+          username: user.username,
+          age: user.age || 'N/A',
+          gender: user.gender,
+          location: user.location || 'Unknown',
+          coverImage: user.upcomingTrips?.[0]?.coverPhoto || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=400&fit=crop',
+          avatar: user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=059467`,
+          travelStyles: Array.isArray(user.travelStyle) ? user.travelStyle : user.travelStyle ? [user.travelStyle] : [],
+          connectionStatus: status,
+          bio: user.bio,
+          upcomingTrips: user.upcomingTrips || [],
+          interests: user.interests || [],
+          totalConnections: user.totalConnections || 0
+        });
+
+        setIncomingLikes(likesRes.map((like: any) => formatUser(like.user, 'pending')));
+        setMatches(matchesRes.map((match: any) => formatUser(match.user, 'connected')));
+        setOutgoingLikes(sentLikesRes.map((like: any) => formatUser(like.user, 'sent')));
+      } catch (err) {
+        console.error('Error fetching counts:', err);
+      }
+    };
+
+    fetchCounts();
+  }, []);
+
   const getCurrentData = () => {
     if (activeTab === 'discover') return users;
     if (activeTab === 'mutual') return matches;
     if (activeTab === 'incoming') return incomingLikes;
+    if (activeTab === 'outgoing') return outgoingLikes;
     return [];
   };
 
-  // Apply filters to current data
   const applyFilters = (data: UserCard[]) => {
     return data.filter(user => {
-      // Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchesName = user.name.toLowerCase().includes(query);
         const matchesUsername = user.username?.toLowerCase().includes(query);
         const matchesLocation = user.location.toLowerCase().includes(query);
-        const matchesInterests = user.interests?.some(interest => 
-          interest.toLowerCase().includes(query)
-        );
-        const matchesTravelStyles = user.travelStyles?.some(style => 
-          style.toLowerCase().includes(query)
-        );
+        const matchesInterests = user.interests?.some(interest => interest.toLowerCase().includes(query));
+        const matchesTravelStyles = user.travelStyles?.some(style => style.toLowerCase().includes(query));
         
-        if (!matchesName && !matchesUsername && !matchesLocation && !matchesInterests && !matchesTravelStyles) {
-          return false;
-        }
+        if (!matchesName && !matchesUsername && !matchesLocation && !matchesInterests && !matchesTravelStyles) return false;
       }
 
-      // Age filter
       const userAge = typeof user.age === 'number' ? user.age : parseInt(user.age as string);
-      if (!isNaN(userAge) && (userAge < filters.ageRange[0] || userAge > filters.ageRange[1])) {
-        return false;
-      }
+      if (!isNaN(userAge) && (userAge < filters.ageRange[0] || userAge > filters.ageRange[1])) return false;
 
-      // Gender filter
       if (filters.selectedGenders.length > 0 && !filters.selectedGenders.includes('Any')) {
-        if (!user.gender) {
-          // If user has no gender set, exclude them when gender filter is active
-          return false;
-        }
-        // Check if user's gender matches any of the selected genders
+        if (!user.gender) return false;
         const userGender = user.gender.toLowerCase();
-        const matchesGender = filters.selectedGenders.some(selectedGender => 
-          selectedGender.toLowerCase() === userGender
-        );
+        const matchesGender = filters.selectedGenders.some(selectedGender => selectedGender.toLowerCase() === userGender);
         if (!matchesGender) return false;
       }
 
-      // Travel style filter
       if (filters.selectedTravelStyles.length > 0) {
-        const hasMatchingStyle = user.travelStyles?.some(style => 
-          filters.selectedTravelStyles.includes(style)
-        );
+        const hasMatchingStyle = user.travelStyles?.some(style => filters.selectedTravelStyles.includes(style));
         if (!hasMatchingStyle) return false;
       }
 
-      // Interests filter
       if (filters.selectedInterests.length > 0) {
-        const hasMatchingInterest = user.interests?.some(interest => 
-          filters.selectedInterests.includes(interest)
-        );
+        const hasMatchingInterest = user.interests?.some(interest => filters.selectedInterests.includes(interest));
         if (!hasMatchingInterest) return false;
       }
 
-      // Distance filter
       if (filters.locationRange < 500 && user.distance !== undefined) {
         if (user.distance > filters.locationRange) return false;
       }
@@ -256,41 +304,38 @@ export default function DiscoverPage() {
 
   const currentData = applyFilters(getCurrentData());
   const totalPages = Math.ceil(currentData.length / itemsPerPage);
-  
-  const paginatedUsers = currentData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedUsers = currentData.slice(0, currentPage * itemsPerPage);
 
   const handleConnect = async (userId: string) => {
     try {
       const response = await matchAPI.likeUser(userId);
       
-      // Update the user's connection status in the current list without reloading
-      if (activeTab === 'discover') {
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
-              ? { ...user, connectionStatus: response.matched ? 'connected' : 'sent' as const }
-              : user
-          )
-        );
-      } else if (activeTab === 'incoming') {
-        setIncomingLikes(prevLikes => 
-          prevLikes.map(user => 
-            user.id === userId 
-              ? { ...user, connectionStatus: 'connected' as const }
-              : user
-          )
-        );
-      }
+      // Grab user details before we move them around
+      const userToMove = users.find(u => u.id === userId) || 
+                         incomingLikes.find(u => u.id === userId);
+
+      // 1. Always sync the Discover list if they exist there
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, connectionStatus: response.matched ? 'connected' : 'sent' as const }
+            : user
+        )
+      );
+
+      // 2. If they were in incoming likes, remove them (since we've now responded)
+      setIncomingLikes(prev => prev.filter(user => user.id !== userId));
       
-      // Show success message
+      // 3. Update final destination lists
       if (response.matched) {
+        if (userToMove) {
+          setMatches(prev => [{ ...userToMove, connectionStatus: 'connected' as const }, ...prev]);
+        }
         showToast(`🎉 It's a match! You can now message ${response.matchedUser?.name || 'this user'}`, 'success');
-        // Silently refresh matches count in background
-        fetchMatches();
       } else {
+        if (userToMove) {
+          setOutgoingLikes(prev => [{ ...userToMove, connectionStatus: 'sent' as const }, ...prev]);
+        }
         showToast('✅ Connection request sent!', 'success');
       }
     } catch (err: any) {
@@ -303,16 +348,17 @@ export default function DiscoverPage() {
     try {
       await matchAPI.cancelConnection(userId);
       
-      // Update the user's connection status back to 'none'
-      if (activeTab === 'discover') {
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
-              ? { ...user, connectionStatus: 'none' as const }
-              : user
-          )
-        );
-      }
+      // 1. Reset status in Discover tab
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, connectionStatus: 'none' as const }
+            : user
+        )
+      );
+
+      // 2. Remove from Outgoing tab globally
+      setOutgoingLikes(prev => prev.filter(user => user.id !== userId));
       
       showToast('Connection request cancelled', 'success');
     } catch (err: any) {
@@ -325,7 +371,6 @@ export default function DiscoverPage() {
     if (username) {
       router.push(`/profile/${username}`);
     } else if (userId) {
-      // Fallback to userId if username not available
       router.push(`/profile/${userId}`);
     }
   };
@@ -340,11 +385,11 @@ export default function DiscoverPage() {
 
   const handleApplyFilters = (newFilters: FilterState) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
+    setCurrentPage(1);
   };
 
   const handleSearch = () => {
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
   };
 
   const getActiveFilterCount = () => {
@@ -457,6 +502,20 @@ export default function DiscoverPage() {
               <User className="w-4 h-4 inline mr-2" />
               Incoming ({incomingLikes.length})
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('outgoing');
+                setCurrentPage(1);
+              }}
+              className={`px-6 py-3 rounded-full font-bold text-sm transition-all ${
+                activeTab === 'outgoing'
+                  ? 'bg-[#059467] text-white shadow-lg shadow-[#059467]/30'
+                  : 'bg-white dark:bg-[#1a3830] text-[#489d82] hover:bg-[#e7f4f0] dark:hover:bg-[#1a3830]/80 border border-[#e7f4f0] dark:border-[#1a3830]'
+              }`}
+            >
+              <Heart className="w-4 h-4 inline mr-2" />
+              Outgoing ({outgoingLikes.length})
+            </button>
           </div>
         </div>
 
@@ -503,6 +562,7 @@ export default function DiscoverPage() {
               {activeTab === 'discover' && 'No profiles to discover right now. Check back later!'}
               {activeTab === 'mutual' && 'No mutual matches yet. Keep swiping!'}
               {activeTab === 'incoming' && 'No incoming likes yet.'}
+              {activeTab === 'outgoing' && 'No outgoing connection requests yet. Start connecting!'}
             </p>
           </div>
         )}
@@ -681,7 +741,7 @@ export default function DiscoverPage() {
 
             {/* Results Info */}
             <div className="text-center text-sm text-[#489d82] mt-4">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, currentData.length)} of {currentData.length} travelers
+              Showing {Math.min(currentPage * itemsPerPage, currentData.length)} of {currentData.length} travelers
             </div>
           </>
         )}
