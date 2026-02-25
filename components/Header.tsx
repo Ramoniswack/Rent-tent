@@ -251,13 +251,13 @@ const Header: React.FC = () => {
       {/* Mobile Sidebar Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] lg:hidden animate-in fade-in duration-200"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Mobile Sidebar */}
-      <aside className={`fixed top-0 left-0 h-[100dvh] w-[280px] sm:w-[320px] bg-white dark:bg-slate-900 shadow-2xl z-50 transform transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) lg:hidden flex flex-col ${
+      <aside className={`fixed top-0 left-0 h-[100dvh] w-[280px] sm:w-[320px] bg-white dark:bg-slate-900 shadow-2xl z-[70] transform transition-transform duration-300 cubic-bezier(0.4, 0, 0.2, 1) lg:hidden flex flex-col ${
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         

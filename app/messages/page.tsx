@@ -1154,7 +1154,7 @@ function MessagesPage() {
       </div>
       
       {!mounted ? (
-        <div className="flex h-[calc(100vh-128px)] overflow-hidden bg-white dark:bg-[#0f231d]">
+        <div className="flex md:h-[calc(100vh-80px)] h-[calc(100vh-64px)] overflow-hidden bg-[#f8faf9] dark:bg-[#0b1713]">
           {/* Sidebar Skeleton */}
           <aside className="w-full md:w-[380px] flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#132a24]">
             {/* Search Skeleton */}
@@ -1220,7 +1220,7 @@ function MessagesPage() {
           </main>
         </div>
       ) : (
-      <div className="flex flex-col h-[calc(100dvh-80px)] md:h-[calc(100vh-128px)] overflow-hidden bg-white dark:bg-[#0f231d] animate-fadeInContent">
+      <div className="flex flex-col md:h-[calc(100vh-80px)] h-[calc(100vh-64px)] overflow-hidden bg-[#f8faf9] dark:bg-[#0b1713] animate-fadeInContent">
         {/* Connection Status */}
         {!isConnected && currentUserId && (
           <div className="bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-center py-2.5 text-sm font-semibold shadow-lg animate-pulse">
@@ -1521,10 +1521,10 @@ function MessagesPage() {
           </div>
         )}
         
-        <div className="flex flex-1 overflow-hidden relative">
+        <div className="flex flex-1 overflow-hidden relative md:h-full h-[calc(100vh-64px)]">
         {/* Left Sidebar - Conversation List */}
         <aside 
-          className={`w-full md:w-[380px] flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#132a24] z-10 h-full fixed md:relative transform transition-transform duration-300 ease-in-out ${
+          className={`w-full md:w-[380px] flex flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-[#132a24] z-10 md:h-full h-[calc(100vh-64px)] fixed md:relative transform transition-transform duration-300 ease-in-out ${
             showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
@@ -1627,7 +1627,7 @@ function MessagesPage() {
         </aside>
 
         {/* Right Panel - Active Chat */}
-        <main className={`flex-1 flex flex-col bg-white dark:bg-[#0b1a16] relative w-full h-full ${
+        <main className={`flex-1 flex flex-col bg-white dark:bg-[#0b1a16] relative w-full md:h-full h-[calc(100vh-64px)] ${
           showSidebar ? 'hidden md:flex' : 'flex'
         }`}>
           {selectedMatch ? (
@@ -1796,7 +1796,8 @@ function MessagesPage() {
               </div>
 
               {/* Messages Area */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 custom-scrollbar flex flex-col bg-white dark:bg-[#0b1a16]">
+              <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar bg-white dark:bg-[#0b1a16] min-h-0">
+                <div className="flex flex-col space-y-4">
                 {messages.map((message, index) => {
                   const isOwn = message.senderId === currentUserId;
                   const showAvatar = !isOwn && (index === 0 || messages[index - 1].senderId !== message.senderId);
@@ -1813,7 +1814,7 @@ function MessagesPage() {
                   return (
                     <div
                       key={message._id || message.id}
-                      className={`flex gap-3 animate-fadeIn group ${isOwn ? 'max-w-[85%] md:max-w-[70%] self-end justify-end' : 'max-w-[85%] md:max-w-[70%]'}`}
+                      className={`flex gap-3 animate-fadeIn group ${isOwn ? 'justify-end' : 'justify-start'}`}
                     >
                       {!isOwn && (
                         <div className="flex-none self-end mb-1">
@@ -1827,7 +1828,7 @@ function MessagesPage() {
                           )}
                         </div>
                       )}
-                      <div className={`flex flex-col gap-1 ${isOwn ? 'items-end' : ''}`}>
+                      <div className={`flex flex-col gap-1 max-w-[85%] md:max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
                         <div className={`rounded-2xl text-sm shadow-md transition-all hover:shadow-lg relative ${
                           isOwn
                             ? 'bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-br-md'
@@ -1959,6 +1960,7 @@ function MessagesPage() {
                   );
                 })}
                 <div ref={messagesEndRef} />
+                </div>
               </div>
 
               {/* Input Area */}

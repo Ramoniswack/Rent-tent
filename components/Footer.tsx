@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
   const router = useRouter();
 
   return (
-    <footer className="bg-[#0f231d] text-white py-20 px-6 lg:px-20 mt-12 rounded-t-[3rem]">
+    <footer className="hidden md:block bg-[#0b1713] text-white py-12 px-6 lg:px-20 mt-0">
       <div className="max-w-[1440px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 md:gap-8">
         {/* Brand Column */}
         <div className="md:col-span-4 flex flex-col gap-6">

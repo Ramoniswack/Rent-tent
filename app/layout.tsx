@@ -61,7 +61,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <link rel="shortcut icon" href="/icons/icon-192x192.svg" />
       </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} font-sans antialiased bg-[#f8faf9] dark:bg-[#0b1713]`}>
         <AuthProvider>
           <ToastProvider>
             {children}
