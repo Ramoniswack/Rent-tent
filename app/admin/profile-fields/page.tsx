@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
-import { Save, Loader2, ArrowLeft, Plus, Trash2, Mountain, Heart, Globe, Package, BadgeCheck, Sparkles, Truck, Headphones, Edit2 } from 'lucide-react';
+import { 
+  Save, Loader2, ArrowLeft, Plus, Trash2, Mountain, Heart, 
+  Globe, Package, BadgeCheck, Sparkles, Truck, Headphones, 
+  Edit2, AlertCircle, CheckCircle2, Settings 
+} from 'lucide-react';
 
 interface BookingFeature {
   icon: string;
@@ -86,10 +90,21 @@ export default function ProfileFieldsAdmin() {
     }
   };
 
-  const handleSave = async (fieldType: 'travelStyles' | 'interests' | 'languages' | 'gearCategories' | 'gearConditions' | 'bookingFeatures' | 'footerProductMenu' | 'footerCompanyMenu') => {
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 4000);
+  };
+
+  const showError = (msg: string) => {
+    setError(msg);
+    setTimeout(() => setError(''), 4000);
+  };
+
+  const handleSave = async (fieldType: keyof FieldOptions) => {
     try {
       setSaving(true);
       setError('');
+      setSuccessMessage('');
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
       
@@ -116,21 +131,19 @@ export default function ProfileFieldsAdmin() {
         throw new Error(errorData.error || 'Failed to save options');
       }
       
-      setSuccessMessage(`${fieldType} updated successfully!`);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess(`${fieldType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} updated successfully!`);
     } catch (err: any) {
-      setError(err.message);
+      showError(err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const addOption = (fieldType: 'travelStyles' | 'interests' | 'languages' | 'gearCategories' | 'gearConditions', value: string) => {
+  const addOption = (fieldType: keyof Pick<FieldOptions, 'travelStyles'|'interests'|'languages'|'gearCategories'|'gearConditions'>, value: string) => {
     if (!value.trim()) return;
     
     if (options[fieldType].includes(value.trim())) {
-      setError('This option already exists');
-      setTimeout(() => setError(''), 3000);
+      showError('This option already exists');
       return;
     }
     
@@ -147,7 +160,7 @@ export default function ProfileFieldsAdmin() {
     if (fieldType === 'gearConditions') setNewGearCondition('');
   };
 
-  const removeOption = (fieldType: 'travelStyles' | 'interests' | 'languages' | 'gearCategories' | 'gearConditions', index: number) => {
+  const removeOption = (fieldType: keyof Pick<FieldOptions, 'travelStyles'|'interests'|'languages'|'gearCategories'|'gearConditions'>, index: number) => {
     setOptions({
       ...options,
       [fieldType]: options[fieldType].filter((_, i) => i !== index)
@@ -156,13 +169,11 @@ export default function ProfileFieldsAdmin() {
   
   const addBookingFeature = () => {
     if (!newFeatureTitle.trim() || !newFeatureDescription.trim()) {
-      setError('Title and description are required');
-      setTimeout(() => setError(''), 3000);
+      showError('Title and description are required');
       return;
     }
     
     if (editingFeatureIndex !== null) {
-      // Update existing feature
       const updatedFeatures = [...options.bookingFeatures];
       updatedFeatures[editingFeatureIndex] = {
         icon: newFeatureIcon,
@@ -172,7 +183,6 @@ export default function ProfileFieldsAdmin() {
       setOptions({ ...options, bookingFeatures: updatedFeatures });
       setEditingFeatureIndex(null);
     } else {
-      // Add new feature
       setOptions({
         ...options,
         bookingFeatures: [...options.bookingFeatures, {
@@ -183,7 +193,6 @@ export default function ProfileFieldsAdmin() {
       });
     }
     
-    // Clear inputs
     setNewFeatureIcon('Sparkles');
     setNewFeatureTitle('');
     setNewFeatureDescription('');
@@ -217,20 +226,17 @@ export default function ProfileFieldsAdmin() {
     return icons[iconName] || Sparkles;
   };
   
-  // Footer menu management functions
   const addFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu') => {
     const label = menuType === 'footerProductMenu' ? newProductMenuLabel : newCompanyMenuLabel;
     const url = menuType === 'footerProductMenu' ? newProductMenuUrl : newCompanyMenuUrl;
     const editingIndex = menuType === 'footerProductMenu' ? editingProductMenuIndex : editingCompanyMenuIndex;
     
     if (!label.trim() || !url.trim()) {
-      setError('Label and URL are required');
-      setTimeout(() => setError(''), 3000);
+      showError('Label and URL are required');
       return;
     }
     
     if (editingIndex !== null) {
-      // Update existing item
       const updatedItems = [...options[menuType]];
       updatedItems[editingIndex] = { label: label.trim(), url: url.trim() };
       setOptions({ ...options, [menuType]: updatedItems });
@@ -241,14 +247,12 @@ export default function ProfileFieldsAdmin() {
         setEditingCompanyMenuIndex(null);
       }
     } else {
-      // Add new item
       setOptions({
         ...options,
         [menuType]: [...options[menuType], { label: label.trim(), url: url.trim() }]
       });
     }
     
-    // Clear inputs
     if (menuType === 'footerProductMenu') {
       setNewProductMenuLabel('');
       setNewProductMenuUrl('');
@@ -260,7 +264,6 @@ export default function ProfileFieldsAdmin() {
   
   const editFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu', index: number) => {
     const item = options[menuType][index];
-    
     if (menuType === 'footerProductMenu') {
       setNewProductMenuLabel(item.label);
       setNewProductMenuUrl(item.url);
@@ -291,574 +294,513 @@ export default function ProfileFieldsAdmin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0b1713]">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#060d0b] flex flex-col relative overflow-hidden">
         <Header />
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
+        <div className="flex flex-col items-center justify-center flex-1 gap-6 animate-in fade-in duration-500">
+          <div className="relative">
+            <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse" />
+            <div className="w-16 h-16 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl flex items-center justify-center relative z-10">
+              <Loader2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 animate-spin" />
+            </div>
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Loading Options</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Fetching system configurations...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0b1713]">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060d0b] flex flex-col relative overflow-hidden pb-16">
+      {/* Background Decorative Elements */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] bg-emerald-500/10 dark:bg-emerald-500/5 blur-[120px] rounded-full pointer-events-none" />
+      
       <Header />
       
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div className="flex items-start gap-5">
             <button
               onClick={() => router.push('/admin')}
-              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="mt-1 p-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-800 hover:border-emerald-500/30 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-2xl transition-all shadow-sm group"
+              aria-label="Go back"
             >
-              <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+              <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
             </button>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white"> Field Options</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">Manage options for user  fields</p>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Settings className="w-3.5 h-3.5" />
+                  System Config
+                </span>
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Field Options</h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm sm:text-base font-medium">Manage drop-down selections and system-wide lists.</p>
             </div>
           </div>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 text-green-600 dark:text-green-400 font-semibold">
-            {successMessage}
-          </div>
-        )}
+        {/* Floating Status Notifications */}
+        <div className="fixed top-24 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+          {successMessage && (
+            <div className="pointer-events-auto flex items-center gap-3 bg-white dark:bg-[#132a24] border border-emerald-200 dark:border-emerald-500/30 shadow-2xl rounded-2xl p-4 text-emerald-700 dark:text-emerald-400 font-bold animate-in slide-in-from-right-8 fade-in duration-300">
+              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <p>{successMessage}</p>
+            </div>
+          )}
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 font-semibold">
-            {error}
-          </div>
-        )}
+          {error && (
+            <div className="pointer-events-auto flex items-center gap-3 bg-white dark:bg-[#132a24] border border-red-200 dark:border-red-500/30 shadow-2xl rounded-2xl p-4 text-red-700 dark:text-red-400 font-bold animate-in slide-in-from-right-8 fade-in duration-300">
+              <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <p>{error}</p>
+            </div>
+          )}
+        </div>
 
         <div className="space-y-8">
-          {/* Travel Styles (Vibe) */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          
+          {/* Travel Styles (Purple Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Mountain className="w-6 h-6 text-purple-500" />
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                  <Mountain className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Travel Styles (Vibe)</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Options for user travel style preferences</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Travel Styles</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">User profile vibe preferences</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('travelStyles')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Save
-                  </>
-                )}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-2">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={newTravelStyle}
                   onChange={(e) => setNewTravelStyle(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addOption('travelStyles', newTravelStyle)}
-                  placeholder="Add new travel style..."
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                  placeholder="e.g. Backpacking, Luxury, Adventure..."
+                  className="flex-1 px-4 py-3.5 bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
                 />
                 <button
                   onClick={() => addOption('travelStyles', newTravelStyle)}
-                  className="px-6 py-3 bg-purple-500 text-white rounded-xl font-semibold hover:bg-purple-600 transition-colors flex items-center gap-2"
+                  className="px-6 py-3.5 bg-slate-900 dark:bg-purple-500/20 text-white dark:text-purple-400 border border-transparent dark:border-purple-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-purple-500/30 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
-                  Add
+                  <Plus className="w-4 h-4" /> Add Style
                 </button>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {options.travelStyles.map((style, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg"
-                  >
-                    <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">{style}</span>
-                    <button
-                      onClick={() => removeOption('travelStyles', index)}
-                      className="p-1 hover:bg-purple-200 dark:hover:bg-purple-800 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <div key={index} className="flex items-center gap-2 px-3.5 py-2 bg-purple-50 dark:bg-purple-500/10 border border-purple-200/60 dark:border-purple-500/20 rounded-xl group transition-all hover:border-purple-300 dark:hover:border-purple-500/40">
+                    <span className="text-sm font-bold text-purple-800 dark:text-purple-300">{style}</span>
+                    <button onClick={() => removeOption('travelStyles', index)} className="p-1 text-purple-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-md transition-colors opacity-60 group-hover:opacity-100">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Interests */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Interests (Pink Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-pink-500/10 rounded-lg">
-                  <Heart className="w-6 h-6 text-pink-500" />
+                <div className="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-500/20 flex items-center justify-center text-pink-600 dark:text-pink-400">
+                  <Heart className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Interests</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Options for user interests and hobbies</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Interests & Hobbies</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Profile matching keywords</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('interests')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-pink-600 to-pink-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Save
-                  </>
-                )}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-2">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={newInterest}
                   onChange={(e) => setNewInterest(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addOption('interests', newInterest)}
-                  placeholder="Add new interest..."
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                  placeholder="e.g. Photography, Hiking, Food..."
+                  className="flex-1 px-4 py-3.5 bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-pink-500/50 outline-none transition-all"
                 />
                 <button
                   onClick={() => addOption('interests', newInterest)}
-                  className="px-6 py-3 bg-pink-500 text-white rounded-xl font-semibold hover:bg-pink-600 transition-colors flex items-center gap-2"
+                  className="px-6 py-3.5 bg-slate-900 dark:bg-pink-500/20 text-white dark:text-pink-400 border border-transparent dark:border-pink-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-pink-500/30 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
-                  Add
+                  <Plus className="w-4 h-4" /> Add Interest
                 </button>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {options.interests.map((interest, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-4 py-2 bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800 rounded-lg"
-                  >
-                    <span className="text-sm font-semibold text-pink-700 dark:text-pink-300">{interest}</span>
-                    <button
-                      onClick={() => removeOption('interests', index)}
-                      className="p-1 hover:bg-pink-200 dark:hover:bg-pink-800 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-pink-600 dark:text-pink-400" />
+                  <div key={index} className="flex items-center gap-2 px-3.5 py-2 bg-pink-50 dark:bg-pink-500/10 border border-pink-200/60 dark:border-pink-500/20 rounded-xl group transition-all hover:border-pink-300 dark:hover:border-pink-500/40">
+                    <span className="text-sm font-bold text-pink-800 dark:text-pink-300">{interest}</span>
+                    <button onClick={() => removeOption('interests', index)} className="p-1 text-pink-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-md transition-colors opacity-60 group-hover:opacity-100">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Languages */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Languages (Blue Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Globe className="w-6 h-6 text-blue-500" />
+                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <Globe className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Languages Spoken</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Options for languages users can speak</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Languages Spoken</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Profile selection options</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('languages')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Save
-                  </>
-                )}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-2">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={newLanguage}
                   onChange={(e) => setNewLanguage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addOption('languages', newLanguage)}
-                  placeholder="Add new language..."
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                  placeholder="e.g. English, Spanish, French..."
+                  className="flex-1 px-4 py-3.5 bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
                 />
                 <button
                   onClick={() => addOption('languages', newLanguage)}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold hover:bg-blue-600 transition-colors flex items-center gap-2"
+                  className="px-6 py-3.5 bg-slate-900 dark:bg-blue-500/20 text-white dark:text-blue-400 border border-transparent dark:border-blue-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-blue-500/30 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
-                  Add
+                  <Plus className="w-4 h-4" /> Add Language
                 </button>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {options.languages.map((language, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-                  >
-                    <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{language}</span>
-                    <button
-                      onClick={() => removeOption('languages', index)}
-                      className="p-1 hover:bg-blue-200 dark:hover:bg-blue-800 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <div key={index} className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 rounded-xl group transition-all hover:border-blue-300 dark:hover:border-blue-500/40">
+                    <span className="text-sm font-bold text-blue-800 dark:text-blue-300">{language}</span>
+                    <button onClick={() => removeOption('languages', index)} className="p-1 text-blue-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-md transition-colors opacity-60 group-hover:opacity-100">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Gear Categories */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Gear Categories (Emerald Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Package className="w-6 h-6 text-emerald-500" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                  <Package className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Gear Categories</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Options for gear rental categories</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Gear Categories</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Classifications for rental items</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('gearCategories')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Save
-                  </>
-                )}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-2">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={newGearCategory}
                   onChange={(e) => setNewGearCategory(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addOption('gearCategories', newGearCategory)}
-                  placeholder="Add new gear category..."
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                  placeholder="e.g. Tents, Cameras, Backpacks..."
+                  className="flex-1 px-4 py-3.5 bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/50 outline-none transition-all"
                 />
                 <button
                   onClick={() => addOption('gearCategories', newGearCategory)}
-                  className="px-6 py-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 transition-colors flex items-center gap-2"
+                  className="px-6 py-3.5 bg-slate-900 dark:bg-emerald-500/20 text-white dark:text-emerald-400 border border-transparent dark:border-emerald-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-emerald-500/30 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
-                  Add
+                  <Plus className="w-4 h-4" /> Add Category
                 </button>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {options.gearCategories?.map((category, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg"
-                  >
-                    <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{category}</span>
-                    <button
-                      onClick={() => removeOption('gearCategories', index)}
-                      className="p-1 hover:bg-emerald-200 dark:hover:bg-emerald-800 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <div key={index} className="flex items-center gap-2 px-3.5 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/60 dark:border-emerald-500/20 rounded-xl group transition-all hover:border-emerald-300 dark:hover:border-emerald-500/40">
+                    <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{category}</span>
+                    <button onClick={() => removeOption('gearCategories', index)} className="p-1 text-emerald-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-md transition-colors opacity-60 group-hover:opacity-100">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Gear Conditions */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Gear Conditions (Amber Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500/10 rounded-lg">
-                  <BadgeCheck className="w-6 h-6 text-amber-500" />
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <BadgeCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Gear Conditions</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Options for gear condition ratings</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Gear Conditions</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Standardized condition ratings</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('gearConditions')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Save
-                  </>
-                )}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-2">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
                   value={newGearCondition}
                   onChange={(e) => setNewGearCondition(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addOption('gearConditions', newGearCondition)}
-                  placeholder="Add new condition..."
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                  placeholder="e.g. Like New, Good, Fair..."
+                  className="flex-1 px-4 py-3.5 bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/50 outline-none transition-all"
                 />
                 <button
                   onClick={() => addOption('gearConditions', newGearCondition)}
-                  className="px-6 py-3 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition-colors flex items-center gap-2"
+                  className="px-6 py-3.5 bg-slate-900 dark:bg-amber-500/20 text-white dark:text-amber-400 border border-transparent dark:border-amber-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-amber-500/30 transition-colors flex items-center justify-center gap-2"
                 >
-                  <Plus className="w-5 h-5" />
-                  Add
+                  <Plus className="w-4 h-4" /> Add Condition
                 </button>
               </div>
 
               <div className="flex flex-wrap gap-2">
                 {options.gearConditions?.map((condition, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg"
-                  >
-                    <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">{condition}</span>
-                    <button
-                      onClick={() => removeOption('gearConditions', index)}
-                      className="p-1 hover:bg-amber-200 dark:hover:bg-amber-800 rounded transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <div key={index} className="flex items-center gap-2 px-3.5 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 rounded-xl group transition-all hover:border-amber-300 dark:hover:border-amber-500/40">
+                    <span className="text-sm font-bold text-amber-800 dark:text-amber-300">{condition}</span>
+                    <button onClick={() => removeOption('gearConditions', index)} className="p-1 text-amber-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-md transition-colors opacity-60 group-hover:opacity-100">
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Booking Features */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Booking Features (Indigo Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500/10 rounded-lg">
-                  <Sparkles className="w-6 h-6 text-indigo-500" />
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Booking Page Features</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Features displayed on gear booking pages</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Booking Features</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Perks shown on gear pages</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('bookingFeatures')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    Save
-                  </>
-                )}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Add/Edit Feature Form */}
-              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex gap-2">
-                  <select
-                    value={newFeatureIcon}
-                    onChange={(e) => setNewFeatureIcon(e.target.value)}
-                    className="px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                  >
-                    <option value="Sparkles">✨ Sparkles</option>
-                    <option value="Truck">🚚 Truck</option>
-                    <option value="Headphones">🎧 Headphones</option>
-                    <option value="Shield">🛡️ Shield</option>
-                    <option value="Package">📦 Package</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={newFeatureTitle}
-                    onChange={(e) => setNewFeatureTitle(e.target.value)}
-                    placeholder="Feature title..."
-                    className="flex-1 px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                  />
-                </div>
-                <textarea
-                  value={newFeatureDescription}
-                  onChange={(e) => setNewFeatureDescription(e.target.value)}
-                  placeholder="Feature description..."
-                  rows={2}
-                  className="w-full px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none resize-none"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={addBookingFeature}
-                    className="flex-1 px-6 py-3 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2"
-                  >
-                    {editingFeatureIndex !== null ? (
-                      <>
-                        <Edit2 className="w-5 h-5" />
-                        Update Feature
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-5 h-5" />
-                        Add Feature
-                      </>
-                    )}
-                  </button>
-                  {editingFeatureIndex !== null && (
-                    <button
-                      onClick={() => {
-                        setEditingFeatureIndex(null);
-                        setNewFeatureIcon('Sparkles');
-                        setNewFeatureTitle('');
-                        setNewFeatureDescription('');
-                      }}
-                      className="px-6 py-3 bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-semibold hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors"
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              {/* Form Sidebar */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Icon</label>
+                    <select
+                      value={newFeatureIcon}
+                      onChange={(e) => setNewFeatureIcon(e.target.value)}
+                      className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
                     >
-                      Cancel
+                      <option value="Sparkles">✨ Sparkles</option>
+                      <option value="Truck">🚚 Truck</option>
+                      <option value="Headphones">🎧 Headphones</option>
+                      <option value="Shield">🛡️ Shield</option>
+                      <option value="Package">📦 Package</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Title</label>
+                    <input
+                      type="text"
+                      value={newFeatureTitle}
+                      onChange={(e) => setNewFeatureTitle(e.target.value)}
+                      placeholder="e.g. Free Shipping..."
+                      className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/50 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Description</label>
+                    <textarea
+                      value={newFeatureDescription}
+                      onChange={(e) => setNewFeatureDescription(e.target.value)}
+                      placeholder="Add a short description..."
+                      rows={3}
+                      className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/50 outline-none resize-none"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={addBookingFeature}
+                      className="flex-1 px-4 py-3 bg-slate-900 dark:bg-indigo-500/20 text-white dark:text-indigo-400 border border-transparent dark:border-indigo-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-indigo-500/30 transition-colors flex items-center justify-center gap-2 text-sm"
+                    >
+                      {editingFeatureIndex !== null ? <><Edit2 className="w-4 h-4" /> Update Feature</> : <><Plus className="w-4 h-4" /> Add Feature</>}
                     </button>
-                  )}
+                    {editingFeatureIndex !== null && (
+                      <button
+                        onClick={() => {
+                          setEditingFeatureIndex(null);
+                          setNewFeatureIcon('Sparkles');
+                          setNewFeatureTitle('');
+                          setNewFeatureDescription('');
+                        }}
+                        className="px-4 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Features List */}
-              <div className="space-y-3">
+              {/* List */}
+              <div className="lg:col-span-3 space-y-3">
                 {options.bookingFeatures?.map((feature, index) => {
                   const IconComponent = getIconComponent(feature.icon);
                   return (
-                    <div
-                      key={index}
-                      className="flex items-start gap-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl"
-                    >
-                      <div className="p-2 bg-indigo-100 dark:bg-indigo-800 rounded-lg flex-shrink-0">
+                    <div key={index} className="flex items-start gap-4 p-5 bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-200/50 dark:border-indigo-500/10 rounded-2xl group transition-all hover:bg-indigo-50 dark:hover:bg-indigo-500/10">
+                      <div className="p-3 bg-white dark:bg-[#132a24] shadow-sm rounded-xl flex-shrink-0">
                         <IconComponent className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">{feature.title}</h4>
-                        <p className="text-xs text-indigo-700 dark:text-indigo-300 mt-1">{feature.description}</p>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">{feature.title}</h4>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">{feature.description}</p>
                       </div>
-                      <div className="flex gap-1 flex-shrink-0">
-                        <button
-                          onClick={() => editBookingFeature(index)}
-                          className="p-2 hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded transition-colors"
-                          title="Edit feature"
-                        >
-                          <Edit2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => editBookingFeature(index)} className="p-2 hover:bg-indigo-200/50 dark:hover:bg-indigo-500/20 rounded-lg transition-colors text-indigo-600 dark:text-indigo-400" title="Edit feature">
+                          <Edit2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => removeBookingFeature(index)}
-                          className="p-2 hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded transition-colors"
-                          title="Remove feature"
-                        >
-                          <Trash2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        <button onClick={() => removeBookingFeature(index)} className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500" title="Remove feature">
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
                   );
                 })}
+                {(!options.bookingFeatures || options.bookingFeatures.length === 0) && (
+                  <div className="h-full flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 dark:text-slate-600">
+                    <Sparkles className="w-8 h-8 mb-2 opacity-50" />
+                    <p className="text-sm font-bold">No features added yet</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Footer Product Menu */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Footer Product Menu (Cyan Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-cyan-500/10 rounded-lg">
-                  <Package className="w-6 h-6 text-cyan-500" />
+                <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+                  <Package className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Footer Product Menu</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Menu items in Product column</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Footer "Product" Menu</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Links for the Product column</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('footerProductMenu')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? <><Loader2 className="w-5 h-5 animate-spin" />Saving...</> : <><Save className="w-5 h-5" />Save</>}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-4 h-fit">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Menu Label</label>
                   <input
                     type="text"
                     value={newProductMenuLabel}
                     onChange={(e) => setNewProductMenuLabel(e.target.value)}
-                    placeholder="Menu label..."
-                    className="flex-1 px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                    placeholder="e.g. Browse Gear..."
+                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500/50 outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Destination URL</label>
                   <input
                     type="text"
                     value={newProductMenuUrl}
                     onChange={(e) => setNewProductMenuUrl(e.target.value)}
-                    placeholder="URL (e.g., /match)..."
-                    className="flex-1 px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                    placeholder="e.g. /search"
+                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500/50 outline-none"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => addFooterMenuItem('footerProductMenu')}
-                    className="flex-1 px-6 py-3 bg-cyan-500 text-white rounded-xl font-semibold hover:bg-cyan-600 transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-slate-900 dark:bg-cyan-500/20 text-white dark:text-cyan-400 border border-transparent dark:border-cyan-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-cyan-500/30 transition-colors flex items-center justify-center gap-2 text-sm"
                   >
-                    {editingProductMenuIndex !== null ? <><Edit2 className="w-5 h-5" />Update</> : <><Plus className="w-5 h-5" />Add</>}
+                    {editingProductMenuIndex !== null ? <><Edit2 className="w-4 h-4" /> Update Link</> : <><Plus className="w-4 h-4" /> Add Link</>}
                   </button>
                   {editingProductMenuIndex !== null && (
                     <button
@@ -867,7 +809,7 @@ export default function ProfileFieldsAdmin() {
                         setNewProductMenuLabel('');
                         setNewProductMenuUrl('');
                       }}
-                      className="px-6 py-3 bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-semibold hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors"
+                      className="px-4 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
                     >
                       Cancel
                     </button>
@@ -875,72 +817,77 @@ export default function ProfileFieldsAdmin() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {options.footerProductMenu?.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-4 bg-cyan-50/50 dark:bg-cyan-500/5 border border-cyan-200/50 dark:border-cyan-500/10 rounded-2xl group hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-colors">
                     <div>
-                      <span className="text-sm font-bold text-cyan-900 dark:text-cyan-100">{item.label}</span>
-                      <span className="text-xs text-cyan-700 dark:text-cyan-300 ml-2">→ {item.url}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{item.label}</span>
+                      <p className="text-xs font-medium text-cyan-600 dark:text-cyan-400 mt-1">{item.url}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => editFooterMenuItem('footerProductMenu', index)} className="p-2 hover:bg-cyan-200 dark:hover:bg-cyan-800 rounded transition-colors">
-                        <Edit2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => editFooterMenuItem('footerProductMenu', index)} className="p-2 hover:bg-cyan-200/50 dark:hover:bg-cyan-500/20 rounded-lg transition-colors text-cyan-600 dark:text-cyan-400">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => removeFooterMenuItem('footerProductMenu', index)} className="p-2 hover:bg-cyan-200 dark:hover:bg-cyan-800 rounded transition-colors">
-                        <Trash2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                      <button onClick={() => removeFooterMenuItem('footerProductMenu', index)} className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Footer Company Menu */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center justify-between mb-6">
+          {/* Footer Company Menu (Violet Theme) */}
+          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-violet-500/10 rounded-lg">
-                  <Globe className="w-6 h-6 text-violet-500" />
+                <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                  <Globe className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Footer Company Menu</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Menu items in Company column</p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Footer "Company" Menu</h2>
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Links for the Company column</p>
                 </div>
               </div>
               <button
                 onClick={() => handleSave('footerCompanyMenu')}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-600 to-violet-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
               >
-                {saving ? <><Loader2 className="w-5 h-5 animate-spin" />Saving...</> : <><Save className="w-5 h-5" />Save</>}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex gap-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-4 h-fit">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Menu Label</label>
                   <input
                     type="text"
                     value={newCompanyMenuLabel}
                     onChange={(e) => setNewCompanyMenuLabel(e.target.value)}
-                    placeholder="Menu label..."
-                    className="flex-1 px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                    placeholder="e.g. About Us..."
+                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-violet-500/50 outline-none"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Destination URL</label>
                   <input
                     type="text"
                     value={newCompanyMenuUrl}
                     onChange={(e) => setNewCompanyMenuUrl(e.target.value)}
-                    placeholder="URL (e.g., /about)..."
-                    className="flex-1 px-4 py-3 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
+                    placeholder="e.g. /about"
+                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-violet-500/50 outline-none"
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => addFooterMenuItem('footerCompanyMenu')}
-                    className="flex-1 px-6 py-3 bg-violet-500 text-white rounded-xl font-semibold hover:bg-violet-600 transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-3 bg-slate-900 dark:bg-violet-500/20 text-white dark:text-violet-400 border border-transparent dark:border-violet-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-violet-500/30 transition-colors flex items-center justify-center gap-2 text-sm"
                   >
-                    {editingCompanyMenuIndex !== null ? <><Edit2 className="w-5 h-5" />Update</> : <><Plus className="w-5 h-5" />Add</>}
+                    {editingCompanyMenuIndex !== null ? <><Edit2 className="w-4 h-4" /> Update Link</> : <><Plus className="w-4 h-4" /> Add Link</>}
                   </button>
                   {editingCompanyMenuIndex !== null && (
                     <button
@@ -949,7 +896,7 @@ export default function ProfileFieldsAdmin() {
                         setNewCompanyMenuLabel('');
                         setNewCompanyMenuUrl('');
                       }}
-                      className="px-6 py-3 bg-slate-300 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-semibold hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors"
+                      className="px-4 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
                     >
                       Cancel
                     </button>
@@ -957,28 +904,29 @@ export default function ProfileFieldsAdmin() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {options.footerCompanyMenu?.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-4 bg-violet-50/50 dark:bg-violet-500/5 border border-violet-200/50 dark:border-violet-500/10 rounded-2xl group hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">
                     <div>
-                      <span className="text-sm font-bold text-violet-900 dark:text-violet-100">{item.label}</span>
-                      <span className="text-xs text-violet-700 dark:text-violet-300 ml-2">→ {item.url}</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">{item.label}</span>
+                      <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mt-1">{item.url}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => editFooterMenuItem('footerCompanyMenu', index)} className="p-2 hover:bg-violet-200 dark:hover:bg-violet-800 rounded transition-colors">
-                        <Edit2 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => editFooterMenuItem('footerCompanyMenu', index)} className="p-2 hover:bg-violet-200/50 dark:hover:bg-violet-500/20 rounded-lg transition-colors text-violet-600 dark:text-violet-400">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => removeFooterMenuItem('footerCompanyMenu', index)} className="p-2 hover:bg-violet-200 dark:hover:bg-violet-800 rounded transition-colors">
-                        <Trash2 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                      <button onClick={() => removeFooterMenuItem('footerCompanyMenu', index)} className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500">
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </section>
+
         </div>
-      </div>
+      </main>
     </div>
   );
 }
