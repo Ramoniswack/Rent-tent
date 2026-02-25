@@ -62,9 +62,32 @@ export default function GearPage() {
 
   const locationDropdownRef = useRef<HTMLDivElement>(null);
 
-  const categories = ['Camping', 'Photography', 'Tech', 'Office', 'Sports', 'Audio'];
+  // Dynamic categories
+  const [categories, setCategories] = useState<string[]>([]);
   
   const locations = Array.from(new Set(allGearItems.map(item => item.location).filter(Boolean)));
+
+  // Fetch dynamic categories
+  useEffect(() => {
+    fetchGearCategories();
+  }, []);
+
+  const fetchGearCategories = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/profile-field-options`);
+      if (response.ok) {
+        const data = await response.json();
+        // Get unique categories from gear items and dynamic options
+        const dynamicCategories = data.gearCategories || [];
+        setCategories(dynamicCategories.slice(0, 8)); // Limit to first 8 for UI
+      }
+    } catch (err) {
+      console.error('Error fetching gear categories:', err);
+      // Fallback to defaults
+      setCategories(['Camping', 'Photography', 'Tech', 'Office', 'Sports', 'Audio']);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

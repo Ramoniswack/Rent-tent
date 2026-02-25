@@ -39,6 +39,8 @@ export default function BookGearPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bookedDates, setBookedDates] = useState<{start: Date, end: Date}[]>([]);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
+  const [bookingFeatures, setBookingFeatures] = useState<Array<{icon: string, title: string, description: string}>>([]);
+  const [serviceFeePercentage, setServiceFeePercentage] = useState(5);
 
   useEffect(() => {
     if (!user) {
@@ -46,7 +48,60 @@ export default function BookGearPage() {
       return;
     }
     fetchGear();
+    fetchBookingFeatures();
+    fetchServiceFee();
   }, [user, params.id]);
+
+  const fetchServiceFee = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/site-settings/serviceFeePercentage`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.value !== undefined) {
+          setServiceFeePercentage(data.value);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching service fee:', error);
+      // Fallback to default 5%
+    }
+  };
+
+  const fetchBookingFeatures = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/profile-field-options`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.bookingFeatures && Array.isArray(data.bookingFeatures)) {
+          setBookingFeatures(data.bookingFeatures);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching booking features:', error);
+      // Fallback to default features
+      setBookingFeatures([
+        {
+          icon: 'Sparkles',
+          title: 'Deep Cleaned',
+          description: 'Every item is professionally sanitized and inspected after each use to ensure peak performance.'
+        },
+        {
+          icon: 'Truck',
+          title: 'Free Pickup',
+          description: 'Pick up from our central hubs or have it delivered to your trailhead for a small fee.'
+        },
+        {
+          icon: 'Headphones',
+          title: '24/7 Adventure Support',
+          description: 'Stuck in the wild? Our gear experts are available via satellite phone/chat to help you out.'
+        }
+      ]);
+    }
+  };
 
   const fetchGear = async () => {
     try {
@@ -89,6 +144,13 @@ export default function BookGearPage() {
     } catch (error) {
       console.error('Error fetching unavailable dates:', error);
     }
+  };
+
+  const getIconComponent = (iconName: string) => {
+    const icons: Record<string, any> = {
+      Sparkles, Truck, Headphones, Shield, Package: Receipt
+    };
+    return icons[iconName] || Sparkles;
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -202,7 +264,7 @@ export default function BookGearPage() {
     
     const rental = days * gear.pricePerDay;
     const deposit = gear.deposit || 0;
-    const serviceFee = rental * 0.05;
+    const serviceFee = rental * (serviceFeePercentage / 100);
     const total = rental + deposit + serviceFee;
     
     return { rental, deposit, serviceFee, total, days };
@@ -615,7 +677,7 @@ export default function BookGearPage() {
                   <div className="flex items-center justify-between text-xs sm:text-sm text-[#0d1c17]/70 dark:text-white/70 pb-4 sm:pb-6 border-b border-dashed border-[#059467]/20">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Receipt className="w-3 h-3 sm:w-4 sm:h-4 text-[#059467]/60 flex-shrink-0" />
-                      <span>Service Fee (5%)</span>
+                      <span>Service Fee ({serviceFeePercentage}%)</span>
                     </div>
                     <span className="font-bold text-[#0d1c17] dark:text-white ml-2">{formatNPR(pricing.serviceFee)}</span>
                   </div>
@@ -679,33 +741,20 @@ export default function BookGearPage() {
           {/* Additional Info */}
           <section className="mt-12 md:mt-20 border-t border-[#059467]/10 pt-10 md:pt-16">
             <div className="grid grid-cols-1 gap-8 sm:gap-10 md:gap-12 md:grid-cols-3">
-              <div className="flex flex-col items-start gap-3 sm:gap-4">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#059467]/10 text-[#059467]">
-                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-                <h4 className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">Deep Cleaned</h4>
-                <p className="text-xs sm:text-sm text-[#0d1c17]/60 dark:text-white/60">
-                  Every item is professionally sanitized and inspected after each use to ensure peak performance.
-                </p>
-              </div>
-              <div className="flex flex-col items-start gap-3 sm:gap-4">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#059467]/10 text-[#059467]">
-                  <Truck className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-                <h4 className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">Free Pickup</h4>
-                <p className="text-xs sm:text-sm text-[#0d1c17]/60 dark:text-white/60">
-                  Pick up from our central hubs or have it delivered to your trailhead for a small fee.
-                </p>
-              </div>
-              <div className="flex flex-col items-start gap-3 sm:gap-4">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#059467]/10 text-[#059467]">
-                  <Headphones className="w-5 h-5 sm:w-6 sm:h-6" />
-                </div>
-                <h4 className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">24/7 Adventure Support</h4>
-                <p className="text-xs sm:text-sm text-[#0d1c17]/60 dark:text-white/60">
-                  Stuck in the wild? Our gear experts are available via satellite phone/chat to help you out.
-                </p>
-              </div>
+              {bookingFeatures.map((feature, index) => {
+                const IconComponent = getIconComponent(feature.icon);
+                return (
+                  <div key={index} className="flex flex-col items-start gap-3 sm:gap-4">
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#059467]/10 text-[#059467]">
+                      <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </div>
+                    <h4 className="text-base sm:text-lg font-bold text-[#0d1c17] dark:text-white">{feature.title}</h4>
+                    <p className="text-xs sm:text-sm text-[#0d1c17]/60 dark:text-white/60">
+                      {feature.description}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </main>

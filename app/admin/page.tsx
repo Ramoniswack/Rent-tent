@@ -26,7 +26,8 @@ import {
   EyeOff,
   ExternalLink,
   MoreVertical,
-  Calendar
+  Calendar,
+  Settings
 } from 'lucide-react';
 
 type Tab = 'overview' | 'users' | 'trips' | 'gear' | 'pages';
@@ -640,7 +641,99 @@ export default function AdminPage() {
 
             {/* Pages Tab Section */}
             {activeTab === 'pages' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="space-y-8">
+                {/* Special Home Page Editor */}
+                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/5 rounded-[2.5rem] p-8 border-2 border-purple-500/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Home Page</h3>
+                      <p className="text-slate-600 dark:text-slate-400 font-medium">Customize hero, features, CTA banner, and testimonials sections</p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/admin/pages/home/edit')}
+                      className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all hover:scale-105"
+                    >
+                      <Edit className="w-5 h-5" />
+                      Edit Home Page
+                    </button>
+                  </div>
+                </div>
+
+                {/* Special About Page Editor */}
+                <div className="bg-gradient-to-br from-[#059467]/10 to-emerald-500/5 rounded-[2.5rem] p-8 border-2 border-[#059467]/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">About Page</h3>
+                      <p className="text-slate-600 dark:text-slate-400 font-medium">Fully customizable About page with hero, values, team, and CTA sections</p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/admin/pages/about/edit')}
+                      className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-bold hover:bg-[#047854] transition-all hover:scale-105"
+                    >
+                      <Edit className="w-5 h-5" />
+                      Edit About Page
+                    </button>
+                  </div>
+                </div>
+
+                {/* Special Contact Page Editor */}
+                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/5 rounded-[2.5rem] p-8 border-2 border-blue-500/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Contact Page</h3>
+                      <p className="text-slate-600 dark:text-slate-400 font-medium">Manage contact information, form topics, map location, and social links</p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/admin/pages/contact/edit')}
+                      className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all hover:scale-105"
+                    >
+                      <Edit className="w-5 h-5" />
+                      Edit Contact Page
+                    </button>
+                  </div>
+                </div>
+
+                {/* Profile Field Options */}
+                <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/5 rounded-[2.5rem] p-8 border-2 border-orange-500/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Profile Field Options</h3>
+                      <p className="text-slate-600 dark:text-slate-400 font-medium">Manage options for Interests, Vibe (Travel Styles), and Languages Spoken</p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/admin/profile-fields')}
+                      className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-xl font-bold hover:bg-orange-700 transition-all hover:scale-105"
+                    >
+                      <Edit className="w-5 h-5" />
+                      Edit Profile Fields
+                    </button>
+                  </div>
+                </div>
+
+                {/* Site Settings Card */}
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-[2.5rem] p-8 shadow-sm border border-indigo-200 dark:border-indigo-800">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="size-12 rounded-2xl bg-indigo-600 flex items-center justify-center">
+                          <Settings className="w-6 h-6 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white">Site Settings</h3>
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-400 font-medium">Configure service fees, platform name, and other global settings</p>
+                    </div>
+                    <button
+                      onClick={() => router.push('/admin/settings')}
+                      className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all hover:scale-105"
+                    >
+                      <Settings className="w-5 h-5" />
+                      Manage Settings
+                    </button>
+                  </div>
+                </div>
+
+                {/* Other Pages */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {pages.map((page) => (
                   <div key={page._id} className="bg-white dark:bg-[#11241e] rounded-[2.5rem] p-8 shadow-sm border border-slate-200 dark:border-white/5 group hover:border-[#059467]/30 transition-all flex flex-col h-full">
                     <div className="flex items-start justify-between mb-6">
@@ -666,6 +759,7 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
           </main>

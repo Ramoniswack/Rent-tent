@@ -19,13 +19,6 @@ export interface FilterState {
   locationRange: number;
 }
 
-const TRAVEL_STYLES = ['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Travel', 'Luxury', 'Budget'];
-const COMMON_INTERESTS = [
-  'Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 
-  'Meditation', 'Local Cuisine', 'Mountaineering', 'Rock Climbing', 
-  'Camping', 'Coworking', 'Cafes', 'History', 'Language Exchange'
-];
-
 const MatchFilterModal: React.FC<MatchFilterModalProps> = ({
   isOpen,
   onClose,
@@ -33,6 +26,35 @@ const MatchFilterModal: React.FC<MatchFilterModalProps> = ({
   initialFilters,
 }) => {
   const [filters, setFilters] = useState<FilterState>(initialFilters);
+  
+  // Dynamic options
+  const [travelStyles, setTravelStyles] = useState<string[]>([]);
+  const [commonInterests, setCommonInterests] = useState<string[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  // Fetch dynamic options on mount
+  useEffect(() => {
+    fetchProfileFieldOptions();
+  }, []);
+
+  const fetchProfileFieldOptions = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/profile-field-options`);
+      if (response.ok) {
+        const data = await response.json();
+        setTravelStyles(data.travelStyles || []);
+        setCommonInterests(data.interests || []);
+      }
+    } catch (err) {
+      console.error('Error fetching profile field options:', err);
+      // Fallback to defaults if fetch fails
+      setTravelStyles(['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Travel', 'Luxury', 'Budget']);
+      setCommonInterests(['Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 'Meditation']);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
 
   // Update local state when initialFilters change
   useEffect(() => {
@@ -229,30 +251,38 @@ const MatchFilterModal: React.FC<MatchFilterModalProps> = ({
                       <span className="text-xs text-[#059467]">({filters.selectedTravelStyles.length} selected)</span>
                     )}
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    {TRAVEL_STYLES.map(style => (
-                      <button
-                        key={style}
-                        type="button"
-                        onClick={() => {
-                          const styles = filters.selectedTravelStyles;
-                          setFilters({
-                            ...filters,
-                            selectedTravelStyles: styles.includes(style)
-                              ? styles.filter(s => s !== style)
-                              : [...styles, style]
-                          });
-                        }}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                          filters.selectedTravelStyles.includes(style)
-                            ? 'bg-[#059467] text-white shadow-lg'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        {style}
-                      </button>
-                    ))}
-                  </div>
+                  {loadingOptions ? (
+                    <div className="flex flex-wrap gap-2">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <div key={i} className="h-9 w-24 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {travelStyles.map(style => (
+                        <button
+                          key={style}
+                          type="button"
+                          onClick={() => {
+                            const styles = filters.selectedTravelStyles;
+                            setFilters({
+                              ...filters,
+                              selectedTravelStyles: styles.includes(style)
+                                ? styles.filter(s => s !== style)
+                                : [...styles, style]
+                            });
+                          }}
+                          className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                            filters.selectedTravelStyles.includes(style)
+                              ? 'bg-[#059467] text-white shadow-lg'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {style}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">Select multiple styles to find similar travelers</p>
                 </div>
 
@@ -267,30 +297,38 @@ const MatchFilterModal: React.FC<MatchFilterModalProps> = ({
                       <span className="text-xs text-[#059467]">({filters.selectedInterests.length} selected)</span>
                     )}
                   </label>
-                  <div className="flex flex-wrap gap-2">
-                    {COMMON_INTERESTS.map(interest => (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => {
-                          const interests = filters.selectedInterests;
-                          setFilters({
-                            ...filters,
-                            selectedInterests: interests.includes(interest)
-                              ? interests.filter(i => i !== interest)
-                              : [...interests, interest]
-                          });
-                        }}
-                        className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
-                          filters.selectedInterests.includes(interest)
-                            ? 'bg-pink-500 text-white shadow-lg'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        {interest}
-                      </button>
-                    ))}
-                  </div>
+                  {loadingOptions ? (
+                    <div className="flex flex-wrap gap-2">
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                        <div key={i} className="h-9 w-20 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {commonInterests.map(interest => (
+                        <button
+                          key={interest}
+                          type="button"
+                          onClick={() => {
+                            const interests = filters.selectedInterests;
+                            setFilters({
+                              ...filters,
+                              selectedInterests: interests.includes(interest)
+                                ? interests.filter(i => i !== interest)
+                                : [...interests, interest]
+                            });
+                          }}
+                          className={`px-3 py-2 rounded-full text-sm font-semibold transition-all ${
+                            filters.selectedInterests.includes(interest)
+                              ? 'bg-pink-500 text-white shadow-lg'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {interest}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">More interests = better matches!</p>
                 </div>
 

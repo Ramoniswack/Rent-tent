@@ -121,6 +121,11 @@ export default function AccountPage() {
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   
+  // Dynamic profile field options
+  const [travelStyles, setTravelStyles] = useState<string[]>([]);
+  const [commonInterests, setCommonInterests] = useState<string[]>([]);
+  const [commonLanguages, setCommonLanguages] = useState<string[]>([]);
+  
   const [formData, setFormData] = useState({
     name: '', username: '', bio: '', gender: '', interests: [] as string[],
     language: 'English (US)', currency: 'USD ($)', emailNotifications: true,
@@ -132,6 +137,7 @@ export default function AccountPage() {
   });
 
   useEffect(() => {
+    fetchProfileFieldOptions();
     fetchUserProfile();
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
@@ -143,6 +149,25 @@ export default function AccountPage() {
       }
     }
   }, []);
+
+  const fetchProfileFieldOptions = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/profile-field-options`);
+      if (response.ok) {
+        const data = await response.json();
+        setTravelStyles(data.travelStyles || []);
+        setCommonInterests(data.interests || []);
+        setCommonLanguages(data.languages || []);
+      }
+    } catch (err) {
+      console.error('Error fetching profile field options:', err);
+      // Fallback to defaults if fetch fails
+      setTravelStyles(['Adventure', 'Relaxed', 'Cultural', 'Extreme', 'Slow Travel', 'Luxury', 'Budget']);
+      setCommonInterests(['Trekking', 'Photography', 'Culture', 'Food', 'Hiking', 'Yoga', 'Meditation']);
+      setCommonLanguages(['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Mandarin']);
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -642,7 +667,7 @@ export default function AccountPage() {
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"><Mountain className="w-4 h-4 text-slate-400" /> Vibe</label>
                         <div className="flex flex-wrap gap-2">
-                          {TRAVEL_STYLES.map(style => (
+                          {travelStyles.map(style => (
                             <button key={style} type="button" onClick={() => setFormData(prev => ({ ...prev, travelStyle: style }))} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${formData.travelStyle === style ? 'bg-[#059467] text-white border-[#059467]' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>
                               {style}
                             </button>
@@ -653,7 +678,7 @@ export default function AccountPage() {
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"><Globe className="w-4 h-4 text-slate-400" /> Languages Spoken</label>
                         <div className="flex flex-wrap gap-2">
-                          {COMMON_LANGUAGES.map(lang => (
+                          {commonLanguages.map(lang => (
                             <button key={lang} type="button" onClick={() => toggleLanguage(lang)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all border ${formData.languages.includes(lang) ? 'bg-blue-500 text-white border-blue-500' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}>
                               {lang}
                             </button>
@@ -664,7 +689,7 @@ export default function AccountPage() {
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"><Heart className="w-4 h-4 text-slate-400" /> Interests</label>
                         <div className="flex flex-wrap gap-2">
-                          {COMMON_INTERESTS.map(interest => (
+                          {commonInterests.map(interest => (
                             <button key={interest} type="button" onClick={() => toggleInterest(interest)} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all border ${formData.interests.includes(interest) ? 'bg-pink-500 text-white border-pink-500' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'}`}>
                               {interest}
                             </button>

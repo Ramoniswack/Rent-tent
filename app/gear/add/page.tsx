@@ -121,25 +121,31 @@ export default function AddGearPage() {
     { number: 4, label: 'Review', completed: currentStep > 4 }
   ];
 
-  const categories = [
-    'Backpacks',
-    'Tents',
-    'Sleeping Bags',
-    'Trekking Poles',
-    'Camping Gear',
-    'Climbing Equipment',
-    'Winter Gear',
-    'Electronics',
-    'Clothing',
-    'Other'
-  ];
+  // Dynamic options
+  const [categories, setCategories] = useState<string[]>([]);
+  const [conditions, setConditions] = useState<string[]>([]);
 
-  const conditions = [
-    'Excellent',
-    'Good',
-    'Fair',
-    'Used'
-  ];
+  // Fetch dynamic options
+  useEffect(() => {
+    fetchGearOptions();
+  }, []);
+
+  const fetchGearOptions = async () => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/profile-field-options`);
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.gearCategories || []);
+        setConditions(data.gearConditions || []);
+      }
+    } catch (err) {
+      console.error('Error fetching gear options:', err);
+      // Fallback to defaults
+      setCategories(['Backpacks', 'Tents', 'Sleeping Bags', 'Camping Gear', 'Electronics', 'Other']);
+      setConditions(['Like New', 'Excellent', 'Good', 'Fair']);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -148,6 +154,7 @@ export default function AddGearPage() {
       [name]: value
     }));
     setError('');
+
   };
 
   const handleAddImage = () => {

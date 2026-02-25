@@ -40,8 +40,26 @@ const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [logoText, setLogoText] = useState('NomadNotes');
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch logo text from settings
+  useEffect(() => {
+    const fetchLogoText = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/site-settings/logoText`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.value) setLogoText(data.value);
+        }
+      } catch (error) {
+        console.error('Error fetching logo text:', error);
+      }
+    };
+    fetchLogoText();
+  }, []);
 
   // Initialize dark mode from localStorage or system preference
   useEffect(() => {
@@ -150,7 +168,7 @@ const Header: React.FC = () => {
                   <Plane className="w-5 h-5 -rotate-12" />
                 </div>
                 <h1 className="text-slate-900 dark:text-white text-xl font-black tracking-tight">
-                  NomadNotes
+                  {logoText}
                 </h1>
               </button>
             </div>
@@ -267,7 +285,7 @@ const Header: React.FC = () => {
             <div className="size-8 bg-[#059467] rounded-lg flex items-center justify-center text-white">
               <Plane className="w-5 h-5 -rotate-12" />
             </div>
-            <span className="font-bold text-slate-900 dark:text-white">NomadNotes</span>
+            <span className="font-bold text-slate-900 dark:text-white">{logoText}</span>
           </button>
           <button onClick={() => setMobileMenuOpen(false)} className="p-2 -mr-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 active:scale-95 transition-transform">
             <X className="w-5 h-5" />
@@ -349,7 +367,7 @@ const Header: React.FC = () => {
                 Log In
               </button>
               <button onClick={() => handleNavigation('/register')} className="w-full px-4 py-3 rounded-xl text-sm font-bold text-white bg-[#059467] active:bg-[#047854] transition-colors text-center shadow-md shadow-[#059467]/20">
-                Join NomadNotes
+                Join {logoText}
               </button>
             </div>
           )}

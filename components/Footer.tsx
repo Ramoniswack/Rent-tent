@@ -1,11 +1,55 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Facebook, Twitter, Instagram } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const router = useRouter();
+  const [settings, setSettings] = useState({
+    logoText: 'NomadNotes',
+    footerTagline: 'Empowering the modern explorer with tools to travel further, work smarter, and live freely.',
+    facebookUrl: 'https://facebook.com',
+    twitterUrl: 'https://twitter.com',
+    instagramUrl: 'https://instagram.com',
+    newsletterText: 'Join our newsletter to get the latest travel tips and gear updates.',
+    copyrightText: '© 2024 NomadNotes. All rights reserved.'
+  });
+  
+  const [productMenu, setProductMenu] = useState<Array<{label: string, url: string}>>([]);
+  const [companyMenu, setCompanyMenu] = useState<Array<{label: string, url: string}>>([]);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/site-settings`);
+        if (response.ok) {
+          const data = await response.json();
+          setSettings(prev => ({ ...prev, ...data }));
+        }
+      } catch (error) {
+        console.error('Error fetching footer settings:', error);
+      }
+    };
+    
+    const fetchMenus = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
+        const response = await fetch(`${apiUrl}/api/profile-field-options`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.footerProductMenu) setProductMenu(data.footerProductMenu);
+          if (data.footerCompanyMenu) setCompanyMenu(data.footerCompanyMenu);
+        }
+      } catch (error) {
+        console.error('Error fetching footer menus:', error);
+      }
+    };
+    
+    fetchSettings();
+    fetchMenus();
+  }, []);
 
   return (
     <footer className="hidden md:block bg-[#0b1713] text-white py-12 px-6 lg:px-20 mt-0">
@@ -16,26 +60,32 @@ const Footer: React.FC = () => {
             <div className="size-8 bg-[#059467] rounded-lg flex items-center justify-center text-white">
               <MapPin className="w-5 h-5" />
             </div>
-            <span className="text-white text-xl font-bold tracking-tight">NomadNotes</span>
+            <span className="text-white text-xl font-bold tracking-tight">{settings.logoText}</span>
           </div>
           <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
-            Empowering the modern explorer with tools to travel further, work smarter, and live freely.
+            {settings.footerTagline}
           </p>
           <div className="flex gap-4 mt-4">
             <a
-              href="#"
+              href={settings.facebookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
             >
               <Facebook className="w-5 h-5 text-slate-400 hover:text-white" />
             </a>
             <a
-              href="#"
+              href={settings.twitterUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
             >
               <Twitter className="w-5 h-5 text-slate-400 hover:text-white" />
             </a>
             <a
-              href="#"
+              href={settings.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
             >
               <Instagram className="w-5 h-5 text-slate-400 hover:text-white" />
@@ -46,57 +96,56 @@ const Footer: React.FC = () => {
         {/* Links Column 1 */}
         <div className="md:col-span-2 flex flex-col gap-4">
           <h4 className="text-white font-bold text-sm uppercase tracking-wider">Product</h4>
-          <button
-            onClick={() => router.push('/match')}
-            className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
-          >
-            Match
-          </button>
-          <button
-            onClick={() => router.push('/gear')}
-            className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
-          >
-            Gear Rental
-          </button>
-          <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Messages
-          </a>
-          <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Map
-          </a>
+          {productMenu.map((item, index) => (
+            item.url.startsWith('/') ? (
+              <button
+                key={index}
+                onClick={() => router.push(item.url)}
+                className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
+              >
+                {item.label}
+              </button>
+            ) : (
+              <a
+                key={index}
+                href={item.url}
+                className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm"
+              >
+                {item.label}
+              </a>
+            )
+          ))}
         </div>
 
         {/* Links Column 2 */}
         <div className="md:col-span-2 flex flex-col gap-4">
           <h4 className="text-white font-bold text-sm uppercase tracking-wider">Company</h4>
-          <button
-            onClick={() => router.push('/about')}
-            className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
-          >
-            About Us
-          </button>
-          <button
-            onClick={() => router.push('/contact')}
-            className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
-          >
-            Contact
-          </button>
-          <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Careers
-          </a>
-          <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Community
-          </a>
-          <a href="#" className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm">
-            Blog
-          </a>
+          {companyMenu.map((item, index) => (
+            item.url.startsWith('/') ? (
+              <button
+                key={index}
+                onClick={() => router.push(item.url)}
+                className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm text-left"
+              >
+                {item.label}
+              </button>
+            ) : (
+              <a
+                key={index}
+                href={item.url}
+                className="text-slate-400 hover:text-white hover:translate-x-1 transition-all text-sm"
+              >
+                {item.label}
+              </a>
+            )
+          ))}
         </div>
 
         {/* Newsletter Column */}
         <div className="md:col-span-4 flex flex-col gap-4">
           <h4 className="text-white font-bold text-sm uppercase tracking-wider">Subscribe</h4>
           <p className="text-slate-400 text-sm">
-            Join our newsletter to get the latest travel tips and gear updates.
+            {settings.newsletterText}
           </p>
           <div className="flex flex-col sm:flex-row gap-2 mt-2">
             <input
@@ -112,7 +161,7 @@ const Footer: React.FC = () => {
       </div>
 
       <div className="max-w-[1440px] mx-auto mt-20 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p className="text-slate-500 text-sm">© 2024 NomadNotes Inc. All rights reserved.</p>
+        <p className="text-slate-500 text-sm">{settings.copyrightText}</p>
         <div className="flex gap-6">
           <a href="#" className="text-slate-500 hover:text-white text-sm transition-colors">
             Privacy Policy
