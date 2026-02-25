@@ -208,6 +208,9 @@ const Header: React.FC = () => {
                           <button onClick={() => handleNavigation('/account')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <Settings className="w-4 h-4 text-slate-400" /> Account Settings
                           </button>
+                          <button onClick={() => handleNavigation(`/seller/${user.username}`)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <Backpack className="w-4 h-4 text-slate-400" /> Gears Dashboard
+                          </button>
                           <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <div className="flex items-center gap-2.5">
                               {isDarkMode ? <Moon className="w-4 h-4 text-slate-400" /> : <Sun className="w-4 h-4 text-slate-400" />}
@@ -326,6 +329,10 @@ const Header: React.FC = () => {
               <button onClick={() => handleNavigation('/account')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <Settings className="w-4 h-4 text-slate-400" />
                 <span>Account Settings</span>
+              </button>
+              <button onClick={() => handleNavigation(`/seller/${user.username}`)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <Backpack className="w-4 h-4 text-slate-400" />
+                <span>Gears Dashboard</span>
               </button>
               <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
                 <LogOut className="w-4 h-4" />

@@ -809,6 +809,61 @@ export const adminAPI = {
       method: 'DELETE',
     });
   },
+
+  // Page management
+  getPages: async () => {
+    return apiRequest('/admin/pages');
+  },
+
+  createPage: async (pageData: {
+    slug: string;
+    title: string;
+    content: string;
+    metaDescription?: string;
+    isPublished?: boolean;
+    pageType: 'home' | 'about' | 'contact' | 'custom';
+    sections?: Array<{
+      type: 'hero' | 'features' | 'cta' | 'text' | 'image';
+      title?: string;
+      content?: string;
+      imageUrl?: string;
+      buttonText?: string;
+      buttonLink?: string;
+      order?: number;
+    }>;
+  }) => {
+    return apiRequest('/admin/pages', {
+      method: 'POST',
+      body: JSON.stringify(pageData),
+    });
+  },
+
+  updatePage: async (id: string, pageData: {
+    title?: string;
+    content?: string;
+    metaDescription?: string;
+    isPublished?: boolean;
+    sections?: Array<{
+      type: 'hero' | 'features' | 'cta' | 'text' | 'image';
+      title?: string;
+      content?: string;
+      imageUrl?: string;
+      buttonText?: string;
+      buttonLink?: string;
+      order?: number;
+    }>;
+  }) => {
+    return apiRequest(`/admin/pages/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(pageData),
+    });
+  },
+
+  deletePage: async (id: string) => {
+    return apiRequest(`/admin/pages/${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 export default {

@@ -167,7 +167,7 @@ export default function SellerDashboardPage() {
 
             <div className="flex-1 text-center md:text-left space-y-4">
               <div>
-                <h1 className="text-3xl md:text-5xl font-black text-[#0d1c17] dark:text-white mb-1">
+                <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white mb-1">
                   {sellerData?.user.name}
                 </h1>
                 <p className="text-[#059467] font-black text-sm uppercase tracking-[0.2em]">@{sellerData?.user.username}</p>
@@ -214,7 +214,7 @@ export default function SellerDashboardPage() {
                   className={`px-8 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all ${
                     activeTab === tab 
                       ? 'bg-[#059467] text-white shadow-lg' 
-                      : 'text-slate-400 hover:text-[#059467]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-[#059467]'
                   }`}
                 >
                   {tab === 'gear' ? 'Inventory' : 'Active Rentals'}
@@ -225,7 +225,7 @@ export default function SellerDashboardPage() {
             {activeTab === 'rentals' ? (
               <div className="animate-slideUp">
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-2xl font-black dark:text-white flex items-center gap-3">
+                  <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                     <TrendingUp className="text-[#059467]" /> Rental Operations
                   </h2>
                 </div>
@@ -241,8 +241,8 @@ export default function SellerDashboardPage() {
                           <img src={rental.gear?.images?.[0]} className="w-full h-full object-cover" alt="Gear" />
                         </div>
                         <div className="flex-1 text-center md:text-left space-y-1">
-                          <h4 className="font-black text-lg dark:text-white group-hover:text-[#059467] transition-colors">{rental.gear?.title}</h4>
-                          <p className="text-sm text-slate-500 font-bold uppercase tracking-wider">Rented by {rental.renter?.name}</p>
+                          <h4 className="font-black text-lg text-slate-900 dark:text-white group-hover:text-[#059467] transition-colors">{rental.gear?.title}</h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-500 font-bold uppercase tracking-wider">Rented by {rental.renter?.name}</p>
                           <div className="flex flex-wrap justify-center md:justify-start gap-4 pt-2">
                             <span className="text-xs font-black px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 rounded-full uppercase tracking-tighter">
                               Status: {rental.status}
@@ -262,8 +262,8 @@ export default function SellerDashboardPage() {
                 ) : (
                   <div className="py-20 text-center bg-white dark:bg-[#1a2c26] rounded-[2rem] border-2 border-dashed border-slate-200 dark:border-white/5">
                     <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold dark:text-white">No active rentals found</h3>
-                    <p className="text-slate-500">Listed gear waiting for its next adventure.</p>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white">No active rentals found</h3>
+                    <p className="text-slate-600 dark:text-slate-500">Listed gear waiting for its next adventure.</p>
                   </div>
                 )}
               </div>
@@ -308,10 +308,10 @@ function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }:
     <div className="animate-slideUp">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
         <div>
-          <h2 className="text-2xl font-black dark:text-white flex items-center gap-3">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
             <ShoppingBag className="text-[#059467]" /> {isOwn ? 'Your Inventory' : 'Available Gear'}
           </h2>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-[0.1em]">{gear.length} Items Listed</p>
+          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">{gear.length} Items Listed</p>
         </div>
         
         {/* Category Pill Filters */}
@@ -319,7 +319,7 @@ function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }:
           <button
             onClick={() => setCat('')}
             className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-              !selectedCat ? 'bg-[#059467] text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-[#1a2c26] text-slate-400 hover:bg-slate-50'
+              !selectedCat ? 'bg-[#059467] text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-[#1a2c26] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             All Items
@@ -329,7 +329,7 @@ function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }:
               key={cat}
               onClick={() => setCat(cat)}
               className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-                selectedCat === cat ? 'bg-[#059467] text-white shadow-lg' : 'bg-white dark:bg-[#1a2c26] text-slate-400 hover:bg-slate-50'
+                selectedCat === cat ? 'bg-[#059467] text-white shadow-lg' : 'bg-white dark:bg-[#1a2c26] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
               {cat}
@@ -362,13 +362,13 @@ function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }:
               </div>
               <div className="p-8 pt-2 space-y-4">
                 <div className="flex justify-between items-start">
-                  <h3 className="font-black text-xl text-[#0d1c17] dark:text-white leading-tight group-hover:text-[#059467] transition-colors">{item.title}</h3>
+                  <h3 className="font-black text-xl text-slate-900 dark:text-white leading-tight group-hover:text-[#059467] transition-colors">{item.title}</h3>
                   <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg">
                     <Star size={12} className="text-amber-500 fill-amber-500" />
                     <span className="text-xs font-black text-amber-700">{item.rating || 4.5}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest">
                   <MapPin size={14} className="text-emerald-500" />
                   {getCityName(item.location)}
                 </div>
@@ -379,8 +379,8 @@ function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }:
       ) : (
         <div className="py-32 text-center bg-white dark:bg-[#1a2c26] rounded-[3rem] border border-slate-100 dark:border-white/5">
           <Package size={64} className="mx-auto text-slate-200 mb-6" />
-          <h3 className="text-2xl font-black dark:text-white">Inventory is empty</h3>
-          <p className="text-slate-400">No gear matching this category was found.</p>
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white">Inventory is empty</h3>
+          <p className="text-slate-600 dark:text-slate-400">No gear matching this category was found.</p>
         </div>
       )}
     </div>

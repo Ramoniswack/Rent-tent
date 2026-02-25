@@ -689,8 +689,18 @@ export default function AccountPage() {
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2"><Wallet className="w-4 h-4 text-slate-400" /> Currency</label>
                       <select name="currency" value={formData.currency} onChange={handleInputChange} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/50 appearance-none cursor-pointer">
-                        <option>USD ($)</option><option>EUR (€)</option><option>GBP (£)</option><option>NPR (Rs)</option>
+                        <option>USD ($)</option>
+                        <option>EUR (€)</option>
+                        <option>GBP (£)</option>
+                        <option>NPR (Rs)</option>
+                        <option>INR (₹)</option>
+                        <option>AUD ($)</option>
+                        <option>CAD ($)</option>
+                        <option>JPY (¥)</option>
                       </select>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        This currency will be used throughout the app for trips, expenses, and gear rentals.
+                      </p>
                     </div>
                   </div>
 
@@ -698,9 +708,9 @@ export default function AccountPage() {
                     <h4 className="font-bold text-slate-900 dark:text-white mb-3">Privacy & Notifications</h4>
                     
                     {[
-                      { name: 'emailNotifications', title: 'Email Notifications', desc: 'Receive updates about your trips and rentals.' },
-                      { name: 'publicProfile', title: 'Public Profile', desc: 'Allow other nomads to view your profile and reviews.' },
-                      { name: 'shareLocation', title: 'Location Sharing', desc: 'Help locals and travelers find you on the map.' }
+                      { name: 'emailNotifications', title: 'App Notifications', desc: 'Receive push notifications about trips, bookings, and matches.' },
+                      { name: 'publicProfile', title: 'Public Profile', desc: 'Allow other nomads to view your profile and reviews in match discover.' },
+                      { name: 'shareLocation', title: 'Location Sharing', desc: 'Show your location on friends map and in match profiles.' }
                     ].map((item) => (
                       <div key={item.name} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-slate-200 dark:hover:border-slate-700 transition-colors">
                         <div>

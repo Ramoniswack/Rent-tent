@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
+import MatchSuccess from '../../../components/MatchSuccess';
 import { 
   Heart, 
   Send,
@@ -17,7 +18,7 @@ import {
   Search,
   Sparkles
 } from 'lucide-react';
-import { matchAPI } from '../../../services/api';
+import { matchAPI, userAPI } from '../../../services/api';
 
 interface User {
   _id: string;
@@ -46,6 +47,21 @@ const LikesPage: React.FC = () => {
   const [likedYou, setLikedYou] = useState<LikeItem[]>([]);
   const [sentLikes, setSentLikes] = useState<LikeItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showMatch, setShowMatch] = useState(false);
+  const [lastMatch, setLastMatch] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const profile = await userAPI.getProfile();
+        setUserProfile(profile);
+      } catch (err) {
+        console.error('Failed to load user profile:', err);
+      }
+    };
+    loadUserProfile();
+  }, []);
 
   const fetchLikes = useCallback(async () => {
     try {
@@ -70,10 +86,12 @@ const LikesPage: React.FC = () => {
   const handleLikeBack = async (userId: string) => {
     try {
       const result = await matchAPI.likeUser(userId);
-      if (result.matched) {
+      if (result.matched && result.matchedUser) {
         // Remove from current list locally for instant feedback
         setLikedYou(prev => prev.filter(item => item.user._id !== userId));
-        router.push('/match/discover');
+        // Show match success modal
+        setLastMatch(result.matchedUser);
+        setShowMatch(true);
       }
     } catch (error) {
       console.error('Failed to finalize match:', error);
@@ -287,6 +305,29 @@ const LikesPage: React.FC = () => {
           <Footer />
         </div>
       </div>
+
+      {showMatch && lastMatch && userProfile && (
+        <MatchSuccess
+          isOpen={showMatch}
+          onClose={() => { 
+            setShowMatch(false); 
+            setLastMatch(null); 
+          }}
+          onSendMessage={() => { 
+            setShowMatch(false); 
+            setLastMatch(null); 
+            router.push(`/messages?user=${lastMatch.id || lastMatch._id}`); 
+          }}
+          matchedUser={{ 
+            name: lastMatch.name, 
+            profilePicture: lastMatch.profilePicture 
+          }}
+          currentUser={{ 
+            name: userProfile.name, 
+            profilePicture: userProfile.profilePicture 
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 };
