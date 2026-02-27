@@ -670,11 +670,12 @@ function AnalyticsDashboard({ analytics, loading, dateRange, setDateRange, onRef
             <div className="relative w-48 h-48">
               <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                 {(() => {
-                  const total = (Object.values(analytics.charts.bookingsByStatus) as number[]).reduce((a, b) => a + b, 0);
+                  const bookingValues = Object.values(analytics.charts.bookingsByStatus) as number[];
+                  const total = bookingValues.reduce((a: number, b: number) => a + b, 0);
                   let currentAngle = 0;
                   const colors = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444'];
                   
-                  return Object.entries(analytics.charts.bookingsByStatus).map(([status, count]: [string, any], idx) => {
+                  return (Object.entries(analytics.charts.bookingsByStatus) as [string, number][]).map(([status, count], idx) => {
                     const angle = ((count / total) * 360) || 0;
                     const startAngle = currentAngle;
                     currentAngle += angle;
@@ -712,7 +713,10 @@ function AnalyticsDashboard({ analytics, loading, dateRange, setDateRange, onRef
               {/* Center text */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <p className="text-3xl font-black text-slate-900 dark:text-white">
-                  {(Object.values(analytics.charts.bookingsByStatus) as number[]).reduce((a, b) => a + b, 0)}
+                  {(() => {
+                    const bookingValues = Object.values(analytics.charts.bookingsByStatus) as number[];
+                    return bookingValues.reduce((a: number, b: number) => a + b, 0);
+                  })()}
                 </p>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total</p>
               </div>
@@ -720,7 +724,7 @@ function AnalyticsDashboard({ analytics, loading, dateRange, setDateRange, onRef
             
             {/* Legend */}
             <div className="ml-8 space-y-2">
-              {Object.entries(analytics.charts.bookingsByStatus).map(([status, count]: [string, any], idx) => {
+              {(Object.entries(analytics.charts.bookingsByStatus) as [string, number][]).map(([status, count], idx) => {
                 const colors = ['#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444'];
                 return (
                   <div key={status} className="flex items-center gap-2">
@@ -793,8 +797,10 @@ function MetricCard({ icon, label, value, trend, color }: any) {
     amber: 'bg-amber-50 dark:bg-amber-500/10'
   };
 
+  const bgColor = (color && colorClasses[color]) ? colorClasses[color] : colorClasses.emerald;
+
   return (
-    <div className={`${colorClasses[color] || colorClasses.emerald} p-6 rounded-2xl border border-white/50 dark:border-white/5`}>
+    <div className={`${bgColor} p-6 rounded-2xl border border-white/50 dark:border-white/5`}>
       <div className="flex items-center justify-between mb-4">
         <div className="p-3 bg-white dark:bg-[#1a2c26] rounded-xl shadow-sm">
           {icon}

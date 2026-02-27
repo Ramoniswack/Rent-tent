@@ -6,6 +6,10 @@ import { MapPin, Facebook, Twitter, Instagram } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [settings, setSettings] = useState({
     logoText: 'NomadNotes',
     footerTagline: 'Empowering the modern explorer with tools to travel further, work smarter, and live freely.',
@@ -50,6 +54,49 @@ const Footer: React.FC = () => {
     fetchSettings();
     fetchMenus();
   }, []);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      setMessage('Please enter your email address');
+      setMessageType('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage('');
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${apiUrl}/newsletter/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, source: 'footer' }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage(data.message);
+        setMessageType('success');
+        setEmail('');
+      } else {
+        setMessage(data.message || 'Failed to subscribe. Please try again.');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error('Newsletter subscription error:', error);
+      setMessage('Failed to subscribe. Please check your connection.');
+      setMessageType('error');
+    } finally {
+      setIsSubmitting(false);
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage(''), 5000);
+    }
+  };
 
   return (
     <footer className="hidden md:block bg-[#0b1713] text-white py-12 px-6 lg:px-20 mt-0">
@@ -147,16 +194,30 @@ const Footer: React.FC = () => {
           <p className="text-slate-400 text-sm">
             {settings.newsletterText}
           </p>
-          <div className="flex flex-col sm:flex-row gap-2 mt-2">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#059467] focus:border-transparent flex-grow"
-            />
-            <button className="bg-[#059467] hover:bg-[#047a55] text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors">
-              Subscribe
-            </button>
-          </div>
+          <form onSubmit={handleSubscribe} className="flex flex-col gap-2 mt-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                disabled={isSubmitting}
+                className="bg-white/10 border border-white/20 rounded-full px-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#059467] focus:border-transparent flex-grow disabled:opacity-50"
+              />
+              <button 
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-[#059467] hover:bg-[#047a55] text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </div>
+            {message && (
+              <p className={`text-sm ${messageType === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                {message}
+              </p>
+            )}
+          </form>
         </div>
       </div>
 
