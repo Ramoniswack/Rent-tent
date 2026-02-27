@@ -69,15 +69,21 @@ export default function SiteSettingsAdmin() {
   const fetchSettings = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/site-settings`);
-      if (!response.ok) throw new Error('Failed to fetch settings');
-      const data = await response.json();
       
-      // Ensure footer menus are arrays
+      // Fetch site settings
+      const settingsResponse = await fetch(`${apiUrl}/api/site-settings`);
+      if (!settingsResponse.ok) throw new Error('Failed to fetch settings');
+      const settingsData = await settingsResponse.json();
+      
+      // Fetch footer menus from profile-field-options
+      const menusResponse = await fetch(`${apiUrl}/api/profile-field-options`);
+      const menusData = menusResponse.ok ? await menusResponse.json() : {};
+      
+      // Combine both data sources
       setSettings({
-        ...data,
-        footerProductMenu: Array.isArray(data.footerProductMenu) ? data.footerProductMenu : [],
-        footerCompanyMenu: Array.isArray(data.footerCompanyMenu) ? data.footerCompanyMenu : []
+        ...settingsData,
+        footerProductMenu: Array.isArray(menusData.footerProductMenu) ? menusData.footerProductMenu : [],
+        footerCompanyMenu: Array.isArray(menusData.footerCompanyMenu) ? menusData.footerCompanyMenu : []
       });
     } catch (err: any) {
       setError(err.message);
@@ -93,18 +99,35 @@ export default function SiteSettingsAdmin() {
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
       
-      const response = await fetch(`${apiUrl}/api/admin/site-settings/${key}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ value: settings[key] })
-      });
+      // Footer menus are stored in profile-field-options, not site-settings
+      if (key === 'footerProductMenu' || key === 'footerCompanyMenu') {
+        const response = await fetch(`${apiUrl}/api/profile-field-options/${key}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ menuItems: settings[key] })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || 'Failed to save setting');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Failed to save menu');
+        }
+      } else {
+        const response = await fetch(`${apiUrl}/api/admin/site-settings/${key}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ value: settings[key] })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Failed to save setting');
+        }
       }
       
       setSuccessMessage('Setting updated successfully!');
