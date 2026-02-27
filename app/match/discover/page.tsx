@@ -93,24 +93,31 @@ export default function DiscoverPage() {
         matchAPI.getSentLikes()
       ]);
 
-      const formatUser = (data: any, status: UserCard['connectionStatus']): UserCard => ({
-        id: data.id || data.user?._id || data._id,
-        name: data.name || data.user?.name,
-        username: data.username || data.user?.username,
-        age: data.age || data.user?.age || 'N/A',
-        gender: data.gender || data.user?.gender,
-        location: data.location || data.user?.location || 'Unknown',
-        coverImage: data.upcomingTrips?.[0]?.coverPhoto || data.user?.upcomingTrips?.[0]?.coverPhoto || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
-        avatar: data.profilePicture || data.user?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || data.user?.name)}&background=059467`,
-        travelStyles: Array.isArray(data.travelStyle || data.user?.travelStyle) ? (data.travelStyle || data.user?.travelStyle) : [],
-        connectionStatus: status,
-        bio: data.bio || data.user?.bio,
-        distance: data.distance,
-        upcomingTrips: data.upcomingTrips || data.user?.upcomingTrips || [],
-        interests: data.interests || data.user?.interests || [],
-        totalConnections: data.totalConnections || data.user?.totalConnections || 0,
-        matchScore: data.matchScore
-      });
+      const formatUser = (data: any, status: UserCard['connectionStatus']): UserCard => {
+        const travelStyle = data.travelStyle || data.user?.travelStyle;
+        const travelStylesArray = Array.isArray(travelStyle) 
+          ? travelStyle 
+          : (typeof travelStyle === 'string' && travelStyle.trim() ? [travelStyle] : []);
+        
+        return {
+          id: data.id || data.user?._id || data._id,
+          name: data.name || data.user?.name,
+          username: data.username || data.user?.username,
+          age: data.age || data.user?.age || 'N/A',
+          gender: data.gender || data.user?.gender,
+          location: data.location || data.user?.location || 'Unknown',
+          coverImage: data.upcomingTrips?.[0]?.coverPhoto || data.user?.upcomingTrips?.[0]?.coverPhoto || 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800',
+          avatar: data.profilePicture || data.user?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || data.user?.name)}&background=059467`,
+          travelStyles: travelStylesArray,
+          connectionStatus: status,
+          bio: data.bio || data.user?.bio,
+          distance: data.distance,
+          upcomingTrips: data.upcomingTrips || data.user?.upcomingTrips || [],
+          interests: data.interests || data.user?.interests || [],
+          totalConnections: data.totalConnections || data.user?.totalConnections || 0,
+          matchScore: data.matchScore
+        };
+      };
 
       // BATCH UPDATES: Prepare all data before updating state
       const formattedDiscover = discoverRes.success ? discoverRes.profiles.map((p: any) => formatUser(p, p.connectionStatus || 'none')) : [];
@@ -155,19 +162,49 @@ export default function DiscoverPage() {
     if (activeTab === 'outgoing') source = outgoingLikes;
 
     return source.filter(user => {
+      // Search query filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const searchFields = [user.name, user.username, user.location, ...(user.interests || []), ...(user.travelStyles || [])];
         if (!searchFields.some(f => f?.toLowerCase().includes(query))) return false;
       }
+      
+      // Age range filter
       const age = Number(user.age);
       if (!isNaN(age) && (age < filters.ageRange[0] || age > filters.ageRange[1])) return false;
+      
+      // Gender filter
       if (filters.selectedGenders.length > 0 && !filters.selectedGenders.includes('Any')) {
         if (!user.gender || !filters.selectedGenders.some(g => g.toLowerCase() === user.gender?.toLowerCase())) return false;
       }
+      
+      // Travel styles filter
+      if (filters.selectedTravelStyles.length > 0) {
+        const userTravelStyles = Array.isArray(user.travelStyles) ? user.travelStyles : [];
+        const hasMatchingStyle = filters.selectedTravelStyles.some(filterStyle => 
+          userTravelStyles.some(userStyle => 
+            userStyle?.toLowerCase() === filterStyle?.toLowerCase()
+          )
+        );
+        if (!hasMatchingStyle) return false;
+      }
+      
+      // Interests filter
+      if (filters.selectedInterests.length > 0) {
+        const userInterests = Array.isArray(user.interests) ? user.interests : [];
+        const hasMatchingInterest = filters.selectedInterests.some(filterInterest => 
+          userInterests.some(userInterest => 
+            userInterest?.toLowerCase() === filterInterest?.toLowerCase()
+          )
+        );
+        if (!hasMatchingInterest) return false;
+      }
+      
+      // Location range filter
       if (filters.locationRange < 500 && user.distance !== undefined) {
         if (user.distance > filters.locationRange) return false;
       }
+      
       return true;
     });
   }, [activeTab, users, matches, incomingLikes, outgoingLikes, searchQuery, filters]);
@@ -216,13 +253,14 @@ export default function DiscoverPage() {
         <div className="sticky top-4 z-30 mb-12">
           <div className="bg-white/80 dark:bg-[#1a3830]/80 backdrop-blur-xl rounded-[2.5rem] p-3 shadow-2xl border border-white dark:border-white/5 flex flex-col md:flex-row items-center gap-3">
             <div className="flex-1 relative w-full">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[#059467] w-5 h-5" />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[#059467] w-5 h-5 pointer-events-none z-10" />
               <input
                 type="text"
                 placeholder="Search nomads..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-14 pl-14 pr-6 bg-slate-50 dark:bg-[#0f231d] border-none rounded-3xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white font-bold"
+                autoComplete="off"
+                className="w-full h-14 pl-14 pr-6 bg-slate-50 dark:bg-[#0f231d] border-none rounded-3xl focus:ring-2 focus:ring-[#059467] text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-bold focus:outline-none"
               />
             </div>
             <button 
@@ -338,6 +376,23 @@ export default function DiscoverPage() {
         @keyframes loading {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
+        }
+        
+        /* Prevent autocomplete dropdown styling issues */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus,
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px rgb(248 250 252) inset !important;
+          -webkit-text-fill-color: rgb(15 23 42) !important;
+        }
+        
+        .dark input:-webkit-autofill,
+        .dark input:-webkit-autofill:hover,
+        .dark input:-webkit-autofill:focus,
+        .dark input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px rgb(15 35 29) inset !important;
+          -webkit-text-fill-color: rgb(255 255 255) !important;
         }
       `}</style>
     </div>

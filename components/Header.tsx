@@ -109,11 +109,11 @@ const Header: React.FC = () => {
     { icon: <Mail className="w-[18px] h-[18px]" />, label: 'Messages', path: '/messages', private: true },
     { icon: <Backpack className="w-[18px] h-[18px]" />, label: 'Gear Rental', path: '/gear', private: false },
     { icon: <MapIcon className="w-[18px] h-[18px]" />, label: 'Map', path: '/map', private: true },
-    { icon: <Inbox className="w-[18px] h-[18px]" />, label: 'My Rentals', path: '/rentals/dashboard', private: true },
+
   ];
 
   const adminNavItems = user?.isAdmin 
-    ? [{ icon: <Shield className="w-[18px] h-[18px]" />, label: 'Admin', path: '/admin', private: true }]
+    ? []
     : [];
 
   const displayNavItems = user ? [...privateNavItems, ...adminNavItems] : navItems;
@@ -223,11 +223,16 @@ const Header: React.FC = () => {
                           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
                         </div>
                         <div className="p-1.5">
-                          <button onClick={() => handleNavigation('/account')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                            <Settings className="w-4 h-4 text-slate-400" /> Account Settings
+                 
+                          <button onClick={() => handleNavigation('/rentals/dashboard')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <Inbox className="w-4 h-4 text-slate-400" /> My Rentals
                           </button>
+                      
                           <button onClick={() => handleNavigation(`/seller/${user.username}`)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <Backpack className="w-4 h-4 text-slate-400" /> Gears Dashboard
+                          </button>
+                                   <button onClick={() => handleNavigation('/account')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <Settings className="w-4 h-4 text-slate-400" /> Account Settings
                           </button>
                           <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <div className="flex items-center gap-2.5">
@@ -238,6 +243,11 @@ const Header: React.FC = () => {
                               <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${isDarkMode ? 'left-[18px]' : 'left-0.5'}`} />
                             </div>
                           </button>
+                            {user.isAdmin && (
+                            <button onClick={() => handleNavigation('/admin')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                              <Shield className="w-4 h-4 text-slate-400" /> Admin
+                            </button>
+                          )}
                           <button onClick={handleLogout} className="w-full flex items-center gap-2.5 px-3 py-2 mt-1 text-sm font-medium text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
                             <LogOut className="w-4 h-4" /> Logout
                           </button>
@@ -338,19 +348,29 @@ const Header: React.FC = () => {
         <div className="p-4 border-t border-slate-100 dark:border-slate-800/50">
           {user ? (
             <div className="flex flex-col gap-1">
+              <button onClick={() => handleNavigation('/account')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>Account Settings</span>
+              </button>
+              <button onClick={() => handleNavigation('/rentals/dashboard')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <Inbox className="w-4 h-4 text-slate-400" />
+                <span>My Rentals</span>
+              </button>
+              {user.isAdmin && (
+                <button onClick={() => handleNavigation('/admin')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <Shield className="w-4 h-4 text-slate-400" />
+                  <span>Admin</span>
+                </button>
+              )}
+              <button onClick={() => handleNavigation(`/seller/${user.username}`)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <Backpack className="w-4 h-4 text-slate-400" />
+                <span>Gears Dashboard</span>
+              </button>
               <button onClick={toggleTheme} className="flex items-center justify-between w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-center gap-3">
                   {isDarkMode ? <Moon className="w-4 h-4 text-slate-400" /> : <Sun className="w-4 h-4 text-slate-400" />}
                   <span>{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
                 </div>
-              </button>
-              <button onClick={() => handleNavigation('/account')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <Settings className="w-4 h-4 text-slate-400" />
-                <span>Account Settings</span>
-              </button>
-              <button onClick={() => handleNavigation(`/seller/${user.username}`)} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                <Backpack className="w-4 h-4 text-slate-400" />
-                <span>Gears Dashboard</span>
               </button>
               <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors">
                 <LogOut className="w-4 h-4" />

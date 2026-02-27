@@ -257,6 +257,18 @@ export const bookingAPI = {
       body: JSON.stringify({ rating, review }),
     });
   },
+
+  // Get owner analytics
+  getAnalytics: async (filters?: { startDate?: string; endDate?: string }) => {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+    }
+    const query = params.toString();
+    return apiRequest(`/gear/analytics/dashboard${query ? `?${query}` : ''}`);
+  },
 };
 
 // Auth API
@@ -276,6 +288,13 @@ export const authAPI = {
     return apiRequest('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
+    });
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    return apiRequest('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
 

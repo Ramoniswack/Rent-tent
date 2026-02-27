@@ -23,7 +23,8 @@ import {
   ArrowRight,
   Sparkles,
   Truck,
-  Headphones
+  Headphones,
+  X
 } from 'lucide-react';
 
 export default function BookGearPage() {
@@ -126,7 +127,8 @@ export default function BookGearPage() {
 
   const fetchUnavailableDates = async (gearId: string) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/gear/${gearId}/unavailable-dates`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const response = await fetch(`${apiUrl}/gear/${gearId}/unavailable-dates`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -134,11 +136,13 @@ export default function BookGearPage() {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Fetched unavailable dates:', data);
         // Convert date strings to Date objects
         const dates = data.map((range: any) => ({
           start: new Date(range.startDate),
           end: new Date(range.endDate)
         }));
+        console.log('Converted booked dates:', dates);
         setBookedDates(dates);
       }
     } catch (error) {
@@ -175,13 +179,19 @@ export default function BookGearPage() {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     date.setHours(0, 0, 0, 0);
     
-    return bookedDates.some(range => {
+    const isBooked = bookedDates.some(range => {
       const start = new Date(range.start);
       const end = new Date(range.end);
       start.setHours(0, 0, 0, 0);
       end.setHours(0, 0, 0, 0);
       return date >= start && date <= end;
     });
+    
+    if (isBooked) {
+      console.log(`Date ${day} is booked`);
+    }
+    
+    return isBooked;
   };
 
   const handleDateClick = (day: number) => {
@@ -591,9 +601,11 @@ export default function BookGearPage() {
                         onClick={() => handleDateClick(day)}
                         disabled={isDisabled}
                         title={isPast ? 'Past date' : isBooked ? 'Already booked' : ''}
-                        className={`flex h-10 sm:h-12 items-center justify-center text-xs sm:text-sm font-semibold transition-all ${
-                          isDisabled
-                            ? 'bg-[#fee2e2] dark:bg-red-900/20 text-[#ef4444]/50 dark:text-red-400/50 cursor-not-allowed line-through'
+                        className={`flex h-10 sm:h-12 items-center justify-center text-xs sm:text-sm font-semibold transition-all relative ${
+                          isBooked
+                            ? 'bg-[#ffe4e6] dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 cursor-not-allowed border-2 border-rose-300 dark:border-rose-700'
+                            : isPast
+                            ? 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 cursor-not-allowed line-through'
                             : isStart || isEnd
                             ? 'bg-[#059467] text-white shadow-lg ' + (isStart ? 'rounded-l-full' : '') + (isEnd ? 'rounded-r-full' : '')
                             : inRange
@@ -601,6 +613,9 @@ export default function BookGearPage() {
                             : 'text-[#0d1c17] dark:text-white hover:bg-[#059467]/10'
                         }`}
                       >
+                        {isBooked && (
+                          <X className="absolute w-4 h-4 text-rose-500 opacity-50" />
+                        )}
                         {day}
                       </button>
                     );
@@ -614,8 +629,12 @@ export default function BookGearPage() {
                     <span>Selected</span>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2">
-                    <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#fee2e2] border border-red-200" />
-                    <span>Booked/Past</span>
+                    <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#ffe4e6] border-2 border-rose-300" />
+                    <span>Booked</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-slate-100 border border-slate-300" />
+                    <span>Past</span>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <div className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-[#059467]/10" />

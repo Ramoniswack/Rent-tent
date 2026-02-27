@@ -6,7 +6,6 @@ import Header from '../../../components/Header';
 import Footer from '../../../components/Footer';
 import ProtectedRoute from '../../../components/ProtectedRoute';
 import Toast from '../../../components/Toast';
-import ConfirmModal from '../../../components/ConfirmModal';
 import { BookingCardSkeleton } from '../../../components/SkeletonCard';
 import { bookingAPI } from '../../../services/api';
 import { useAuth } from '../../../hooks/useAuth';
@@ -29,23 +28,12 @@ function RentalDashboard() {
   const router = useRouter();
   const { user } = useAuth();
   
-  // Get initial tab from URL or default to 'rentals'
-  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const initialTab = (searchParams.get('tab') as 'rentals' | 'requests') || 'rentals';
-  
-  const [activeTab, setActiveTab] = useState<'rentals' | 'requests'>(initialTab);
   const [filterStatus, setFilterStatus] = useState<'all' | BookingStatus>('all');
-  const [myRentals, setMyRentals] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
-  const [confirmModal, setConfirmModal] = useState<{
-    bookingId: string;
-    status: string;
-    type: 'confirm' | 'decline';
-  } | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -55,27 +43,11 @@ function RentalDashboard() {
     fetchBookings();
   }, [user]);
 
-  const handleTabChange = (tab: 'rentals' | 'requests') => {
-    setActiveTab(tab);
-    setFilterStatus('all'); // Reset filter on tab change
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', tab);
-    window.history.pushState({}, '', url.toString());
-  };
-
   const fetchBookings = async () => {
     try {
       setLoading(true);
       setError('');
       
-      try {
-        const rentalsData = await bookingAPI.getGearBookings();
-        setMyRentals(rentalsData || []);
-      } catch (err) {
-        console.error('Error fetching rentals:', err);
-        setMyRentals([]);
-      }
-
       try {
         const requestsData = await bookingAPI.getMyBookings();
         setMyRequests(requestsData || []);
@@ -94,24 +66,6 @@ function RentalDashboard() {
     setRefreshing(true);
     await fetchBookings();
     setRefreshing(false);
-  };
-
-  const handleStatusUpdate = async (bookingId: string, status: string) => {
-    try {
-      await bookingAPI.updateStatus(bookingId, status);
-      await fetchBookings();
-      setToast({ 
-        message: `Booking ${status === 'confirmed' ? 'accepted' : 'declined'} successfully!`, 
-        type: 'success' 
-      });
-    } catch (error: any) {
-      setToast({ 
-        message: error.message || 'Failed to update booking status', 
-        type: 'error' 
-      });
-    } finally {
-      setConfirmModal(null);
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -136,7 +90,7 @@ function RentalDashboard() {
     return `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${days} Days)`;
   };
 
-  const currentBookings = activeTab === 'rentals' ? myRentals : myRequests;
+  const currentBookings = myRequests;
   const filteredBookings = filterStatus === 'all' 
     ? currentBookings 
     : currentBookings.filter(b => b.status === filterStatus);
@@ -169,19 +123,6 @@ function RentalDashboard() {
     <>
       <Header />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      {confirmModal && (
-        <ConfirmModal
-          title={confirmModal.status === 'confirmed' ? 'Accept Request?' : 'Decline Request?'}
-          message={confirmModal.status === 'confirmed' 
-            ? 'Are you sure you want to accept this booking request? The renter will be notified.'
-            : 'Are you sure you want to decline this booking request? This action cannot be undone.'}
-          confirmText={confirmModal.status === 'confirmed' ? 'Accept' : 'Decline'}
-          cancelText="Cancel"
-          type={confirmModal.type}
-          onConfirm={() => handleStatusUpdate(confirmModal.bookingId, confirmModal.status)}
-          onCancel={() => setConfirmModal(null)}
-        />
-      )}
       
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
         <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
@@ -190,10 +131,10 @@ function RentalDashboard() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                Activity
+                My Rental Requests
               </h1>
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                Manage your gear rentals and booking requests.
+                Track your gear rental requests and bookings.
               </p>
             </div>
             
@@ -208,38 +149,11 @@ function RentalDashboard() {
           </div>
 
           {error && (
-            <div className="p-4 mb-6 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm flex items-center justify-between">
+            <div className="p-4 mb-6 bg-rose-50 dark:bg-rose-50/10 border border-rose-200 dark:border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-sm flex items-center justify-between">
               <span>{error}</span>
               <button onClick={handleRefresh} className="font-bold hover:underline">Retry</button>
             </div>
           )}
-
-          {/* Segment Controller (iOS Style) */}
-          <div className="bg-slate-200/50 dark:bg-slate-800 p-1 rounded-xl flex relative mb-6">
-            <button
-              onClick={() => handleTabChange('rentals')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
-                activeTab === 'rentals'
-                  ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              My Gear (Owner)
-            </button>
-            <button
-              onClick={() => handleTabChange('requests')}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
-                activeTab === 'requests'
-                  ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              My Trips (Renter)
-              {activeTab === 'rentals' && pendingCount > 0 && (
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-              )}
-            </button>
-          </div>
 
           {/* Scrollable Filters */}
           <div className="flex overflow-x-auto hide-scrollbar gap-2 pb-2 -mx-4 px-4 md:mx-0 md:px-0 mb-6 snap-x">
@@ -271,12 +185,10 @@ function RentalDashboard() {
                   <Inbox className="w-8 h-8 text-slate-400" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                  No {filterStatus !== 'all' ? filterStatus : ''} bookings
+                  No {filterStatus !== 'all' ? filterStatus : ''} rental requests
                 </h3>
                 <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mb-6">
-                  {activeTab === 'rentals' 
-                    ? 'When someone requests to rent your gear, it will show up here.'
-                    : 'Browse available gear and request to rent it for your next adventure.'}
+                  Browse available gear and request to rent it for your next adventure.
                 </p>
                 <button
                   onClick={() => router.push('/gear')}
@@ -288,8 +200,8 @@ function RentalDashboard() {
             ) : (
               filteredBookings.map((booking) => {
                 const badge = getStatusBadge(booking.status);
-                const isOwner = activeTab === 'rentals';
-                const otherUser = isOwner ? booking.renter : booking.owner;
+                const isOwner = false; // Always false since this is requests page
+                const otherUser = booking.owner; // Always show the owner since user is the renter
                 const gear = booking.gear;
                 
                 if (!gear) return null;
@@ -361,22 +273,6 @@ function RentalDashboard() {
 
                       {/* Action Buttons */}
                       <div className="flex gap-2 w-full md:w-auto">
-                        {booking.status === 'pending' && isOwner && (
-                          <>
-                            <button
-                              onClick={() => setConfirmModal({ bookingId: booking._id, status: 'cancelled', type: 'decline' })}
-                              className="flex-1 md:flex-none px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                            >
-                              Decline
-                            </button>
-                            <button
-                              onClick={() => setConfirmModal({ bookingId: booking._id, status: 'confirmed', type: 'confirm' })}
-                              className="flex-1 md:flex-none px-4 py-2 rounded-lg bg-[#059467] text-white font-bold text-xs hover:bg-[#047854] shadow-md shadow-[#059467]/20 transition-all"
-                            >
-                              Accept
-                            </button>
-                          </>
-                        )}
                         {booking.status === 'confirmed' && (
                           <button
                             onClick={() => router.push('/messages')}

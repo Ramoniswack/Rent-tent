@@ -3,7 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
-import { Save, Loader2, ArrowLeft, Settings, Percent, Mail, Globe, Type, MessageSquare, Facebook, Twitter, Instagram, Copyright } from 'lucide-react';
+import { 
+  Save, Loader2, ArrowLeft, Percent, Mail, Globe, 
+  Type, MessageSquare, Facebook, Twitter, Instagram, Copyright,
+  CheckCircle2, AlertCircle, Plus, Edit2, Trash2, Link as LinkIcon
+} from 'lucide-react';
+
+interface MenuItem {
+  label: string;
+  url: string;
+}
 
 interface SiteSettings {
   serviceFeePercentage: number;
@@ -16,12 +25,19 @@ interface SiteSettings {
   instagramUrl: string;
   newsletterText: string;
   copyrightText: string;
+  footerProductMenu: MenuItem[];
+  footerCompanyMenu: MenuItem[];
 }
+
+// Type for simple settings (excluding arrays)
+type SimpleSettingKey = Exclude<keyof SiteSettings, 'footerProductMenu' | 'footerCompanyMenu'>;
 
 export default function SiteSettingsAdmin() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingKey, setSavingKey] = useState<keyof SiteSettings | null>(null);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [settings, setSettings] = useState<SiteSettings>({
     serviceFeePercentage: 5,
     platformName: 'NomadNotes',
@@ -32,10 +48,19 @@ export default function SiteSettingsAdmin() {
     twitterUrl: 'https://twitter.com',
     instagramUrl: 'https://instagram.com',
     newsletterText: 'Join our newsletter to get the latest travel tips and gear updates.',
-    copyrightText: '© 2024 NomadNotes. All rights reserved.'
+    copyrightText: '© 2024 NomadNotes. All rights reserved.',
+    footerProductMenu: [],
+    footerCompanyMenu: []
   });
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+
+  // Footer menu inputs
+  const [newProductMenuLabel, setNewProductMenuLabel] = useState('');
+  const [newProductMenuUrl, setNewProductMenuUrl] = useState('');
+  const [editingProductMenuIndex, setEditingProductMenuIndex] = useState<number | null>(null);
+  
+  const [newCompanyMenuLabel, setNewCompanyMenuLabel] = useState('');
+  const [newCompanyMenuUrl, setNewCompanyMenuUrl] = useState('');
+  const [editingCompanyMenuIndex, setEditingCompanyMenuIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSettings();
@@ -45,11 +70,15 @@ export default function SiteSettingsAdmin() {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
       const response = await fetch(`${apiUrl}/api/site-settings`);
-      
       if (!response.ok) throw new Error('Failed to fetch settings');
-      
       const data = await response.json();
-      setSettings(data);
+      
+      // Ensure footer menus are arrays
+      setSettings({
+        ...data,
+        footerProductMenu: Array.isArray(data.footerProductMenu) ? data.footerProductMenu : [],
+        footerCompanyMenu: Array.isArray(data.footerCompanyMenu) ? data.footerCompanyMenu : []
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -57,9 +86,9 @@ export default function SiteSettingsAdmin() {
     }
   };
 
-  const handleSave = async (key: string, value: any) => {
+  const handleSave = async (key: keyof SiteSettings) => {
     try {
-      setSaving(true);
+      setSavingKey(key);
       setError('');
       const token = localStorage.getItem('token');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -70,7 +99,7 @@ export default function SiteSettingsAdmin() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ value })
+        body: JSON.stringify({ value: settings[key] })
       });
 
       if (!response.ok) {
@@ -78,469 +107,491 @@ export default function SiteSettingsAdmin() {
         throw new Error(errorData.error || 'Failed to save setting');
       }
       
-      setSuccessMessage(`${key} updated successfully!`);
+      setSuccessMessage('Setting updated successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setSaving(false);
+      setSavingKey(null);
     }
+  };
+
+  const handleChange = (key: keyof SiteSettings, value: any) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const showSuccess = (msg: string) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const showError = (msg: string) => {
+    setError(msg);
+    setTimeout(() => setError(''), 3000);
+  };
+
+  const addFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu') => {
+    const label = menuType === 'footerProductMenu' ? newProductMenuLabel : newCompanyMenuLabel;
+    const url = menuType === 'footerProductMenu' ? newProductMenuUrl : newCompanyMenuUrl;
+    const editingIndex = menuType === 'footerProductMenu' ? editingProductMenuIndex : editingCompanyMenuIndex;
+    
+    if (!label.trim() || !url.trim()) {
+      showError('Label and URL are required');
+      return;
+    }
+    
+    // Ensure the menu array exists
+    const currentMenu = Array.isArray(settings[menuType]) ? settings[menuType] : [];
+    
+    if (editingIndex !== null) {
+      const updatedItems = [...currentMenu];
+      updatedItems[editingIndex] = { label: label.trim(), url: url.trim() };
+      setSettings({ ...settings, [menuType]: updatedItems });
+      
+      if (menuType === 'footerProductMenu') {
+        setEditingProductMenuIndex(null);
+      } else {
+        setEditingCompanyMenuIndex(null);
+      }
+    } else {
+      setSettings({
+        ...settings,
+        [menuType]: [...currentMenu, { label: label.trim(), url: url.trim() }]
+      });
+    }
+    
+    if (menuType === 'footerProductMenu') {
+      setNewProductMenuLabel('');
+      setNewProductMenuUrl('');
+    } else {
+      setNewCompanyMenuLabel('');
+      setNewCompanyMenuUrl('');
+    }
+  };
+  
+  const editFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu', index: number) => {
+    const currentMenu = Array.isArray(settings[menuType]) ? settings[menuType] : [];
+    const item = currentMenu[index];
+    if (!item) return;
+    
+    if (menuType === 'footerProductMenu') {
+      setNewProductMenuLabel(item.label);
+      setNewProductMenuUrl(item.url);
+      setEditingProductMenuIndex(index);
+    } else {
+      setNewCompanyMenuLabel(item.label);
+      setNewCompanyMenuUrl(item.url);
+      setEditingCompanyMenuIndex(index);
+    }
+  };
+  
+  const removeFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu', index: number) => {
+    const currentMenu = Array.isArray(settings[menuType]) ? settings[menuType] : [];
+    
+    setSettings({
+      ...settings,
+      [menuType]: currentMenu.filter((_, i) => i !== index)
+    });
+    
+    if (menuType === 'footerProductMenu' && editingProductMenuIndex === index) {
+      setEditingProductMenuIndex(null);
+      setNewProductMenuLabel('');
+      setNewProductMenuUrl('');
+    } else if (menuType === 'footerCompanyMenu' && editingCompanyMenuIndex === index) {
+      setEditingCompanyMenuIndex(null);
+      setNewCompanyMenuLabel('');
+      setNewCompanyMenuUrl('');
+    }
+  };
+
+  // Reusable UI Component for each setting row
+  const SettingRow = ({ 
+    icon: Icon, title, description, settingKey, type = 'text', 
+    iconBg = 'bg-slate-500/10', iconColor = 'text-slate-500', extraContent = null 
+  }: {
+    icon: any;
+    title: string;
+    description: string;
+    settingKey: SimpleSettingKey;
+    type?: 'text' | 'number' | 'url' | 'email' | 'textarea';
+    iconBg?: string;
+    iconColor?: string;
+    extraContent?: React.ReactNode;
+  }) => {
+    const isSaving = savingKey === settingKey;
+    
+    return (
+      <div className="py-6 flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+          <div className="flex items-start gap-4 flex-1">
+            <div className={`p-2 rounded-lg ${iconBg} mt-1`}>
+              <Icon className={`w-5 h-5 ${iconColor}`} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md">{description}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-3 w-full md:w-auto md:min-w-[400px]">
+            <div className="relative flex-1">
+              {type === 'textarea' ? (
+                <textarea
+                  value={String(settings[settingKey] || '')}
+                  onChange={(e) => handleChange(settingKey, e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-[#059467]/30 outline-none resize-none transition-all"
+                />
+              ) : (
+                <input
+                  type={type === 'number' ? 'number' : type === 'url' ? 'url' : type === 'email' ? 'email' : 'text'}
+                  value={type === 'number' ? Number(settings[settingKey]) : String(settings[settingKey] || '')}
+                  onChange={(e) => handleChange(settingKey, type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-[#059467]/30 outline-none transition-all"
+                  step={type === 'number' ? '0.1' : undefined}
+                />
+              )}
+              {type === 'number' && settingKey === 'serviceFeePercentage' && (
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-semibold">%</span>
+              )}
+            </div>
+            
+            <button
+              onClick={() => handleSave(settingKey)}
+              disabled={isSaving}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-[#059467] text-white rounded-xl font-medium hover:bg-[#047854] transition-all disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap min-w-[100px]"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSaving ? 'Saving' : 'Save'}
+            </button>
+          </div>
+        </div>
+        {extraContent}
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0b1713]">
+      <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0b1713] flex flex-col">
         <Header />
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-12 h-12 text-[#059467] animate-spin" />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-10 h-10 text-[#059467] animate-spin" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0b1713]">
+    <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0b1713] pb-20">
       <Header />
       
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push('/admin')}
-              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-            </button>
-            <div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white">Site Settings</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">Configure platform-wide settings</p>
-            </div>
+      {/* Toast Notifications */}
+      <div className="fixed top-24 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        {successMessage && (
+          <div className="flex items-center gap-2 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-4">
+            <CheckCircle2 className="w-5 h-5" />
+            <span className="font-medium text-sm">{successMessage}</span>
+          </div>
+        )}
+        {error && (
+          <div className="flex items-center gap-2 bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-4">
+            <AlertCircle className="w-5 h-5" />
+            <span className="font-medium text-sm">{error}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* Page Header */}
+        <div className="flex items-center gap-4 mb-10">
+          <button
+            onClick={() => router.push('/admin')}
+            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors shadow-sm"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Site Settings</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage core configuration and platform branding</p>
           </div>
         </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 text-green-600 dark:text-green-400 font-semibold">
-            {successMessage}
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 font-semibold">
-            {error}
-          </div>
-        )}
-
-        <div className="space-y-6">
-          {/* Service Fee Percentage */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <Percent className="w-6 h-6 text-green-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Service Fee Percentage</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Fee applied to all gear rental bookings</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex-1 max-w-xs">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={settings.serviceFeePercentage}
-                        onChange={(e) => setSettings({ ...settings, serviceFeePercentage: parseFloat(e.target.value) || 0 })}
-                        className="w-full px-4 py-3 pr-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-lg font-semibold focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-semibold">%</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                      Current: {settings.serviceFeePercentage}% of rental amount
+        <div className="space-y-8">
+          {/* 1. General Settings Section */}
+          <section>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">General</h2>
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm px-6 divide-y divide-slate-100 dark:divide-slate-800/60">
+              <SettingRow 
+                icon={Globe} title="Platform Name" description="Display name for your platform across the site."
+                settingKey="platformName" iconBg="bg-purple-500/10" iconColor="text-purple-500"
+              />
+              <SettingRow 
+                icon={Mail} title="Support Email" description="Contact email for user support and inquiries."
+                settingKey="supportEmail" type="email" iconBg="bg-blue-500/10" iconColor="text-blue-500"
+              />
+              <SettingRow 
+                icon={Percent} title="Service Fee Percentage" description="Global fee applied to all gear rental bookings."
+                settingKey="serviceFeePercentage" type="number" iconBg="bg-green-500/10" iconColor="text-green-500"
+                extraContent={
+                  <div className="ml-0 md:ml-14 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700 inline-block">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <strong className="text-slate-700 dark:text-slate-300">Example:</strong> A rental of NPR 1,000 will have a service charge of NPR {(1000 * settings.serviceFeePercentage / 100).toFixed(2)}.
                     </p>
                   </div>
-                  
-                  <button
-                    onClick={() => handleSave('serviceFeePercentage', settings.serviceFeePercentage)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-                
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    <strong>Example:</strong> For a rental of NPR 1,000 with {settings.serviceFeePercentage}% fee, 
-                    the service charge would be NPR {(1000 * settings.serviceFeePercentage / 100).toFixed(2)}
-                  </p>
-                </div>
-              </div>
+                }
+              />
             </div>
-          </div>
+          </section>
 
-          {/* Platform Name */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
-                    <Globe className="w-6 h-6 text-purple-500" />
+          {/* 2. Branding Section */}
+          <section>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">Branding</h2>
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm px-6 divide-y divide-slate-100 dark:divide-slate-800/60">
+              <SettingRow 
+                icon={Type} title="Logo Text" description="Text displayed in the top navigation bar."
+                settingKey="logoText" iconBg="bg-cyan-500/10" iconColor="text-cyan-500"
+              />
+            </div>
+          </section>
+
+          {/* 3. Social Media Section */}
+          <section>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">Social Links</h2>
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm px-6 divide-y divide-slate-100 dark:divide-slate-800/60">
+              <SettingRow 
+                icon={Facebook} title="Facebook" description="Link to your official Facebook page."
+                settingKey="facebookUrl" type="url" iconBg="bg-blue-600/10" iconColor="text-blue-600"
+              />
+              <SettingRow 
+                icon={Twitter} title="Twitter (X)" description="Link to your official Twitter profile."
+                settingKey="twitterUrl" type="url" iconBg="bg-sky-500/10" iconColor="text-sky-500"
+              />
+              <SettingRow 
+                icon={Instagram} title="Instagram" description="Link to your official Instagram account."
+                settingKey="instagramUrl" type="url" iconBg="bg-pink-500/10" iconColor="text-pink-500"
+              />
+            </div>
+          </section>
+
+          {/* 4. Footer Section */}
+          <section>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">Footer Configuration</h2>
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm px-6 divide-y divide-slate-100 dark:divide-slate-800/60">
+              <SettingRow 
+                icon={MessageSquare} title="Footer Tagline" description="Brief description shown in the footer area."
+                settingKey="footerTagline" type="textarea" iconBg="bg-teal-500/10" iconColor="text-teal-500"
+              />
+              <SettingRow 
+                icon={Mail} title="Newsletter Text" description="Call to action text above the newsletter input."
+                settingKey="newsletterText" type="textarea" iconBg="bg-orange-500/10" iconColor="text-orange-500"
+              />
+              <SettingRow 
+                icon={Copyright} title="Copyright Text" description="Legal copyright notice at the bottom of the page."
+                settingKey="copyrightText" iconBg="bg-slate-500/10" iconColor="text-slate-500"
+              />
+            </div>
+          </section>
+
+          {/* 5. Footer Product Menu */}
+          <section>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">Footer Product Menu</h2>
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+              <div className="mb-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Manage links for the Product column in the footer.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Menu Label</label>
+                    <input
+                      type="text"
+                      value={newProductMenuLabel}
+                      onChange={(e) => setNewProductMenuLabel(e.target.value)}
+                      placeholder="e.g. Browse Gear"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-cyan-500/30 outline-none transition-all"
+                    />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Platform Name</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Display name for your platform</p>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Destination URL</label>
+                    <input
+                      type="text"
+                      value={newProductMenuUrl}
+                      onChange={(e) => setNewProductMenuUrl(e.target.value)}
+                      placeholder="e.g. /gear"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-cyan-500/30 outline-none transition-all"
+                    />
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
-                    value={settings.platformName}
-                    onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
-                    className="flex-1 max-w-md px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                  />
-                  
+
+                <div className="flex gap-2">
                   <button
-                    onClick={() => handleSave('platformName', settings.platformName)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
+                    onClick={() => addFooterMenuItem('footerProductMenu')}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-medium transition-colors text-sm"
                   >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
+                    {editingProductMenuIndex !== null ? <><Edit2 className="w-4 h-4" /> Update</> : <><Plus className="w-4 h-4" /> Add Link</>}
                   </button>
+                  {editingProductMenuIndex !== null && (
+                    <button
+                      onClick={() => {
+                        setEditingProductMenuIndex(null);
+                        setNewProductMenuLabel('');
+                        setNewProductMenuUrl('');
+                      }}
+                      className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Support Email */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Mail className="w-6 h-6 text-blue-500" />
+              <div className="space-y-2 mb-4">
+                {settings.footerProductMenu?.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-cyan-50/50 dark:bg-cyan-500/5 border border-cyan-200/50 dark:border-cyan-500/10 rounded-xl group hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <LinkIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                      <div>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</span>
+                        <p className="text-xs text-cyan-600 dark:text-cyan-400 mt-0.5">{item.url}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => editFooterMenuItem('footerProductMenu', index)} 
+                        className="p-2 hover:bg-cyan-200/50 dark:hover:bg-cyan-500/20 rounded-lg transition-colors text-cyan-600 dark:text-cyan-400"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => removeFooterMenuItem('footerProductMenu', index)} 
+                        className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {(!settings.footerProductMenu || settings.footerProductMenu.length === 0) && (
+                  <div className="text-center py-8 text-slate-400 dark:text-slate-600 text-sm">
+                    No menu items added yet
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => handleSave('footerProductMenu')}
+                disabled={savingKey === 'footerProductMenu'}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[#059467] text-white rounded-xl font-medium hover:bg-[#047854] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {savingKey === 'footerProductMenu' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {savingKey === 'footerProductMenu' ? 'Saving' : 'Save Product Menu'}
+              </button>
+            </div>
+          </section>
+
+          {/* 6. Footer Company Menu */}
+          <section>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 ml-2">Footer Company Menu</h2>
+            <div className="bg-white dark:bg-[#132a24] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+              <div className="mb-6">
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Manage links for the Company column in the footer.</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Menu Label</label>
+                    <input
+                      type="text"
+                      value={newCompanyMenuLabel}
+                      onChange={(e) => setNewCompanyMenuLabel(e.target.value)}
+                      placeholder="e.g. About Us"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-violet-500/30 outline-none transition-all"
+                    />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Support Email</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Contact email for user support</p>
+                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Destination URL</label>
+                    <input
+                      type="text"
+                      value={newCompanyMenuUrl}
+                      onChange={(e) => setNewCompanyMenuUrl(e.target.value)}
+                      placeholder="e.g. /about"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-violet-500/30 outline-none transition-all"
+                    />
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  <input
-                    type="email"
-                    value={settings.supportEmail}
-                    onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
-                    className="flex-1 max-w-md px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                  />
-                  
+
+                <div className="flex gap-2">
                   <button
-                    onClick={() => handleSave('supportEmail', settings.supportEmail)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
+                    onClick={() => addFooterMenuItem('footerCompanyMenu')}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-medium transition-colors text-sm"
                   >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
+                    {editingCompanyMenuIndex !== null ? <><Edit2 className="w-4 h-4" /> Update</> : <><Plus className="w-4 h-4" /> Add Link</>}
                   </button>
+                  {editingCompanyMenuIndex !== null && (
+                    <button
+                      onClick={() => {
+                        setEditingCompanyMenuIndex(null);
+                        setNewCompanyMenuLabel('');
+                        setNewCompanyMenuUrl('');
+                      }}
+                      className="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
+
+              <div className="space-y-2 mb-4">
+                {settings.footerCompanyMenu?.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-violet-50/50 dark:bg-violet-500/5 border border-violet-200/50 dark:border-violet-500/10 rounded-xl group hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <LinkIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                      <div>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</span>
+                        <p className="text-xs text-violet-600 dark:text-violet-400 mt-0.5">{item.url}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => editFooterMenuItem('footerCompanyMenu', index)} 
+                        className="p-2 hover:bg-violet-200/50 dark:hover:bg-violet-500/20 rounded-lg transition-colors text-violet-600 dark:text-violet-400"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => removeFooterMenuItem('footerCompanyMenu', index)} 
+                        className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500"
+                        title="Remove"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {(!settings.footerCompanyMenu || settings.footerCompanyMenu.length === 0) && (
+                  <div className="text-center py-8 text-slate-400 dark:text-slate-600 text-sm">
+                    No menu items added yet
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => handleSave('footerCompanyMenu')}
+                disabled={savingKey === 'footerCompanyMenu'}
+                className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-[#059467] text-white rounded-xl font-medium hover:bg-[#047854] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {savingKey === 'footerCompanyMenu' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {savingKey === 'footerCompanyMenu' ? 'Saving' : 'Save Company Menu'}
+              </button>
             </div>
-          </div>
+          </section>
 
-          {/* Header Settings Section */}
-          <div className="col-span-full">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 mt-8">Header Settings</h3>
-          </div>
-
-          {/* Logo Text */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-cyan-500/10 rounded-lg">
-                    <Type className="w-6 h-6 text-cyan-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Logo Text</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Text displayed in the header logo</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
-                    value={settings.logoText}
-                    onChange={(e) => setSettings({ ...settings, logoText: e.target.value })}
-                    className="flex-1 max-w-md px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                  />
-                  
-                  <button
-                    onClick={() => handleSave('logoText', settings.logoText)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Settings Section */}
-          <div className="col-span-full">
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 mt-8">Footer Settings</h3>
-          </div>
-
-          {/* Footer Tagline */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-teal-500/10 rounded-lg">
-                    <MessageSquare className="w-6 h-6 text-teal-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Footer Tagline</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Description text in footer</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <textarea
-                    value={settings.footerTagline}
-                    onChange={(e) => setSettings({ ...settings, footerTagline: e.target.value })}
-                    rows={3}
-                    className="flex-1 max-w-2xl px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none resize-none"
-                  />
-                  
-                  <button
-                    onClick={() => handleSave('footerTagline', settings.footerTagline)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap self-start"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Social Media URLs */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700 col-span-full">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Social Media Links</h3>
-            
-            <div className="space-y-6">
-              {/* Facebook */}
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Facebook className="w-5 h-5 text-blue-500" />
-                </div>
-                <input
-                  type="url"
-                  value={settings.facebookUrl}
-                  onChange={(e) => setSettings({ ...settings, facebookUrl: e.target.value })}
-                  placeholder="https://facebook.com/yourpage"
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                />
-                <button
-                  onClick={() => handleSave('facebookUrl', settings.facebookUrl)}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                </button>
-              </div>
-
-              {/* Twitter */}
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-sky-500/10 rounded-lg">
-                  <Twitter className="w-5 h-5 text-sky-500" />
-                </div>
-                <input
-                  type="url"
-                  value={settings.twitterUrl}
-                  onChange={(e) => setSettings({ ...settings, twitterUrl: e.target.value })}
-                  placeholder="https://twitter.com/yourhandle"
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                />
-                <button
-                  onClick={() => handleSave('twitterUrl', settings.twitterUrl)}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                </button>
-              </div>
-
-              {/* Instagram */}
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-pink-500/10 rounded-lg">
-                  <Instagram className="w-5 h-5 text-pink-500" />
-                </div>
-                <input
-                  type="url"
-                  value={settings.instagramUrl}
-                  onChange={(e) => setSettings({ ...settings, instagramUrl: e.target.value })}
-                  placeholder="https://instagram.com/yourprofile"
-                  className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                />
-                <button
-                  onClick={() => handleSave('instagramUrl', settings.instagramUrl)}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
-                >
-                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Newsletter Text */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <Mail className="w-6 h-6 text-orange-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Newsletter Text</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Subscription text in footer</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <textarea
-                    value={settings.newsletterText}
-                    onChange={(e) => setSettings({ ...settings, newsletterText: e.target.value })}
-                    rows={2}
-                    className="flex-1 max-w-2xl px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none resize-none"
-                  />
-                  
-                  <button
-                    onClick={() => handleSave('newsletterText', settings.newsletterText)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap self-start"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Copyright Text */}
-          <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 shadow-sm border border-slate-200 dark:border-slate-700">
-            <div className="flex items-start justify-between gap-6">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-slate-500/10 rounded-lg">
-                    <Copyright className="w-6 h-6 text-slate-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Copyright Text</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Copyright notice in footer</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <input
-                    type="text"
-                    value={settings.copyrightText}
-                    onChange={(e) => setSettings({ ...settings, copyrightText: e.target.value })}
-                    className="flex-1 max-w-2xl px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467]/30 outline-none"
-                  />
-                  
-                  <button
-                    onClick={() => handleSave('copyrightText', settings.copyrightText)}
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-[#059467] text-white rounded-xl font-semibold hover:bg-[#047854] transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-5 h-5" />
-                        Save
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
+    
   );
 }

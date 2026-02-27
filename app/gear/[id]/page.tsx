@@ -22,7 +22,8 @@ import {
   Send,
   X,
   ExternalLink,
-  User as UserIcon
+  User as UserIcon,
+  Edit
 } from 'lucide-react';
 
 export default function GearDetailPage() {
@@ -329,25 +330,39 @@ export default function GearDetailPage() {
       <Header />
       <div className="min-h-screen bg-[#f5f8f7] dark:bg-[#0f231d]">
         <main className="flex-grow w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
-          {/* Breadcrumbs */}
-          <div className="flex flex-wrap gap-2 mb-6 px-2">
-            <button
-              onClick={() => router.push('/gear')}
-              className="text-[#059467]/70 hover:text-[#059467] text-sm font-medium transition-colors"
-            >
-              Gear
-            </button>
-            <span className="text-[#059467]/40 text-sm font-medium">/</span>
-            <button
-              onClick={() => router.push(`/gear?category=${gearItem.category}`)}
-              className="text-[#059467]/70 hover:text-[#059467] text-sm font-medium transition-colors"
-            >
-              {gearItem.category}
-            </button>
-            <span className="text-[#059467]/40 text-sm font-medium">/</span>
-            <span className="text-[#0d1c17] dark:text-white text-sm font-medium">
-              {gearItem.title}
-            </span>
+          {/* Breadcrumbs and Edit Button */}
+          <div className="flex items-center justify-between mb-6 px-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => router.push('/gear')}
+                className="text-[#059467]/70 hover:text-[#059467] text-sm font-medium transition-colors"
+              >
+                Gear
+              </button>
+              <span className="text-[#059467]/40 text-sm font-medium">/</span>
+              <button
+                onClick={() => router.push(`/gear?category=${gearItem.category}`)}
+                className="text-[#059467]/70 hover:text-[#059467] text-sm font-medium transition-colors"
+              >
+                {gearItem.category}
+              </button>
+              <span className="text-[#059467]/40 text-sm font-medium">/</span>
+              <span className="text-[#0d1c17] dark:text-white text-sm font-medium">
+                {gearItem.title}
+              </span>
+            </div>
+            
+            {/* Edit Button for Owner
+            {isOwner && (
+              <button
+                onClick={() => router.push(`/gear/${params.id}/edit`)}
+                className="flex items-center gap-2 px-6 py-3 bg-[#059467] hover:bg-[#047854] text-white rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg"
+              >
+                <Edit className="w-5 h-5" />
+                <span className="hidden sm:inline">Edit Listing</span>
+                <span className="sm:hidden">Edit</span>
+              </button>
+            )} */}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -541,6 +556,8 @@ export default function GearDetailPage() {
                           console.log('Write Review clicked');
                           console.log('User bookings:', userBookings);
                           console.log('User bookings length:', userBookings.length);
+                          console.log('Is owner:', isOwner);
+                          console.log('Show review form:', showReviewForm);
                           
                           if (userBookings.length === 0) {
                             setToast({ 
@@ -554,16 +571,22 @@ export default function GearDetailPage() {
                         disabled={userBookings.length === 0}
                         className={`px-4 py-2 ${
                           userBookings.length === 0 
-                            ? 'bg-slate-400 cursor-not-allowed' 
+                            ? 'bg-slate-400 dark:bg-slate-600 cursor-not-allowed opacity-60' 
                             : 'bg-[#059467] hover:bg-[#047854]'
                         } text-white rounded-full font-medium text-sm transition-colors flex items-center gap-2 shadow-lg`}
+                        title={userBookings.length === 0 ? 'Complete a rental to write a review' : 'Write a review for this gear'}
                       >
                         <MessageCircle className="w-4 h-4" />
                         Write Review
                       </button>
                       {userBookings.length === 0 && (
-                        <p className="text-xs text-[#0d1c17]/60 dark:text-white/60 text-center">
-                          Complete a rental to review
+                        <p className="text-xs text-[#0d1c17]/60 dark:text-white/60 text-center max-w-[150px]">
+                          Complete a rental first
+                        </p>
+                      )}
+                      {userBookings.length > 0 && (
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center font-medium">
+                          {userBookings.length} rental{userBookings.length > 1 ? 's' : ''} eligible
                         </p>
                       )}
                     </div>
@@ -915,9 +938,13 @@ export default function GearDetailPage() {
                   {/* CTAs */}
                   <div className="flex flex-col gap-3">
                     {isOwner ? (
-                      <div className="w-full h-12 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold text-base flex items-center justify-center cursor-not-allowed">
-                        Your Listing
-                      </div>
+                      <button
+                        onClick={() => router.push(`/gear/${params.id}/edit`)}
+                        className="w-full h-12 rounded-full bg-[#059467] hover:bg-[#047854] text-white font-bold text-base shadow-lg shadow-[#059467]/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <Edit className="w-5 h-5" />
+                        Edit Listing
+                      </button>
                     ) : (
                       <button 
                         onClick={() => router.push(`/gear/${gearItem._id}/book`)}

@@ -42,7 +42,8 @@ import {
   Droplet,
   Zap,
   Scale,
-  Download
+  Download,
+  Edit
 } from 'lucide-react';
 
 type Tab = 'itinerary' | 'expenses' | 'packing';
@@ -953,223 +954,218 @@ export default function TripDetailsPage() {
         {/* Main Content */}
         <main className="container mx-auto px-4 md:px-10 py-8 grid grid-cols-12 gap-8">
           {/* Left Column */}
-          <div className="col-span-12 lg:col-span-8 space-y-8">
+          <div className="col-span-12 lg:col-span-8 space-y-8 animate-in fade-in duration-500">
             {/* Itinerary Tab */}
             {activeTab === 'itinerary' && (
               <>
                 {/* Filters and Add Action */}
-                <div className="space-y-3 md:space-y-4 mb-6 md:mb-10">
-                  {/* Primary Actions Row - Desktop only */}
-                  <div className="hidden md:flex gap-2">
-                    <button
-                      onClick={() => setShowAddStop(true)}
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-[#059467] text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold shadow-lg shadow-[#059467]/20 hover:scale-[1.02] active:scale-95 transition-all text-sm md:text-base"
-                    >
-                      <Plus className="w-4 h-4 md:w-5 md:h-5" />
-                      Add Stop
-                    </button>
-                    <button
-                      onClick={exportItineraryToPDF}
-                      className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-sm md:text-base"
-                    >
-                      <Download className="w-4 h-4 md:w-5 md:h-5" />
-                      Export PDF
-                    </button>
-                  </div>
-
-                  {/* Filter Buttons Row */}
-                  <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 mb-10">
+                  
+                  {/* Filter Buttons Row (Glass Pill Container) */}
+                  <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-white/60 dark:bg-black/20 backdrop-blur-xl rounded-2xl border border-slate-200/50 dark:border-slate-800/50 shadow-sm w-fit">
                     <button
                       onClick={() => setStatusFilter('all')}
-                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                      className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                         statusFilter === 'all'
-                          ? 'bg-slate-900 dark:bg-slate-700 text-white'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                          ? 'bg-[#059467] text-white shadow-md shadow-[#059467]/20'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       All
                     </button>
                     <button
                       onClick={() => setStatusFilter('completed')}
-                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                      className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                         statusFilter === 'completed'
-                          ? 'bg-[#059467] text-white'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[#059467]/10'
+                          ? 'bg-[#059467] text-white shadow-md shadow-[#059467]/20'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Done
                     </button>
                     <button
                       onClick={() => setStatusFilter('traveling')}
-                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                      className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                         statusFilter === 'traveling'
-                          ? 'bg-[#3b82f6] text-white'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[#3b82f6]/10'
+                          ? 'bg-[#059467] text-white shadow-md shadow-[#059467]/20'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Active
                     </button>
                     <button
                       onClick={() => setStatusFilter('planning')}
-                      className={`px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-bold transition-all ${
+                      className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                         statusFilter === 'planning'
-                          ? 'bg-[#f59e0b] text-white'
-                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-[#f59e0b]/10'
+                          ? 'bg-[#059467] text-white shadow-md shadow-[#059467]/20'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       Plan
                     </button>
                   </div>
+
+                  {/* Primary Actions Row - Desktop only */}
+                  <div className="hidden md:flex items-center gap-3">
+                    <button
+                      onClick={exportItineraryToPDF}
+                      className="flex items-center justify-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#059467]/20 hover:-translate-y-0.5 transition-all text-sm"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export PDF
+                    </button>
+                    <button
+                      onClick={() => setShowAddStop(true)}
+                      className="flex items-center justify-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#059467]/20 hover:-translate-y-0.5 transition-all text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Stop
+                    </button>
+                  </div>
                 </div>
 
-                {/* Timeline with Dashed Line */}
+                {/* Timeline */}
                 <div className="relative pb-12">
-                  {/* Dashed vertical line - hidden on mobile */}
-                  <div className="hidden md:block absolute left-[54px] top-0 bottom-0 w-0.5 border-l-2 border-dashed border-[#cee9e0] dark:border-slate-700 z-0"></div>
+                  {/* Subtle Dashed vertical line */}
+                  <div className="hidden md:block absolute left-[45px] top-6 bottom-0 w-0.5 border-l-2 border-dashed border-slate-200/80 dark:border-slate-700/60 z-0"></div>
                   
-                  <div className="relative z-10 space-y-6 md:space-y-12">
+                  <div className="relative z-10 space-y-6 md:space-y-10">
                     {filteredItinerary.length === 0 ? (
-                      <div className="bg-white dark:bg-slate-900 p-8 md:p-16 rounded-2xl md:rounded-3xl text-center border-2 border-dashed border-slate-200 dark:border-slate-700">
-                        <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">
+                      <div className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-10 md:p-16 rounded-[2rem] text-center border-2 border-dashed border-slate-200 dark:border-slate-800 shadow-sm">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-black/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MapPin className="w-8 h-8 text-slate-400 dark:text-slate-600" />
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-sm">
                           No stops {statusFilter !== 'all' ? statusFilter : 'planned yet'}
                         </p>
                       </div>
                     ) : (
                       filteredItinerary.map((stop, idx) => (
-                        <div key={stop._id} className="relative flex flex-col md:flex-row gap-4 md:gap-6">
+                        <div key={stop._id} className="relative flex flex-col md:flex-row gap-5 md:gap-8 group">
+                          
                           {/* Day Card */}
-                          <div className="flex md:flex-col items-center md:items-center gap-3 md:gap-0 md:min-w-[110px]">
-                            <div className={`w-16 h-20 md:w-20 md:h-24 bg-white dark:bg-slate-900 rounded-xl md:rounded-2xl flex flex-col items-center justify-center shadow-sm border ${
+                          <div className="flex md:flex-col items-center gap-4 md:gap-3 md:min-w-[90px] shrink-0">
+                            <div className={`w-16 h-20 md:w-[90px] md:h-[100px] bg-white/90 dark:bg-[#132a24]/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center shadow-lg border transition-all duration-300 ${
                               stop.status === 'traveling' 
-                                ? 'border-slate-100 dark:border-slate-700 ring-2 ring-[#3b82f6]/20' 
-                                : 'border-slate-100 dark:border-slate-700'
+                                ? 'border-[#059467]/30 ring-2 ring-[#059467]/10 scale-[1.02]' 
+                                : 'border-slate-200/50 dark:border-slate-700/50 group-hover:border-slate-300 dark:group-hover:border-slate-600'
                             }`}>
-                              <span className="text-[9px] md:text-[10px] uppercase tracking-widest font-black text-slate-400">
+                              <span className="text-[9px] md:text-[10px] uppercase tracking-widest font-black text-slate-400 dark:text-slate-500 mb-0.5">
                                 Day {String(idx + 1).padStart(2, '0')}
                               </span>
-                              <span className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
+                              <span className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white leading-none">
                                 {new Date(stop.time).getDate()}
                               </span>
-                              <span className="text-[10px] md:text-xs font-bold text-slate-500">
+                              <span className="text-[10px] md:text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-wider">
                                 {new Date(stop.time).toLocaleDateString('en-US', { month: 'short' })}
                               </span>
                             </div>
                             
-                            {/* Status Icon */}
-                            <div className={`md:mt-4 rounded-full p-1 ring-4 ring-[#f5f8f7] dark:ring-slate-900 ${
-                              stop.status === 'completed' 
-                                ? 'bg-[#059467]' 
-                                : stop.status === 'traveling'
-                                ? 'bg-[#3b82f6] animate-pulse'
-                                : 'bg-[#f59e0b]'
-                            }`}>
-                              {stop.status === 'completed' ? (
-                                <CheckCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
-                              ) : stop.status === 'traveling' ? (
-                                <Navigation className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
-                              ) : (
-                                <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
-                              )}
+                            {/* Semantic Status Indicator */}
+                            <div className="md:mt-1 rounded-full p-1.5 shadow-md bg-white dark:bg-[#060d0b] border border-slate-100 dark:border-slate-800 z-10">
+                              <div className={`rounded-full p-1.5 ${
+                                stop.status === 'completed' 
+                                  ? 'bg-[#059467] text-white' 
+                                  : stop.status === 'traveling'
+                                  ? 'bg-blue-500 text-white animate-pulse'
+                                  : 'bg-orange-500 text-white'
+                              }`}>
+                                {stop.status === 'completed' ? (
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                ) : stop.status === 'traveling' ? (
+                                  <Navigation className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Clock className="w-3.5 h-3.5" />
+                                )}
+                              </div>
                             </div>
                           </div>
 
-                          {/* Stop Card */}
-                          <div className={`flex-1 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-xl md:rounded-[1.5rem] shadow-sm border group hover:shadow-md transition-all ${
-                            stop.status === 'traveling'
-                              ? 'border-2 border-[#3b82f6]/30'
-                              : 'border border-slate-100 dark:border-slate-800'
-                          }`}>
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className={`text-base md:text-xl font-bold transition-colors line-clamp-2 ${
-                                stop.status === 'completed'
-                                  ? 'text-slate-900 dark:text-white group-hover:text-[#059467]'
-                                  : stop.status === 'traveling'
-                                  ? 'text-slate-900 dark:text-white group-hover:text-[#3b82f6]'
-                                  : 'text-slate-900 dark:text-white group-hover:text-[#f59e0b]'
-                              }`}>
+                          {/* Stop Details Glass Card */}
+                          <div className="flex-1 bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-5 md:p-7 rounded-3xl shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl transition-all duration-300">
+                            <div className="flex justify-between items-start mb-3">
+                              <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white line-clamp-2 pr-4 group-hover:text-[#059467] transition-colors">
                                 {stop.name}
                               </h3>
                               <button
                                 onClick={() => setShowStopMenu(showStopMenu === stop._id ? null : stop._id)}
-                                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 flex-shrink-0 ml-2"
+                                className="text-slate-400 hover:text-[#059467] dark:hover:text-[#059467] p-2 hover:bg-[#059467]/10 rounded-xl transition-all flex-shrink-0"
                               >
-                                <MoreHorizontal className="w-4 h-4 md:w-5 md:h-5" />
+                                <MoreHorizontal className="w-5 h-5" />
                               </button>
                             </div>
                             
-                            <div className="flex flex-wrap items-center gap-2 md:gap-4 mb-3 md:mb-4">
-                              <div className="flex items-center gap-1 text-[10px] md:text-xs font-medium text-slate-500">
-                                <MapPin className={`w-3 h-3 md:w-4 md:h-4 flex-shrink-0 ${
+                            <div className="flex flex-wrap items-center gap-3 mb-4">
+                              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50">
+                                <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${
                                   stop.status === 'completed' ? 'text-[#059467]' :
-                                  stop.status === 'traveling' ? 'text-[#3b82f6]' :
-                                  'text-[#f59e0b]'
+                                  stop.status === 'traveling' ? 'text-blue-500' :
+                                  'text-orange-500'
                                 }`} />
-                                <span className="truncate">{stop.name}</span>
+                                <span className="truncate max-w-[200px]">{stop.name}</span>
                               </div>
-                              <span className={`px-2 md:px-2.5 py-0.5 md:py-1 rounded-full text-[9px] md:text-[10px] font-bold uppercase ${
-                                stop.status === 'completed' ? 'bg-[#059467]/10 text-[#059467]' :
-                                stop.status === 'traveling' ? 'bg-[#3b82f6]/10 text-[#3b82f6]' :
-                                'bg-[#f59e0b]/10 text-[#f59e0b]'
+                              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                                stop.status === 'completed' ? 'bg-[#059467]/10 text-[#059467] border-[#059467]/20' :
+                                stop.status === 'traveling' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                'bg-orange-500/10 text-orange-500 border-orange-500/20'
                               }`}>
                                 {stop.status}
                               </span>
                             </div>
                             
                             {stop.activity && (
-                              <div className="bg-slate-50 dark:bg-slate-800 p-3 md:p-4 rounded-lg md:rounded-xl border border-slate-100 dark:border-slate-700">
-                                <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed italic line-clamp-3">
+                              <div className="bg-slate-50/50 dark:bg-black/20 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
+                                <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed italic line-clamp-3">
                                   "{stop.activity}"
                                 </p>
                               </div>
                             )}
                             
-                            {/* Actions Menu */}
+                            {/* Premium Glassmorphism Actions Menu */}
                             {showStopMenu === stop._id && (
-                              <div className="absolute right-4 md:right-6 top-14 md:top-16 w-52 md:w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50">
+                              <div className="absolute right-6 top-16 w-56 bg-white/95 dark:bg-[#132a24]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                 <button
                                   onClick={() => openEditStopModal(stop)}
-                                  className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                                  className="w-full px-4 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-[#059467]/10 hover:text-[#059467] transition-all flex items-center gap-3"
                                 >
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                  </svg>
+                                  <Edit className="w-4 h-4" />
                                   Edit Stop
                                 </button>
-                                <div className="border-t border-slate-100 dark:border-slate-700"></div>
-                                <div className="p-2 border-b border-slate-100 dark:border-slate-700">
-                                  <p className="text-xs font-bold text-slate-400 uppercase px-2 py-1">Change Status</p>
+                                <div className="border-t border-slate-100 dark:border-slate-800/50"></div>
+                                <div className="px-4 py-2 bg-slate-50/50 dark:bg-black/10">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Change Status</p>
                                 </div>
                                 <button
                                   onClick={() => handleUpdateStopStatus(stop._id, 'planning')}
-                                  className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-[#f59e0b]/10 transition-colors flex items-center gap-2"
+                                  className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-[#059467]/10 hover:text-[#059467] transition-all flex items-center gap-3 disabled:opacity-50"
                                   disabled={stop.status === 'planning'}
                                 >
-                                  <Clock className="w-4 h-4 text-[#f59e0b]" />
+                                  <Clock className="w-4 h-4" />
                                   <span>Planning</span>
-                                  {stop.status === 'planning' && <CheckCircle className="w-4 h-4 text-[#f59e0b] ml-auto" />}
+                                  {stop.status === 'planning' && <CheckCircle className="w-4 h-4 ml-auto text-[#059467]" />}
                                 </button>
                                 <button
                                   onClick={() => handleUpdateStopStatus(stop._id, 'traveling')}
-                                  className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-[#3b82f6]/10 transition-colors flex items-center gap-2"
+                                  className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-[#059467]/10 hover:text-[#059467] transition-all flex items-center gap-3 disabled:opacity-50"
                                   disabled={stop.status === 'traveling'}
                                 >
-                                  <Navigation className="w-4 h-4 text-[#3b82f6]" />
+                                  <Navigation className="w-4 h-4" />
                                   <span>Traveling</span>
-                                  {stop.status === 'traveling' && <CheckCircle className="w-4 h-4 text-[#3b82f6] ml-auto" />}
+                                  {stop.status === 'traveling' && <CheckCircle className="w-4 h-4 ml-auto text-[#059467]" />}
                                 </button>
                                 <button
                                   onClick={() => handleUpdateStopStatus(stop._id, 'completed')}
-                                  className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-[#059467]/10 transition-colors flex items-center gap-2"
+                                  className="w-full px-4 py-3 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-[#059467]/10 hover:text-[#059467] transition-all flex items-center gap-3 disabled:opacity-50"
                                   disabled={stop.status === 'completed'}
                                 >
-                                  <CheckCircle className="w-4 h-4 text-[#059467]" />
+                                  <CheckCircle className="w-4 h-4" />
                                   <span>Completed</span>
-                                  {stop.status === 'completed' && <CheckCircle className="w-4 h-4 text-[#059467] ml-auto" />}
+                                  {stop.status === 'completed' && <CheckCircle className="w-4 h-4 ml-auto text-[#059467]" />}
                                 </button>
-                                <div className="border-t border-slate-100 dark:border-slate-700 mt-2"></div>
+                                <div className="border-t border-slate-100 dark:border-slate-800/50"></div>
                                 <button
                                   onClick={() => handleDeleteStop(stop._id)}
-                                  className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
+                                  className="w-full px-4 py-3.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all flex items-center gap-3"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                   Delete Stop
@@ -1188,7 +1184,7 @@ export default function TripDetailsPage() {
                   <div className="md:hidden flex justify-center mt-8">
                     <button
                       onClick={exportItineraryToPDF}
-                      className="flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-3 rounded-full font-bold border-2 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-[#059467] hover:text-[#059467] transition-all text-sm shadow-sm w-full"
+                      className="flex items-center justify-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-6 py-3.5 rounded-xl font-bold transition-all shadow-md shadow-[#059467]/20 text-sm w-full"
                     >
                       <Download className="w-4 h-4" />
                       Export Itinerary as PDF
@@ -1199,7 +1195,7 @@ export default function TripDetailsPage() {
                 {/* Floating Add Stop Button - Mobile Only */}
                 <button
                   onClick={() => setShowAddStop(true)}
-                  className="md:hidden fixed bottom-20 right-4 z-50 w-14 h-14 bg-gradient-to-br from-[#059467] to-[#047854] text-white rounded-full shadow-2xl shadow-[#059467]/40 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                  className="md:hidden fixed bottom-24 right-6 z-50 w-14 h-14 bg-[#059467] hover:bg-[#047854] text-white rounded-2xl shadow-xl shadow-[#059467]/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
                   aria-label="Add Stop"
                 >
                   <Plus className="w-6 h-6" />
@@ -1855,8 +1851,7 @@ export default function TripDetailsPage() {
             {/* Packing Tab Sidebar */}
             {activeTab === 'packing' && (
               <>
-{/* 
-                Weight Tracker
+{/* Weight Tracker
                 <div className="bg-slate-900 text-white rounded-2xl shadow-lg p-6 relative overflow-hidden">
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-[#059467]/20 rounded-full blur-2xl"></div>
 
@@ -2593,4 +2588,3 @@ export default function TripDetailsPage() {
     </>
   );
 }
-         

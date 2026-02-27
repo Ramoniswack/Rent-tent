@@ -27,8 +27,6 @@ interface FieldOptions {
   gearCategories: string[];
   gearConditions: string[];
   bookingFeatures: BookingFeature[];
-  footerProductMenu: MenuItem[];
-  footerCompanyMenu: MenuItem[];
 }
 
 export default function ProfileFieldsAdmin() {
@@ -41,9 +39,7 @@ export default function ProfileFieldsAdmin() {
     languages: [],
     gearCategories: [],
     gearConditions: [],
-    bookingFeatures: [],
-    footerProductMenu: [],
-    footerCompanyMenu: []
+    bookingFeatures: []
   });
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -60,15 +56,6 @@ export default function ProfileFieldsAdmin() {
   const [newFeatureTitle, setNewFeatureTitle] = useState('');
   const [newFeatureDescription, setNewFeatureDescription] = useState('');
   const [editingFeatureIndex, setEditingFeatureIndex] = useState<number | null>(null);
-  
-  // Footer menu inputs
-  const [newProductMenuLabel, setNewProductMenuLabel] = useState('');
-  const [newProductMenuUrl, setNewProductMenuUrl] = useState('');
-  const [editingProductMenuIndex, setEditingProductMenuIndex] = useState<number | null>(null);
-  
-  const [newCompanyMenuLabel, setNewCompanyMenuLabel] = useState('');
-  const [newCompanyMenuUrl, setNewCompanyMenuUrl] = useState('');
-  const [editingCompanyMenuIndex, setEditingCompanyMenuIndex] = useState<number | null>(null);
 
   useEffect(() => {
     fetchOptions();
@@ -111,8 +98,6 @@ export default function ProfileFieldsAdmin() {
       let body;
       if (fieldType === 'bookingFeatures') {
         body = { features: options[fieldType] };
-      } else if (fieldType === 'footerProductMenu' || fieldType === 'footerCompanyMenu') {
-        body = { menuItems: options[fieldType] };
       } else {
         body = { options: options[fieldType] };
       }
@@ -224,72 +209,6 @@ export default function ProfileFieldsAdmin() {
       Sparkles, Truck, Headphones, Shield: BadgeCheck, Package, Mountain, Heart, Globe
     };
     return icons[iconName] || Sparkles;
-  };
-  
-  const addFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu') => {
-    const label = menuType === 'footerProductMenu' ? newProductMenuLabel : newCompanyMenuLabel;
-    const url = menuType === 'footerProductMenu' ? newProductMenuUrl : newCompanyMenuUrl;
-    const editingIndex = menuType === 'footerProductMenu' ? editingProductMenuIndex : editingCompanyMenuIndex;
-    
-    if (!label.trim() || !url.trim()) {
-      showError('Label and URL are required');
-      return;
-    }
-    
-    if (editingIndex !== null) {
-      const updatedItems = [...options[menuType]];
-      updatedItems[editingIndex] = { label: label.trim(), url: url.trim() };
-      setOptions({ ...options, [menuType]: updatedItems });
-      
-      if (menuType === 'footerProductMenu') {
-        setEditingProductMenuIndex(null);
-      } else {
-        setEditingCompanyMenuIndex(null);
-      }
-    } else {
-      setOptions({
-        ...options,
-        [menuType]: [...options[menuType], { label: label.trim(), url: url.trim() }]
-      });
-    }
-    
-    if (menuType === 'footerProductMenu') {
-      setNewProductMenuLabel('');
-      setNewProductMenuUrl('');
-    } else {
-      setNewCompanyMenuLabel('');
-      setNewCompanyMenuUrl('');
-    }
-  };
-  
-  const editFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu', index: number) => {
-    const item = options[menuType][index];
-    if (menuType === 'footerProductMenu') {
-      setNewProductMenuLabel(item.label);
-      setNewProductMenuUrl(item.url);
-      setEditingProductMenuIndex(index);
-    } else {
-      setNewCompanyMenuLabel(item.label);
-      setNewCompanyMenuUrl(item.url);
-      setEditingCompanyMenuIndex(index);
-    }
-  };
-  
-  const removeFooterMenuItem = (menuType: 'footerProductMenu' | 'footerCompanyMenu', index: number) => {
-    setOptions({
-      ...options,
-      [menuType]: options[menuType].filter((_, i) => i !== index)
-    });
-    
-    if (menuType === 'footerProductMenu' && editingProductMenuIndex === index) {
-      setEditingProductMenuIndex(null);
-      setNewProductMenuLabel('');
-      setNewProductMenuUrl('');
-    } else if (menuType === 'footerCompanyMenu' && editingCompanyMenuIndex === index) {
-      setEditingCompanyMenuIndex(null);
-      setNewCompanyMenuLabel('');
-      setNewCompanyMenuUrl('');
-    }
   };
 
   if (loading) {
@@ -747,180 +666,6 @@ export default function ProfileFieldsAdmin() {
                     <p className="text-sm font-bold">No features added yet</p>
                   </div>
                 )}
-              </div>
-            </div>
-          </section>
-
-          {/* Footer Product Menu (Cyan Theme) */}
-          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-500/20 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-                  <Package className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Footer "Product" Menu</h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Links for the Product column</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleSave('footerProductMenu')}
-                disabled={saving}
-                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-4 h-fit">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Menu Label</label>
-                  <input
-                    type="text"
-                    value={newProductMenuLabel}
-                    onChange={(e) => setNewProductMenuLabel(e.target.value)}
-                    placeholder="e.g. Browse Gear..."
-                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500/50 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Destination URL</label>
-                  <input
-                    type="text"
-                    value={newProductMenuUrl}
-                    onChange={(e) => setNewProductMenuUrl(e.target.value)}
-                    placeholder="e.g. /search"
-                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-cyan-500/50 outline-none"
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => addFooterMenuItem('footerProductMenu')}
-                    className="flex-1 px-4 py-3 bg-slate-900 dark:bg-cyan-500/20 text-white dark:text-cyan-400 border border-transparent dark:border-cyan-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-cyan-500/30 transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    {editingProductMenuIndex !== null ? <><Edit2 className="w-4 h-4" /> Update Link</> : <><Plus className="w-4 h-4" /> Add Link</>}
-                  </button>
-                  {editingProductMenuIndex !== null && (
-                    <button
-                      onClick={() => {
-                        setEditingProductMenuIndex(null);
-                        setNewProductMenuLabel('');
-                        setNewProductMenuUrl('');
-                      }}
-                      className="px-4 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {options.footerProductMenu?.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-cyan-50/50 dark:bg-cyan-500/5 border border-cyan-200/50 dark:border-cyan-500/10 rounded-2xl group hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-colors">
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">{item.label}</span>
-                      <p className="text-xs font-medium text-cyan-600 dark:text-cyan-400 mt-1">{item.url}</p>
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => editFooterMenuItem('footerProductMenu', index)} className="p-2 hover:bg-cyan-200/50 dark:hover:bg-cyan-500/20 rounded-lg transition-colors text-cyan-600 dark:text-cyan-400">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => removeFooterMenuItem('footerProductMenu', index)} className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Footer Company Menu (Violet Theme) */}
-          <section className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
-                  <Globe className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">Footer "Company" Menu</h2>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Links for the Company column</p>
-                </div>
-              </div>
-              <button
-                onClick={() => handleSave('footerCompanyMenu')}
-                disabled={saving}
-                className="flex items-center justify-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-600 to-violet-500 text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-70 disabled:transform-none text-sm"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-slate-50/50 dark:bg-[#0b1713]/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-4 h-fit">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Menu Label</label>
-                  <input
-                    type="text"
-                    value={newCompanyMenuLabel}
-                    onChange={(e) => setNewCompanyMenuLabel(e.target.value)}
-                    placeholder="e.g. About Us..."
-                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-violet-500/50 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Destination URL</label>
-                  <input
-                    type="text"
-                    value={newCompanyMenuUrl}
-                    onChange={(e) => setNewCompanyMenuUrl(e.target.value)}
-                    placeholder="e.g. /about"
-                    className="w-full px-4 py-3 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-violet-500/50 outline-none"
-                  />
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => addFooterMenuItem('footerCompanyMenu')}
-                    className="flex-1 px-4 py-3 bg-slate-900 dark:bg-violet-500/20 text-white dark:text-violet-400 border border-transparent dark:border-violet-500/30 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-violet-500/30 transition-colors flex items-center justify-center gap-2 text-sm"
-                  >
-                    {editingCompanyMenuIndex !== null ? <><Edit2 className="w-4 h-4" /> Update Link</> : <><Plus className="w-4 h-4" /> Add Link</>}
-                  </button>
-                  {editingCompanyMenuIndex !== null && (
-                    <button
-                      onClick={() => {
-                        setEditingCompanyMenuIndex(null);
-                        setNewCompanyMenuLabel('');
-                        setNewCompanyMenuUrl('');
-                      }}
-                      className="px-4 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors text-sm"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {options.footerCompanyMenu?.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-violet-50/50 dark:bg-violet-500/5 border border-violet-200/50 dark:border-violet-500/10 rounded-2xl group hover:bg-violet-50 dark:hover:bg-violet-500/10 transition-colors">
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">{item.label}</span>
-                      <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mt-1">{item.url}</p>
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => editFooterMenuItem('footerCompanyMenu', index)} className="p-2 hover:bg-violet-200/50 dark:hover:bg-violet-500/20 rounded-lg transition-colors text-violet-600 dark:text-violet-400">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => removeFooterMenuItem('footerCompanyMenu', index)} className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors text-red-500">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </section>
