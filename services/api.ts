@@ -216,6 +216,33 @@ export const gearAPI = {
   },
 };
 
+// Wishlist API
+export const wishlistAPI = {
+  // Get user's wishlist
+  getWishlist: async () => {
+    return apiRequest('/wishlist');
+  },
+
+  // Check if gear is in wishlist
+  checkWishlist: async (gearId: string) => {
+    return apiRequest(`/wishlist/check/${gearId}`);
+  },
+
+  // Add gear to wishlist
+  addToWishlist: async (gearId: string) => {
+    return apiRequest(`/wishlist/${gearId}`, {
+      method: 'POST',
+    });
+  },
+
+  // Remove gear from wishlist
+  removeFromWishlist: async (gearId: string) => {
+    return apiRequest(`/wishlist/${gearId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 // Booking API
 export const bookingAPI = {
   // Create booking

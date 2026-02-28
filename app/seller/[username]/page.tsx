@@ -26,7 +26,8 @@ import {
   PieChart,
   Download,
   Filter,
-  Activity
+  Activity,
+  Wallet
 } from 'lucide-react';
 
 interface GearItem {
@@ -291,20 +292,32 @@ export default function SellerDashboardPage() {
                   {[
                     { id: 'rentals', icon: ShoppingBag, label: 'Orders' },
                     { id: 'gear', icon: Package, label: 'Inventory' },
-                    { id: 'analytics', icon: BarChart3, label: 'Analytics' }
+                    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
+                    { id: 'wallet', icon: Wallet, label: 'Wallet', isLink: true, href: '/wallet' }
                   ].map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id as any)}
-                      className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all whitespace-nowrap lg:whitespace-normal font-bold text-sm ${
-                        activeTab === item.id
-                          ? 'bg-[#059467] text-white shadow-lg shadow-[#059467]/20 scale-[1.02] lg:translate-x-1 lg:scale-100'
-                          : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} />
-                      {item.label}
-                    </button>
+                    item.isLink ? (
+                      <button
+                        key={item.id}
+                        onClick={() => router.push(item.href!)}
+                        className="flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all whitespace-nowrap lg:whitespace-normal font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
+                      >
+                        <item.icon className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                        {item.label}
+                      </button>
+                    ) : (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id as any)}
+                        className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all whitespace-nowrap lg:whitespace-normal font-bold text-sm ${
+                          activeTab === item.id
+                            ? 'bg-[#059467] text-white shadow-lg shadow-[#059467]/20 scale-[1.02] lg:translate-x-1 lg:scale-100'
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-white' : 'text-slate-400 dark:text-slate-500'}`} />
+                        {item.label}
+                      </button>
+                    )
                   ))}
                 </nav>
               </div>

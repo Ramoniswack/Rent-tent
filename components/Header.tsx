@@ -21,7 +21,8 @@ import {
   Sun,
   Inbox,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Heart
 } from 'lucide-react';
 
 interface NavItem {
@@ -227,6 +228,10 @@ const Header: React.FC = () => {
                           <button onClick={() => handleNavigation('/rentals/dashboard')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <Inbox className="w-4 h-4 text-slate-400" /> My Rentals
                           </button>
+
+                          <button onClick={() => handleNavigation('/wishlist')} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <Heart className="w-4 h-4 text-slate-400" /> Wishlist
+                          </button>
                       
                           <button onClick={() => handleNavigation(`/seller/${user.username}`)} className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                             <Backpack className="w-4 h-4 text-slate-400" /> Gears Dashboard
@@ -355,6 +360,10 @@ const Header: React.FC = () => {
               <button onClick={() => handleNavigation('/rentals/dashboard')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <Inbox className="w-4 h-4 text-slate-400" />
                 <span>My Rentals</span>
+              </button>
+              <button onClick={() => handleNavigation('/wishlist')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <Heart className="w-4 h-4 text-slate-400" />
+                <span>Wishlist</span>
               </button>
               {user.isAdmin && (
                 <button onClick={() => handleNavigation('/admin')} className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">

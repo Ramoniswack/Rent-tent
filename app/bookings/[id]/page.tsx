@@ -42,15 +42,21 @@ function BookingDetailsPage() {
   const [issueDescription, setIssueDescription] = useState('');
   const [showStatusChangeModal, setShowStatusChangeModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState('');
+  const [bookingTexts, setBookingTexts] = useState<any>(null);
+  const [bookingPolicies, setBookingPolicies] = useState<any>(null);
 
   const fetchBookingDetails = useCallback(async () => {
     if (!user || !params.id) return;
     
     try {
       setLoading(true);
-      const [renterBookings, ownerBookings] = await Promise.all([
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      
+      const [renterBookings, ownerBookings, textsRes, policiesRes] = await Promise.all([
         bookingAPI.getMyBookings(),
-        bookingAPI.getGearBookings()
+        bookingAPI.getGearBookings(),
+        fetch(`${API_BASE_URL}/site-settings/bookingTexts`),
+        fetch(`${API_BASE_URL}/site-settings/bookingPolicies`)
       ]);
       
       const allBookings = [...renterBookings, ...ownerBookings];
@@ -60,6 +66,18 @@ function BookingDetailsPage() {
         setToast({ message: 'Booking not found', type: 'error' });
       } else {
         setBooking(foundBooking);
+      }
+
+      // Load dynamic texts
+      if (textsRes.ok) {
+        const textsData = await textsRes.json();
+        setBookingTexts(textsData.settingValue);
+      }
+
+      // Load booking policies
+      if (policiesRes.ok) {
+        const policiesData = await policiesRes.json();
+        setBookingPolicies(policiesData.settingValue);
       }
     } catch (error: any) {
       setToast({ message: error.message || 'Failed to load booking details', type: 'error' });
@@ -354,8 +372,8 @@ function BookingDetailsPage() {
               {/* Location & Instructions */}
               <LogisticsCard
                 location={booking.pickupLocation}
-                pickupInstructions="Ensure you inspect the gear before taking it. Record a video of the item's condition for safety."
-                returnInstructions="Clean the gear before return. Check all accessories are included in the bag."
+                pickupInstructions={bookingTexts?.pickupInstructions || "Please arrive 15 minutes before your scheduled pickup time. Bring a valid ID and payment confirmation."}
+                returnInstructions={bookingTexts?.returnInstructions || "Return the item in the same condition as received. Late returns will incur additional fees."}
                 ownerPhone={otherUser?.phone}
                 ownerEmail={otherUser?.email}
                 onGetDirections={handleGetDirections}
@@ -437,10 +455,11 @@ function BookingDetailsPage() {
 
               {/* Terms Sidebar */}
               <RentalTermsCard
-                lateFeePerDay={50}
+                lateFeePerDay={bookingPolicies?.lateFeePerDay || 50}
                 protectionPlan={{ active: !!booking.protectionPlan }}
-                cancellationDeadline={new Date(new Date(booking.startDate).getTime() - 24 * 60 * 60 * 1000)}
-                cancellationFee={booking.totalPrice * 0.15}
+                cancellationDeadline={new Date(new Date(booking.startDate).getTime() - (bookingPolicies?.cancellationWindow || 24) * 60 * 60 * 1000)}
+                cancellationFee={booking.totalPrice * ((bookingPolicies?.depositPercentage || 15) / 100)}
+                bookingTexts={bookingTexts}
               />
             </aside>
           </div>

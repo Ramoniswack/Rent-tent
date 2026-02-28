@@ -16,7 +16,9 @@ import {
   Search,
   Globe,
   Lock,
-  Eye
+  Eye,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 const LocationMap = dynamic(() => import('../../../components/LocationMap'), {
@@ -47,6 +49,7 @@ export default function CreateTripPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState('');
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   // Auto-calculate trip duration or validation status
   const isDateRangeValid = useMemo(() => {
@@ -86,6 +89,21 @@ export default function CreateTripPage() {
       setLoading(false);
     }
   };
+
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+      );
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        setFormData(prev => ({ ...prev, destination: data.display_name }));
+      }
+    } catch (err) {
+      console.error('Reverse geocoding failed');
+    }
+  }, []);
 
   const geocodeDestination = useCallback(async (destination: string) => {
     if (!destination || destination.length < 3) return;
@@ -157,16 +175,16 @@ export default function CreateTripPage() {
             <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-xl shadow-emerald-500/20 rotate-3">
                <Globe className="text-white w-8 h-8" />
             </div>
-            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 className="text-4xl font-black text-black dark:text-white tracking-tight leading-tight">
               Where to <br />
               <span className="text-emerald-500 text-5xl">Next?</span>
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+            <p className="text-black dark:text-white font-medium leading-relaxed">
               Plan your route, set your dates, and share your journey with the nomad community.
             </p>
             
             <div className="hidden lg:block pt-8 border-t border-slate-200 dark:border-slate-800">
-               <div className="flex items-center gap-4 text-sm font-bold text-slate-400 uppercase tracking-widest">
+               <div className="flex items-center gap-4 text-sm font-bold text-black dark:text-white uppercase tracking-widest">
                   <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                   Live Syncing Active
                </div>
@@ -186,13 +204,13 @@ export default function CreateTripPage() {
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Trip Branding */}
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Trip Identity</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-white">Trip Identity</label>
                   <input
                     type="text"
                     name="title"
                     value={formData.title}
                     onChange={handleInputChange}
-                    className="w-full text-2xl font-black bg-transparent border-b-2 border-slate-100 dark:border-slate-800 focus:border-emerald-500 outline-none pb-2 transition-colors dark:text-white"
+                    className="w-full text-2xl font-black bg-transparent border-b-2 border-slate-100 dark:border-slate-800 focus:border-emerald-500 outline-none pb-2 transition-colors text-black dark:text-white placeholder:text-black dark:placeholder:text-white"
                     placeholder="Adventure Title..."
                     required
                   />
@@ -207,17 +225,26 @@ export default function CreateTripPage() {
                       name="destination"
                       value={formData.destination}
                       onChange={handleInputChange}
-                      className="w-full pl-8 py-3 bg-transparent border-b border-slate-100 dark:border-slate-800 focus:border-emerald-500 outline-none transition-colors font-bold dark:text-white"
+                      className="w-full pl-8 py-3 bg-transparent border-b border-slate-100 dark:border-slate-800 focus:border-emerald-500 outline-none transition-colors font-bold text-black dark:text-white placeholder:text-black dark:placeholder:text-white"
                       placeholder="Search Destination..."
                     />
                     {geocoding && <Loader2 className="absolute right-0 top-1/2 -translate-y-1/2 animate-spin text-emerald-500" size={18} />}
                   </div>
                   
                   <div className="relative rounded-[2rem] overflow-hidden shadow-inner ring-1 ring-slate-100 dark:ring-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setIsMapFullscreen(true)}
+                      className="absolute top-4 right-4 z-[1000] p-2 bg-white dark:bg-slate-800 rounded-xl shadow-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                      title="Fullscreen Map"
+                    >
+                      <Maximize2 className="text-emerald-500" size={18} />
+                    </button>
                     <LocationMap 
                       onLocationSelect={(lat, lng) => {
                         setSelectedLocation({ lat, lng });
                         setMapCenter([lat, lng]);
+                        reverseGeocode(lat, lng);
                       }}
                       initialPosition={mapCenter}
                       selectedLocation={selectedLocation}
@@ -229,27 +256,27 @@ export default function CreateTripPage() {
                 {/* Timing */}
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Arrival</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Arrival</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" size={16} />
                       <input
                         type="date"
                         name="startDate"
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none font-bold text-sm dark:text-white"
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none font-bold text-sm text-black dark:text-white"
                         required
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Departure</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Departure</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500" size={16} />
                       <input
                         type="date"
                         name="endDate"
                         onChange={handleInputChange}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none font-bold text-sm dark:text-white"
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none font-bold text-sm text-black dark:text-white"
                         required
                       />
                     </div>
@@ -258,7 +285,7 @@ export default function CreateTripPage() {
 
                 {/* Cover Media */}
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Visuals</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-black dark:text-white">Visuals</label>
                   {coverPhotoUrl ? (
                     <div className="relative group rounded-3xl overflow-hidden h-40 shadow-lg">
                       <img src={coverPhotoUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="Cover" />
@@ -272,8 +299,8 @@ export default function CreateTripPage() {
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center h-40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group">
-                      <Upload className="text-slate-300 group-hover:text-emerald-500 transition-colors mb-2" size={32} />
-                      <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Drop cover image here</span>
+                      <Upload className="text-black dark:text-white group-hover:text-emerald-500 transition-colors mb-2" size={32} />
+                      <span className="text-xs font-black text-black dark:text-white uppercase tracking-widest">Drop cover image here</span>
                       <input type="file" className="hidden" onChange={handleDirectFileUpload} accept="image/*" />
                       {uploadingImage && <Loader2 className="mt-4 animate-spin text-emerald-500" size={20} />}
                     </label>
@@ -287,8 +314,8 @@ export default function CreateTripPage() {
                       {formData.isPublic ? <Eye size={20} /> : <Lock size={20} />}
                     </div>
                     <div>
-                      <h4 className="font-black text-slate-900 dark:text-white text-sm">Public Trip</h4>
-                      <p className="text-xs text-slate-400 font-medium">Visible to other nomads in Discover</p>
+                      <h4 className="font-black text-black dark:text-white text-sm">Public Trip</h4>
+                      <p className="text-xs text-black dark:text-white font-medium">Visible to other nomads in Discover</p>
                     </div>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -314,6 +341,46 @@ export default function CreateTripPage() {
       <div className="hidden md:block">
         <Footer />
       </div>
+
+      {/* Fullscreen Map Modal */}
+      {isMapFullscreen && (
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col">
+          <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <MapPin className="text-emerald-500" size={24} />
+              <h3 className="text-white font-black text-lg">Select Location</h3>
+            </div>
+            <button
+              onClick={() => setIsMapFullscreen(false)}
+              className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+            >
+              <Minimize2 className="text-white" size={20} />
+            </button>
+          </div>
+          <div className="flex-1 relative">
+            <LocationMap 
+              onLocationSelect={(lat, lng) => {
+                setSelectedLocation({ lat, lng });
+                setMapCenter([lat, lng]);
+                reverseGeocode(lat, lng);
+              }}
+              initialPosition={mapCenter}
+              selectedLocation={selectedLocation}
+              height="100%"
+            />
+          </div>
+          {selectedLocation && (
+            <div className="p-4 bg-white/10 backdrop-blur-sm">
+              <button
+                onClick={() => setIsMapFullscreen(false)}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black transition-colors"
+              >
+                Confirm Location
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

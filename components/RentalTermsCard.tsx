@@ -11,13 +11,22 @@ interface RentalTermsCardProps {
   };
   cancellationDeadline?: Date;
   cancellationFee?: number;
+  bookingTexts?: {
+    lateReturnPolicy?: string;
+    protectionPlanActive?: string;
+    protectionPlanInactive?: string;
+    cancellationPolicy?: string;
+    cancellationFeeNote?: string;
+    termsAndPolicies?: string;
+  };
 }
 
 export default function RentalTermsCard({
   lateFeePerDay = 50,
   protectionPlan,
   cancellationDeadline,
-  cancellationFee
+  cancellationFee,
+  bookingTexts
 }: RentalTermsCardProps) {
   return (
     <div className="bg-white dark:bg-[#1a2c26] rounded-2xl p-6 shadow-sm border border-[#e7f4f0] dark:border-white/5">
@@ -33,7 +42,7 @@ export default function RentalTermsCard({
           <div>
             <p className="font-semibold text-sm text-orange-900 dark:text-orange-200">Late Return Policy</p>
             <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-              Late returns are subject to a <span className="font-bold">{formatNPR(lateFeePerDay)}/day</span> penalty
+              {bookingTexts?.lateReturnPolicy || `Late returns are subject to a ${formatNPR(lateFeePerDay)}/day penalty`}
             </p>
           </div>
         </div>
@@ -56,14 +65,14 @@ export default function RentalTermsCard({
               }`}>
                 Protection Plan: {protectionPlan.active ? 'Active' : 'Not Active'}
               </p>
-              {protectionPlan.active && protectionPlan.coverage && (
+              {protectionPlan.active && (
                 <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                  Coverage up to <span className="font-bold">{formatNPR(protectionPlan.coverage)}</span>
+                  {bookingTexts?.protectionPlanActive || (protectionPlan.coverage ? `Coverage up to ${formatNPR(protectionPlan.coverage)}` : 'Full coverage for damage, theft, and loss during the rental period.')}
                 </p>
               )}
               {!protectionPlan.active && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  No protection coverage for this rental
+                  {bookingTexts?.protectionPlanInactive || 'No protection coverage for this rental'}
                 </p>
               )}
             </div>
@@ -77,11 +86,11 @@ export default function RentalTermsCard({
             <div>
               <p className="font-semibold text-sm text-red-900 dark:text-red-200">Cancellation Policy</p>
               <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                Free cancellation until <span className="font-bold">{new Date(cancellationDeadline).toLocaleDateString()}</span>
+                {bookingTexts?.cancellationPolicy || `Free cancellation until ${new Date(cancellationDeadline).toLocaleDateString()}`}
               </p>
               {cancellationFee && (
                 <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                  Cancellation fee after deadline: <span className="font-bold">{formatNPR(cancellationFee)}</span>
+                  {bookingTexts?.cancellationFeeNote || `Cancellation fee after deadline: ${formatNPR(cancellationFee)}`}
                 </p>
               )}
             </div>
@@ -91,8 +100,7 @@ export default function RentalTermsCard({
         {/* General Terms */}
         <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            By proceeding with this rental, you agree to our terms of service and rental agreement. 
-            Damage to equipment may result in additional charges.
+            {bookingTexts?.termsAndPolicies || 'By proceeding with this rental, you agree to our terms of service and rental agreement. Damage to equipment may result in additional charges.'}
           </p>
         </div>
       </div>

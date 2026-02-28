@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import ProtectedRoute from '../../components/ProtectedRoute';
@@ -26,6 +26,7 @@ interface Match {
   timestamp: string;
   unread: number;
   online: boolean;
+  source?: 'match' | 'connection' | 'marketplace';
 }
 
 interface Message {
@@ -57,6 +58,8 @@ interface Message {
 
 function MessagesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'match' | 'marketplace'>('match');
   const [matches, setMatches] = useState<Match[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -293,14 +296,84 @@ function MessagesPage() {
           lastMessage: match.lastMessage || 'No messages yet',
           timestamp: match.timestamp || new Date().toISOString(),
           unread: match.unread || 0,
-          online: onlineUsers.has(match._id || match.id)
+          online: onlineUsers.has(match._id || match.id),
+          source: match.source || 'match' // Default to 'match' if not specified
         }));
         
         setMatches(formattedMatches);
         
-        // Select first match by default only if no match is selected
-        if (formattedMatches.length > 0 && !selectedMatch) {
-          setSelectedMatch(formattedMatches[0]);
+        // Check if there's a userId query parameter
+        const userIdParam = searchParams.get('userId');
+        const gearNameParam = searchParams.get('gearName');
+        const gearIdParam = searchParams.get('gearId');
+        
+        if (userIdParam) {
+          // Find the match with this userId
+          const targetMatch = formattedMatches.find((m: Match) => m.id === userIdParam || m._id === userIdParam);
+          
+          if (targetMatch) {
+            setSelectedMatch(targetMatch);
+            // Set appropriate tab based on source
+            if (targetMatch.source === 'marketplace') {
+              setActiveTab('marketplace');
+            } else {
+              setActiveTab('match');
+            }
+            
+            // Pre-fill message with gear information if provided
+            if (gearNameParam) {
+              const gearName = decodeURIComponent(gearNameParam);
+              const gearUrl = gearIdParam ? `${window.location.origin}/gear/${gearIdParam}` : '';
+              const prefilledMessage = `Hi! I'm interested in your gear: "${gearName}"${gearUrl ? `\n${gearUrl}` : ''}`;
+              setNewMessage(prefilledMessage);
+            }
+          } else {
+            // User not in matches list yet - they might be a gear owner
+            // Try to fetch their info and add them to the list
+            try {
+              const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userIdParam}`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+              });
+              
+              if (userResponse.ok) {
+                const userData = await userResponse.json();
+                const newMatch: Match = {
+                  _id: userData._id,
+                  id: userData._id,
+                  name: userData.name || 'Unknown',
+                  username: userData.username,
+                  profilePicture: userData.profilePicture,
+                  imageUrl: userData.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`,
+                  lastMessage: 'Start a conversation about gear',
+                  timestamp: new Date().toISOString(),
+                  unread: 0,
+                  online: onlineUsers.has(userData._id),
+                  source: 'marketplace'
+                };
+                
+                setMatches([newMatch, ...formattedMatches]);
+                setSelectedMatch(newMatch);
+                setActiveTab('marketplace');
+                
+                // Pre-fill message with gear information if provided
+                if (gearNameParam) {
+                  const gearName = decodeURIComponent(gearNameParam);
+                  const gearUrl = gearIdParam ? `${window.location.origin}/gear/${gearIdParam}` : '';
+                  const prefilledMessage = `Hi! I'm interested in your gear: "${gearName}"${gearUrl ? `\n${gearUrl}` : ''}`;
+                  setNewMessage(prefilledMessage);
+                }
+              }
+            } catch (err) {
+              console.error('Error fetching user:', err);
+            }
+          }
+        } else {
+          // Select first match by default only if no match is selected
+          if (formattedMatches.length > 0 && !selectedMatch) {
+            setSelectedMatch(formattedMatches[0]);
+          }
         }
       } catch (err: any) {
         console.error('Error fetching matches:', err);
@@ -1141,11 +1214,25 @@ function MessagesPage() {
     }
   };
 
-  // Filter matches by search
-  const filteredMatches = matches.filter(match =>
-    match.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    match.username?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter matches by search and active tab
+  const filteredMatches = matches.filter(match => {
+    // First filter by search query
+    const matchesSearch = match.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      match.username?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    // Then filter by active tab
+    const source = (match as any).source;
+    
+    if (activeTab === 'match') {
+      // Show match and connection conversations
+      return !source || source === 'match' || source === 'connection';
+    } else {
+      // Show marketplace conversations
+      return source === 'marketplace' || !source; // Show all if source is undefined (backward compatibility)
+    }
+  });
 
   return (
     <>
@@ -1528,8 +1615,34 @@ function MessagesPage() {
             showSidebar ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
+          {/* Tabs */}
+          <div className="px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 dark:border-slate-800">
+            <div className="flex gap-2 bg-slate-50 dark:bg-[#1a2c26] rounded-xl p-1">
+              <button
+                onClick={() => setActiveTab('match')}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  activeTab === 'match'
+                    ? 'bg-white dark:bg-[#132a24] text-[#059467] shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#059467]'
+                }`}
+              >
+                Match
+              </button>
+              <button
+                onClick={() => setActiveTab('marketplace')}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  activeTab === 'marketplace'
+                    ? 'bg-white dark:bg-[#132a24] text-[#059467] shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-[#059467]'
+                }`}
+              >
+                Marketplace
+              </button>
+            </div>
+          </div>
+
           {/* Search */}
-          <div className="px-4 md:px-5 py-4 md:py-5 border-b border-slate-100 dark:border-slate-800">
+          <div className="px-4 md:px-5 py-3 md:py-4 border-b border-slate-100 dark:border-slate-800">
             <div className="flex w-full items-center rounded-2xl bg-slate-50 dark:bg-[#1a2c26] px-3 md:px-4 py-2.5 md:py-3 transition-all focus-within:ring-2 focus-within:ring-[#059467]/30 focus-within:bg-white dark:focus-within:bg-[#1f3630]">
               <Search className="w-4 h-4 md:w-5 md:h-5 text-[#059467] dark:text-[#059467]/80 mr-2 md:mr-3" />
               <input
@@ -1568,8 +1681,17 @@ function MessagesPage() {
                   <Search className="w-8 h-8 text-slate-400" />
                 </div>
                 <p className="text-slate-500 dark:text-slate-400 font-medium">
-                  {matches.length === 0 ? 'No conversations yet' : 'No matches found'}
+                  {searchQuery 
+                    ? 'No matches found' 
+                    : activeTab === 'match' 
+                      ? 'No match conversations yet' 
+                      : 'No marketplace conversations yet'}
                 </p>
+                {activeTab === 'marketplace' && !searchQuery && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Marketplace conversations appear when you rent or list gear
+                  </p>
+                )}
               </div>
             ) : (
               filteredMatches.map((match) => (
@@ -1593,6 +1715,14 @@ function MessagesPage() {
                     <div className={`absolute bottom-0 right-0 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-white dark:border-[#132a24] transition-colors ${
                       match.online ? 'bg-[#059467]' : 'bg-slate-300'
                     }`} />
+                    {/* Source indicator badge */}
+                    {(match as any).source === 'marketplace' && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md" title="Marketplace conversation">
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-1">

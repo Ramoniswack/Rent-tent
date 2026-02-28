@@ -60,6 +60,8 @@ interface Trip {
   status: 'planning' | 'traveling' | 'completed';
   isPublic?: boolean;
   budget?: number;
+  lat?: number;
+  lng?: number;
   userId: {
     _id: string;
     name: string;
@@ -144,6 +146,9 @@ export default function TripDetailsPage() {
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteRole, setInviteRole] = useState<'editor' | 'viewer'>('editor');
   const [newPackingItem, setNewPackingItem] = useState({ name: '', notes: '', quantity: 1, category: 'clothing' });
+  const [dateError, setDateError] = useState('');
+  const [weather, setWeather] = useState<any>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
   
   // Packing state
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
@@ -152,6 +157,63 @@ export default function TripDetailsPage() {
   useEffect(() => {
     fetchTripData();
   }, [tripId]);
+
+  // Fetch weather data when trip data is loaded
+  useEffect(() => {
+    const fetchWeather = async () => {
+      if (!trip) {
+        console.log('Weather fetch: No trip data yet');
+        return;
+      }
+      
+      if (!trip.lat || !trip.lng) {
+        console.log('Weather fetch: Trip missing coordinates', { 
+          destination: trip.destination, 
+          lat: trip.lat, 
+          lng: trip.lng 
+        });
+        return;
+      }
+      
+      try {
+        setWeatherLoading(true);
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+        console.log('Fetching weather for:', { 
+          destination: trip.destination, 
+          lat: trip.lat, 
+          lng: trip.lng 
+        });
+        
+        const response = await fetch(
+          `${API_BASE_URL}/weather/${encodeURIComponent(trip.destination)}?lat=${trip.lat}&lon=${trip.lng}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+        
+        console.log('Weather API response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Weather data received:', data);
+          setWeather(data);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.log('Weather not available:', errorData);
+          // Don't set weather data, let it remain null to show "unavailable" message
+        }
+      } catch (err) {
+        console.log('Weather fetch failed:', err);
+        // Silently fail - weather widget will show unavailable message
+      } finally {
+        setWeatherLoading(false);
+      }
+    };
+
+    fetchWeather();
+  }, [trip]);
 
   // Auto-refresh data every 10 seconds for collaborative updates
   useEffect(() => {
@@ -253,10 +315,39 @@ export default function TripDetailsPage() {
 
   const handleAddStop = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const selectedDate = new Date(newStop.time);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    // Validate date is not in the past
+    if (selectedDate < today) {
+      setDateError('Stop date cannot be in the past');
+      return;
+    }
+    
+    // If there are existing stops, new stop must be after the last stop
+    if (itinerary.length > 0) {
+      // Sort itinerary by date to find the latest stop
+      const sortedItinerary = [...itinerary].sort((a, b) => 
+        new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+      const lastStop = sortedItinerary[sortedItinerary.length - 1];
+      const lastStopDate = new Date(lastStop.time);
+      lastStopDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate <= lastStopDate) {
+        setDateError(`Date must be after ${new Date(lastStop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`);
+        return;
+      }
+    }
+    
     try {
       const added = await tripAPI.addItineraryStop(tripId, newStop);
       setItinerary([...itinerary, added]);
       setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
+      setDateError('');
       setShowAddStop(false);
     } catch (err) {
       console.error('Failed to add stop:', err);
@@ -1899,36 +1990,48 @@ export default function TripDetailsPage() {
                   {/* Decor Pattern */}
                   <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                   
-                  <div className="flex items-center justify-between mb-8 relative z-10">
+                  <div className="flex items-center justify-between mb-4 relative z-10">
                     <div>
-                      <h4 className="text-sm font-bold opacity-80">Weather Forecast</h4>
-                      <p className="text-lg font-black uppercase">{trip.destination}</p>
+                      <h4 className="text-sm font-bold opacity-80 mb-1">Weather Forecast</h4>
+                      <p className="text-base font-bold">{trip.destination.split(',')[0]}</p>
                     </div>
-                    <Sun className="w-12 h-12" />
+                    {weather?.condition === 'Clear' ? <Sun className="w-12 h-12" /> :
+                     weather?.condition === 'Clouds' ? <Cloud className="w-12 h-12" /> :
+                     weather?.condition === 'Rain' ? <CloudRain className="w-12 h-12" /> :
+                     <Sun className="w-12 h-12" />}
                   </div>
                   
-                  <div className="flex items-end gap-2 mb-6 relative z-10">
-                    <span className="text-5xl font-black">22°C</span>
-                    <span className="text-sm font-bold opacity-80 mb-2">/ Sunny</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 relative z-10">
-                    <div className="bg-white/10 p-3 rounded-2xl flex flex-col items-center">
-                      <span className="text-[10px] uppercase font-bold opacity-70 mb-1">Mon</span>
-                      <Cloud className="w-5 h-5" />
-                      <span className="text-sm font-bold mt-1">19°</span>
+                  {weatherLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin" />
                     </div>
-                    <div className="bg-white/10 p-3 rounded-2xl flex flex-col items-center">
-                      <span className="text-[10px] uppercase font-bold opacity-70 mb-1">Tue</span>
-                      <Sun className="w-5 h-5" />
-                      <span className="text-sm font-bold mt-1">24°</span>
+                  ) : weather ? (
+                    <>
+                      <div className="mb-4 relative z-10">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-5xl font-black">{weather.temperature}°C</span>
+                        </div>
+                        <p className="text-sm font-medium opacity-80 mt-1 capitalize">{weather.description}</p>
+                      </div>
+                      
+                      <div className="bg-white/10 p-3 rounded-2xl relative z-10">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="opacity-70">Feels like:</span>
+                            <span className="font-bold ml-2">{weather.feelsLike}°C</span>
+                          </div>
+                          <div>
+                            <span className="opacity-70">Humidity:</span>
+                            <span className="font-bold ml-2">{weather.humidity}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-4 opacity-70 text-sm">
+                      Location not found
                     </div>
-                    <div className="bg-white/10 p-3 rounded-2xl flex flex-col items-center">
-                      <span className="text-[10px] uppercase font-bold opacity-70 mb-1">Wed</span>
-                      <CloudRain className="w-5 h-5" />
-                      <span className="text-sm font-bold mt-1">16°</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Trip Progress Widget */}
@@ -2228,10 +2331,79 @@ export default function TripDetailsPage() {
                   <input
                     type="date"
                     value={newStop.time}
-                    onChange={(e) => setNewStop({ ...newStop, time: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
+                    min={(() => {
+                      if (itinerary.length === 0) {
+                        // First stop: cannot be in the past
+                        return new Date().toISOString().split('T')[0];
+                      } else {
+                        // Subsequent stops: must be after the last stop
+                        const sortedItinerary = [...itinerary].sort((a, b) => 
+                          new Date(a.time).getTime() - new Date(b.time).getTime()
+                        );
+                        const lastStop = sortedItinerary[sortedItinerary.length - 1];
+                        const lastStopDate = new Date(lastStop.time);
+                        lastStopDate.setDate(lastStopDate.getDate() + 1); // Next day after last stop
+                        return lastStopDate.toISOString().split('T')[0];
+                      }
+                    })()}
+                    onChange={(e) => {
+                      setNewStop({ ...newStop, time: e.target.value });
+                      setDateError('');
+                      
+                      const selectedDate = new Date(e.target.value);
+                      selectedDate.setHours(0, 0, 0, 0);
+                      
+                      // Check if date is valid
+                      if (itinerary.length > 0) {
+                        const sortedItinerary = [...itinerary].sort((a, b) => 
+                          new Date(a.time).getTime() - new Date(b.time).getTime()
+                        );
+                        const lastStop = sortedItinerary[sortedItinerary.length - 1];
+                        const lastStopDate = new Date(lastStop.time);
+                        lastStopDate.setHours(0, 0, 0, 0);
+                        
+                        if (selectedDate <= lastStopDate) {
+                          setDateError(`❌ Must be after ${new Date(lastStop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
+                        }
+                      }
+                    }}
+                    className={`w-full px-4 py-3 rounded-xl border ${dateError ? 'border-red-500 ring-2 ring-red-500/20' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-slate-800 text-[#0f172a] dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none transition-all`}
                     required
                   />
+                  {dateError ? (
+                    <p className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1">
+                      {dateError}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {itinerary.length === 0 
+                        ? 'First stop cannot be in the past' 
+                        : `Must be after ${(() => {
+                            const sortedItinerary = [...itinerary].sort((a, b) => 
+                              new Date(a.time).getTime() - new Date(b.time).getTime()
+                            );
+                            const lastStop = sortedItinerary[sortedItinerary.length - 1];
+                            return new Date(lastStop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          })()}`
+                      }
+                    </p>
+                  )}
+                  {itinerary.length > 0 && (
+                    <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+                        Existing Stops (in order):
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {[...itinerary].sort((a, b) => 
+                          new Date(a.time).getTime() - new Date(b.time).getTime()
+                        ).map((stop, index) => (
+                          <span key={stop._id} className="text-[10px] px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded font-medium">
+                            Day {index + 1}: {new Date(stop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button
