@@ -39,7 +39,6 @@ Modern Next.js frontend for the NomadNotes application - a comprehensive travel 
 - ✅ Gear Rental Marketplace
 - ✅ Social Matching System
 - ✅ Real-time Messaging
-- ✅ Video/Audio Calls (WebRTC)
 - ✅ Offline Mode Support
 - ✅ PWA (Progressive Web App)
 - ✅ Admin Dashboard
@@ -115,7 +114,6 @@ frontend/
 │   └── useOfflineSync.ts       # Offline sync
 ├── lib/
 │   ├── db.ts                   # IndexedDB for offline
-│   ├── webrtc.ts               # WebRTC utilities
 │   └── cloudinary.ts           # Image uploads
 ├── services/
 │   └── api.ts                  # API client
@@ -150,7 +148,6 @@ frontend/
 - Real-time text messaging
 - Image sharing
 - Message reactions and replies
-- Video and audio calls (WebRTC)
 - Read receipts
 - Typing indicators
 
