@@ -24,7 +24,8 @@ import {
   Sparkles,
   Truck,
   Headphones,
-  X
+  X,
+  Percent
 } from 'lucide-react';
 
 export default function BookGearPage() {
@@ -41,7 +42,7 @@ export default function BookGearPage() {
   const [bookedDates, setBookedDates] = useState<{start: Date, end: Date}[]>([]);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'info' | 'warning'} | null>(null);
   const [bookingFeatures, setBookingFeatures] = useState<Array<{icon: string, title: string, description: string}>>([]);
-  const [serviceFeePercentage, setServiceFeePercentage] = useState(5);
+  const [commissionRate, setCommissionRate] = useState(10);
 
   useEffect(() => {
     if (!user) {
@@ -50,23 +51,23 @@ export default function BookGearPage() {
     }
     fetchGear();
     fetchBookingFeatures();
-    fetchServiceFee();
+    fetchCommissionRate();
   }, [user, params.id]);
 
-  const fetchServiceFee = async () => {
+  const fetchCommissionRate = async () => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000';
-      const response = await fetch(`${apiUrl}/api/site-settings/serviceFeePercentage`);
+      const response = await fetch(`${apiUrl}/api/site-settings/platformCommission`);
       
       if (response.ok) {
         const data = await response.json();
-        if (data.value !== undefined) {
-          setServiceFeePercentage(data.value);
+        if (data.value?.rate !== undefined) {
+          setCommissionRate(data.value.rate);
         }
       }
     } catch (error) {
-      console.error('Error fetching service fee:', error);
-      // Fallback to default 5%
+      console.error('Error fetching commission rate:', error);
+      // Fallback to default 10%
     }
   };
 
@@ -270,11 +271,11 @@ export default function BookGearPage() {
 
   const calculateTotal = () => {
     const days = getRentalDays();
-    if (days === 0 || !gear) return { rental: 0, deposit: 0, serviceFee: 0, total: 0 };
+    if (days === 0 || !gear) return { rental: 0, deposit: 0, serviceFee: 0, total: 0, days: 0 };
     
     const rental = days * gear.pricePerDay;
     const deposit = gear.deposit || 0;
-    const serviceFee = rental * (serviceFeePercentage / 100);
+    const serviceFee = rental * (commissionRate / 100);
     const total = rental + deposit + serviceFee;
     
     return { rental, deposit, serviceFee, total, days };
@@ -696,7 +697,7 @@ export default function BookGearPage() {
                   <div className="flex items-center justify-between text-xs sm:text-sm text-[#0d1c17]/70 dark:text-white/70 pb-4 sm:pb-6 border-b border-dashed border-[#059467]/20">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <Receipt className="w-3 h-3 sm:w-4 sm:h-4 text-[#059467]/60 flex-shrink-0" />
-                      <span>Service Fee ({serviceFeePercentage}%)</span>
+                      <span>Platform Commission ({commissionRate}%)</span>
                     </div>
                     <span className="font-bold text-[#0d1c17] dark:text-white ml-2">{formatNPR(pricing.serviceFee)}</span>
                   </div>
@@ -709,6 +710,19 @@ export default function BookGearPage() {
                     </div>
                     <div className="text-2xl sm:text-3xl md:text-4xl font-black text-[#0d1c17] dark:text-white">
                       {formatNPR(pricing.total)}
+                    </div>
+                  </div>
+
+                  {/* Commission Info Note */}
+                  <div className="mt-4 p-3 sm:p-4 bg-[#059467]/5 dark:bg-[#059467]/10 rounded-xl border border-[#059467]/10">
+                    <div className="flex items-start gap-2">
+                      <Percent className="w-4 h-4 text-[#059467] flex-shrink-0 mt-0.5" />
+                      <div className="text-[10px] sm:text-xs text-[#0d1c17]/70 dark:text-white/70">
+                        <span className="font-semibold text-[#059467]">Platform Commission: {commissionRate}%</span>
+                        <p className="mt-1">
+                          The owner receives {100 - commissionRate}% of the rental amount after a {commissionRate}% platform commission is deducted upon booking completion.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -777,9 +791,9 @@ export default function BookGearPage() {
             </div>
           </section>
         </main>
-      </div>
-      <div className="hidden md:block">
-        <Footer />
+        <div className="hidden md:block">
+          <Footer />
+        </div>
       </div>
     </>
   );

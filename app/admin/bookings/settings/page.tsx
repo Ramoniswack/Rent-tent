@@ -49,18 +49,14 @@ export default function BookingSettingsPage() {
   });
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
+    if (!user) return; // Wait for user to load
+    
     if (!user.isAdmin) {
       router.push('/');
-      return;
+    } else {
+      fetchSettings();
     }
-
-    fetchSettings();
-  }, [user, router]);
+  }, [user?.isAdmin]); // Only depend on admin status
 
   const fetchSettings = async () => {
     try {

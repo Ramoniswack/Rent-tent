@@ -9,10 +9,10 @@ import Footer from '../../components/Footer';
 import {
   Users, MapPin, Package, Loader2, Search, Trash2, Shield, 
   ShieldOff, ChevronLeft, ChevronRight, AlertCircle, LayoutDashboard, 
-  FileText, Plus, Edit, ExternalLink, Calendar, Settings
+  FileText, Plus, Edit, ExternalLink, Calendar, Settings, TrendingUp
 } from 'lucide-react';
 
-type Tab = 'overview' | 'users' | 'trips' | 'gear' | 'pages';
+type Tab = 'overview' | 'users' | 'trips' | 'gear' | 'pages' | 'analytics';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -66,7 +66,7 @@ export default function AdminPage() {
   useEffect(() => {
     checkAdminStatus();
     const tabParam = searchParams.get('tab') as Tab;
-    if (tabParam && ['overview', 'users', 'trips', 'gear', 'pages'].includes(tabParam)) {
+    if (tabParam && ['overview', 'users', 'trips', 'gear', 'pages', 'analytics'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -75,7 +75,7 @@ export default function AdminPage() {
     try {
       const user = await userAPI.getProfile();
       if (!user || !user.isAdmin) {
-        router.push('/dashboard');
+        router.push('/');
         return;
       }
       setIsAdmin(true);
@@ -88,6 +88,10 @@ export default function AdminPage() {
   };
 
   const handleTabChange = (tab: Tab) => {
+    if (tab === 'analytics') {
+      router.push('/admin/analytics');
+      return;
+    }
     setActiveTab(tab);
     router.push(`/admin?tab=${tab}`, { scroll: false });
   };
@@ -366,6 +370,7 @@ export default function AdminPage() {
               <nav className="flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 scrollbar-hide">
                 {[
                   { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+                  { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
                   { id: 'users', icon: Users, label: 'Users' },
                   { id: 'trips', icon: MapPin, label: 'Trips' },
                   { id: 'gear', icon: Package, label: 'Gear' },
@@ -421,6 +426,19 @@ export default function AdminPage() {
               <div className="mb-8 p-4 bg-red-50/80 dark:bg-red-900/20 backdrop-blur-sm border border-red-200 dark:border-red-900/50 rounded-2xl flex items-center gap-3 animate-shake">
                 <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                 <p className="text-sm font-bold text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
+            {/* Analytics Tab - Redirect to dedicated page */}
+            {activeTab === 'analytics' && (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 animate-in fade-in duration-500">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse" />
+                  <div className="w-16 h-16 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl flex items-center justify-center relative z-10">
+                    <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+                  </div>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Redirecting to Analytics...</p>
               </div>
             )}
 

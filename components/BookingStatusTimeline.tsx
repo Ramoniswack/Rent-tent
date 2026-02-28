@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clock, Package, Truck, Home, ClipboardCheck, CheckCircle2 } from 'lucide-react';
+import { Check, Clock, Package, Home, ClipboardCheck, CheckCircle2 } from 'lucide-react';
 
 interface StatusTimelineProps {
   currentStatus: string;
@@ -15,7 +15,6 @@ const STATUSES = [
   { key: 'pending', label: 'Pending', icon: Clock, description: 'Awaiting confirmation' },
   { key: 'confirmed', label: 'Confirmed', icon: CheckCircle2, description: 'Booking confirmed' },
   { key: 'picked_up', label: 'Picked Up', icon: Package, description: 'Item collected' },
-  { key: 'in_use', label: 'In Use', icon: Truck, description: 'Currently rented' },
   { key: 'returned', label: 'Returned', icon: Home, description: 'Item returned' },
   { key: 'inspected', label: 'Inspected', icon: ClipboardCheck, description: 'Quality checked' },
   { key: 'completed', label: 'Completed', icon: CheckCircle2, description: 'Rental complete' }

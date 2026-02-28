@@ -22,7 +22,6 @@ import {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function WalletPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const [wallet, setWallet] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -31,16 +30,15 @@ export default function WalletPage() {
   const [rechargeAmount, setRechargeAmount] = useState('');
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [commissionSettings, setCommissionSettings] = useState<any>(null);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
+    if (!user) return; // Wait for user to load
+    
     fetchWalletData();
     fetchTransactions();
-  }, [user, router]);
+    fetchCommissionSettings();
+  }, [user?._id]); // Only depend on user ID
 
   const fetchWalletData = async () => {
     try {
@@ -78,6 +76,19 @@ export default function WalletPage() {
       setTransactions(data.transactions || []);
     } catch (err: any) {
       console.error('Failed to load transactions:', err);
+    }
+  };
+
+  const fetchCommissionSettings = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/site-settings/platformCommission`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCommissionSettings(data.settingValue || null);
+      }
+    } catch (err: any) {
+      console.error('Failed to load commission settings:', err);
     }
   };
 
@@ -146,9 +157,12 @@ export default function WalletPage() {
   }
 
   const credits = wallet?.wallet?.credits || 0;
-  const commissionRate = wallet?.commissionRate || 10;
+  const commissionRate = commissionSettings?.rate || wallet?.commissionRate || 10;
   const pendingCommission = wallet?.pendingCommission || 0;
   const activeGearCount = wallet?.activeGearCount || 0;
+  const commissionEnabled = commissionSettings?.enabled !== false;
+  const commissionDescription = commissionSettings?.description || 'Platform commission deducted from each completed booking';
+  const trialCredits = 500;
 
   return (
     <>
@@ -227,20 +241,22 @@ export default function WalletPage() {
           </div>
 
           {/* How It Works */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-white/5 mb-8">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-[#059467]" />
-              How Platform Commission Works
-            </h2>
-            <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
-              <p>• Platform charges <strong>{commissionRate}% commission</strong> on each completed booking</p>
-              <p>• Commission is automatically deducted from your wallet when a booking is completed</p>
-              <p>• No monthly listing fees - you only pay when you earn</p>
-              <p>• Keep sufficient balance to cover pending commissions</p>
-              <p>• New sellers get <strong>{formatNPR(500)} free trial credits</strong></p>
-              <p>• Example: If a booking is {formatNPR(1000)}, commission is {formatNPR(1000 * commissionRate / 100)}</p>
+          {commissionEnabled && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-white/5 mb-8">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-[#059467]" />
+                How Platform Commission Works
+              </h2>
+              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
+                <p>• Platform charges <strong>{commissionRate}% commission</strong> on each completed booking</p>
+                <p>• {commissionDescription}</p>
+                <p>• No monthly listing fees - you only pay when you earn</p>
+                <p>• Keep sufficient balance to cover pending commissions</p>
+                <p>• New sellers get <strong>{formatNPR(trialCredits)} free trial credits</strong></p>
+                <p>• Example: If a booking is {formatNPR(1000)}, commission is {formatNPR(Math.round(1000 * commissionRate / 100))}</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Transaction History */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-white/5 mb-6">

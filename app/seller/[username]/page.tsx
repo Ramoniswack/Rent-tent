@@ -27,7 +27,8 @@ import {
   Download,
   Filter,
   Activity,
-  Wallet
+  Wallet,
+  Plus
 } from 'lucide-react';
 
 interface GearItem {
@@ -964,27 +965,40 @@ function InventoryGrid({ gear, isOwn, categories, selectedCat, setCat, router }:
           <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">{gear.length} Items Listed</p>
         </div>
         
-        {/* Category Pill Filters */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setCat('')}
-            className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-              !selectedCat ? 'bg-[#059467] text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-[#1a2c26] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-            }`}
-          >
-            All Items
-          </button>
-          {categories.map((cat: string) => (
+        <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+          {/* List Your Gear Button - Only for own profile */}
+          {isOwn && (
             <button
-              key={cat}
-              onClick={() => setCat(cat)}
+              onClick={() => router.push('/gear/add')}
+              className="flex items-center justify-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-6 py-3 rounded-full font-bold shadow-lg shadow-[#059467]/25 transition-all transform hover:-translate-y-0.5"
+            >
+              <Plus className="w-5 h-5" />
+              List Your Gear
+            </button>
+          )}
+          
+          {/* Category Pill Filters */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setCat('')}
               className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
-                selectedCat === cat ? 'bg-[#059467] text-white shadow-lg' : 'bg-white dark:bg-[#1a2c26] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                !selectedCat ? 'bg-[#059467] text-white shadow-lg shadow-emerald-500/20' : 'bg-white dark:bg-[#1a2c26] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              {cat}
+              All Items
             </button>
-          ))}
+            {categories.map((cat: string) => (
+              <button
+                key={cat}
+                onClick={() => setCat(cat)}
+                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${
+                  selectedCat === cat ? 'bg-[#059467] text-white shadow-lg' : 'bg-white dark:bg-[#1a2c26] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

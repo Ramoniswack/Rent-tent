@@ -11,13 +11,12 @@ interface OwnerStatusControlProps {
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', description: 'Awaiting confirmation' },
+  { value: 'cancelled', label: 'Cancelled', description: 'Booking cancelled' },
   { value: 'confirmed', label: 'Confirmed', description: 'Booking confirmed' },
   { value: 'picked_up', label: 'Picked Up', description: 'Item collected by renter' },
-  { value: 'in_use', label: 'In Use', description: 'Currently being used' },
   { value: 'returned', label: 'Returned', description: 'Item returned by renter' },
   { value: 'inspected', label: 'Inspected', description: 'Quality check completed' },
-  { value: 'completed', label: 'Completed', description: 'Rental completed' },
-  { value: 'cancelled', label: 'Cancelled', description: 'Booking cancelled' }
+  { value: 'completed', label: 'Completed', description: 'Rental completed' }
 ];
 
 export default function OwnerStatusControl({ 
