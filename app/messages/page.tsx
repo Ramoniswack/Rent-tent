@@ -9,9 +9,9 @@ import { MessageListSkeleton } from '../../components/SkeletonCard';
 import { messageAPI } from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import { 
-  Search, Send, Plus, Phone, Video, Info, 
+  Search, Send, Plus, Info, 
   ArrowLeft, Smile, Loader2, Image as ImageIcon, X,
-  PhoneOff, VideoOff, Mic, MicOff, MoreVertical, Pin, 
+  MoreVertical, Pin, 
   Trash2, UserX, Volume2, VolumeX, Edit3, PinOff, User, MapPin, UserMinus
 } from 'lucide-react';
 
@@ -75,11 +75,6 @@ function MessagesPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
-  const [inCall, setInCall] = useState(false);
-  const [callType, setCallType] = useState<'audio' | 'video' | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<{ from: string; type: 'audio' | 'video'; offer?: RTCSessionDescriptionInit } | null>(null);
   const [mounted, setMounted] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
@@ -92,12 +87,6 @@ function MessagesPage() {
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement>(null);
-  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectedMatchIdRef = useRef<string>('');
@@ -105,11 +94,6 @@ function MessagesPage() {
   // Handle client-side mounting
   useEffect(() => {
     setMounted(true);
-    // Initialize ringtone audio
-    if (typeof window !== 'undefined') {
-      ringtoneRef.current = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGGS57OihUBELTKXh8bllHAU2jdXvzn0pBSh+zPDajzsKElyx6OyrWBQLSKDf8sFuIwUrgc7y2Yk2CBhkuezooVARDEyl4fG5ZRwFNo3V7859KQUofsrw2o87ChJcr+jrq1gVC0ig3/LBbiMFK4HO8tmJNggYZLns6KFQEQxMpeHxuWUcBTaN1e/OfSkFKH7K8NqPOwoSXK/o66tYFQtIoN/ywW4jBSuBzvLZiTYIGGS57OihUBEMTKXh8bllHAU2jdXvzn0pBSh+yvDajzsKElyx6OyrWBULSKDf8sFuIwUrgc7y2Yk2CBhkuezooVARDEyl4fG5ZRwFNo3V7859KQUofsrw2o87ChJcr+jrq1gVC0ig3/LBbiMFK4HO8tmJNggYZLns6KFQEQxMpeHxuWUcBTaN1e/OfSkFKH7K8NqPOwoSXK/o66tYFQtIoN/ywW4jBSuBzvLZiTYIGGS57OihUBEMTKXh8bllHAU2jdXvzn0pBSh+yvDajzsKElyx6OyrWBULSKDf8sFuIwUrgc7y2Yk2CBhkuezooVARDEyl4fG5ZRwFNo3V7859KQUofsrw2o87ChJcr+jrq1gVC0ig3/LBbiMFK4HO8tmJNggYZLns6KFQEQxMpeHxuWUcBTaN1e/OfSkFKH7K8NqPOwoSXK/o66tYFQtIoN/ywW4jBQ==');
-      ringtoneRef.current.loop = true;
-    }
   }, []);
 
   // Show notification
@@ -213,55 +197,6 @@ function MessagesPage() {
       }
     });
 
-    // Call signaling
-    socket.on('call:incoming', ({ from, offer, type }: { from: string; offer: RTCSessionDescriptionInit; type: 'audio' | 'video' }) => {
-      setIncomingCall({ from, type, offer });
-      // Play ringtone
-      if (ringtoneRef.current) {
-        ringtoneRef.current.play().catch(err => console.log('Ringtone play failed:', err));
-      }
-    });
-
-    socket.on('call:accepted', async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
-      // Stop ringtone when call is accepted
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current.currentTime = 0;
-      }
-      if (peerConnectionRef.current && answer) {
-        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-      }
-    });
-
-    socket.on('call:rejected', () => {
-      // Stop ringtone
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current.currentTime = 0;
-      }
-      endCall();
-      showNotification('Call was rejected', 'error');
-    });
-
-    socket.on('call:ended', () => {
-      // Stop ringtone
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-        ringtoneRef.current.currentTime = 0;
-      }
-      endCall();
-    });
-
-    socket.on('ice:candidate', async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
-      if (peerConnectionRef.current && candidate) {
-        try {
-          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-        } catch (error) {
-          console.error('Error adding ICE candidate:', error);
-        }
-      }
-    });
-
     return () => {
       socket.off('message:receive');
       socket.off('message:sent');
@@ -269,11 +204,6 @@ function MessagesPage() {
       socket.off('user:offline');
       socket.off('typing:start');
       socket.off('typing:stop');
-      socket.off('call:incoming');
-      socket.off('call:accepted');
-      socket.off('call:rejected');
-      socket.off('call:ended');
-      socket.off('ice:candidate');
     };
   }, [socket, selectedMatch]);
 
@@ -519,368 +449,6 @@ function MessagesPage() {
     setImagePreview('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
-    }
-  };
-
-  // Initialize peer connection
-  const createPeerConnection = () => {
-    const configuration = {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
-      ],
-      iceCandidatePoolSize: 10
-    };
-
-    const pc = new RTCPeerConnection(configuration);
-
-    // ICE candidate handler
-    pc.onicecandidate = (event) => {
-      if (event.candidate && socket) {
-        console.log('Sending ICE candidate:', event.candidate);
-        socket.emit('ice:candidate', {
-          to: selectedMatch?._id || selectedMatch?.id,
-          candidate: event.candidate
-        });
-      }
-    };
-
-    // Track handler for receiving remote stream
-    pc.ontrack = (event) => {
-      console.log('Received remote track:', event.track.kind, event.streams?.[0]);
-      
-      // Wait for the next tick to ensure DOM elements are available
-      setTimeout(() => {
-        const remoteElement = callType === 'video' ? remoteVideoRef.current : remoteAudioRef.current;
-        
-        if (remoteElement && event.streams && event.streams[0]) {
-          console.log('Setting remote stream to element');
-          remoteElement.srcObject = event.streams[0];
-          
-          // Force play
-          remoteElement.play().catch(err => {
-            console.error('Error playing remote stream:', err);
-            showNotification('Click to enable audio', 'info');
-          });
-        } else {
-          console.warn('Remote element not available or no streams:', {
-            hasElement: !!remoteElement,
-            hasStreams: !!(event.streams && event.streams[0]),
-            callType,
-            elementType: callType === 'video' ? 'video' : 'audio'
-          });
-        }
-      }, 100);
-    };
-
-    // Connection state change handler
-    pc.onconnectionstatechange = () => {
-      console.log('Connection state:', pc.connectionState);
-      if (pc.connectionState === 'connected') {
-        showNotification('Call connected', 'success');
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        showNotification('Call disconnected', 'error');
-        endCall();
-      }
-    };
-
-    // ICE connection state change handler
-    pc.oniceconnectionstatechange = () => {
-      console.log('ICE connection state:', pc.iceConnectionState);
-      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-        showNotification('Connection lost', 'error');
-      }
-    };
-
-    return pc;
-  };
-
-  // Test media devices
-  const testMediaDevices = async () => {
-    try {
-      console.log('Testing media devices...');
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      console.log('Available devices:', devices);
-      
-      const audioDevices = devices.filter(d => d.kind === 'audioinput');
-      const videoDevices = devices.filter(d => d.kind === 'videoinput');
-      
-      console.log(`Found ${audioDevices.length} microphones and ${videoDevices.length} cameras`);
-      
-      if (audioDevices.length === 0) {
-        showNotification('No microphone found', 'error');
-        return false;
-      }
-      
-      // Test audio
-      const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('Audio test successful:', audioStream);
-      audioStream.getTracks().forEach(track => track.stop());
-      
-      showNotification('Media devices working!', 'success');
-      return true;
-    } catch (error: any) {
-      console.error('Media device test failed:', error);
-      showNotification(`Media test failed: ${error.message}`, 'error');
-      return false;
-    }
-  };
-
-  // Start call
-  const startCall = async (type: 'audio' | 'video') => {
-    if (!selectedMatch || !socket) {
-      showNotification('Cannot start call: No connection', 'error');
-      return;
-    }
-
-    try {
-      console.log(`Starting ${type} call...`);
-      
-      // Request media permissions
-      const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: type === 'video' ? {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        } : false
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('Got local stream:', stream);
-
-      localStreamRef.current = stream;
-      
-      // Display local video
-      if (localVideoRef.current && type === 'video') {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // Create peer connection
-      const pc = createPeerConnection();
-      peerConnectionRef.current = pc;
-
-      // Add tracks to peer connection
-      stream.getTracks().forEach(track => {
-        console.log('Adding track:', track.kind);
-        pc.addTrack(track, stream);
-      });
-
-      // Create and send offer
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: type === 'video'
-      });
-      
-      await pc.setLocalDescription(offer);
-      console.log('Created offer:', offer);
-
-      socket.emit('call:offer', {
-        to: selectedMatch._id || selectedMatch.id,
-        offer: pc.localDescription,
-        type
-      });
-
-      setInCall(true);
-      setCallType(type);
-      showNotification(`Calling ${selectedMatch.name}...`, 'info');
-      
-      // Play ringtone while waiting for answer
-      if (ringtoneRef.current) {
-        ringtoneRef.current.play().catch(err => console.log('Ringtone play failed:', err));
-      }
-    } catch (error: any) {
-      console.error('Error starting call:', error);
-      
-      let errorMessage = 'Could not start call';
-      if (error.name === 'NotAllowedError') {
-        errorMessage = 'Camera/microphone permission denied';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = 'No camera/microphone found';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = 'Camera/microphone is already in use';
-      }
-      
-      showNotification(errorMessage, 'error');
-      endCall();
-    }
-  };
-
-  // Accept call
-  const acceptCall = async () => {
-    if (!incomingCall || !socket) {
-      showNotification('Cannot accept call', 'error');
-      return;
-    }
-
-    // Stop ringtone
-    if (ringtoneRef.current) {
-      ringtoneRef.current.pause();
-      ringtoneRef.current.currentTime = 0;
-    }
-
-    try {
-      console.log('Accepting call...');
-      
-      // Request media permissions
-      const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: incomingCall.type === 'video' ? {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        } : false
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      console.log('Got local stream:', stream);
-
-      localStreamRef.current = stream;
-      
-      // Display local video
-      if (localVideoRef.current && incomingCall.type === 'video') {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      // Create peer connection
-      const pc = createPeerConnection();
-      peerConnectionRef.current = pc;
-
-      // Add tracks to peer connection
-      stream.getTracks().forEach(track => {
-        console.log('Adding track:', track.kind);
-        pc.addTrack(track, stream);
-      });
-
-      // Set remote description from the offer
-      if (incomingCall.offer) {
-        console.log('Setting remote description:', incomingCall.offer);
-        await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-      }
-
-      // Create answer
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      console.log('Created answer:', answer);
-
-      // Send answer back
-      socket.emit('call:answer', { 
-        to: incomingCall.from, 
-        answer: pc.localDescription
-      });
-
-      setInCall(true);
-      setCallType(incomingCall.type);
-      setIncomingCall(null);
-      showNotification('Call connected', 'success');
-    } catch (error: any) {
-      console.error('Error accepting call:', error);
-      
-      let errorMessage = 'Could not accept call';
-      if (error.name === 'NotAllowedError') {
-        errorMessage = 'Camera/microphone permission denied';
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = 'No camera/microphone found';
-      } else if (error.name === 'NotReadableError') {
-        errorMessage = 'Camera/microphone is already in use';
-      }
-      
-      showNotification(errorMessage, 'error');
-      rejectCall();
-    }
-  };
-
-  // Reject call
-  const rejectCall = () => {
-    if (!incomingCall || !socket) return;
-    
-    // Stop ringtone
-    if (ringtoneRef.current) {
-      ringtoneRef.current.pause();
-      ringtoneRef.current.currentTime = 0;
-    }
-    
-    socket.emit('call:reject', { to: incomingCall.from });
-    setIncomingCall(null);
-  };
-
-  // End call
-  const endCall = () => {
-    console.log('Ending call...');
-    
-    // Stop ringtone
-    if (ringtoneRef.current) {
-      ringtoneRef.current.pause();
-      ringtoneRef.current.currentTime = 0;
-    }
-    
-    // Notify other user
-    if (socket && selectedMatch && inCall) {
-      socket.emit('call:end', { to: selectedMatch._id || selectedMatch.id });
-    }
-
-    // Stop all local media tracks
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        console.log('Stopping track:', track.kind);
-        track.stop();
-      });
-      localStreamRef.current = null;
-    }
-
-    // Clear video elements
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null;
-    }
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null;
-    }
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-    }
-
-    // Close peer connection
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-
-    setInCall(false);
-    setCallType(null);
-    setIsMuted(false);
-    setIsVideoOff(false);
-  };
-
-  // Toggle mute
-  const toggleMute = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
-      }
-    }
-  };
-
-  // Toggle video
-  const toggleVideo = () => {
-    if (localStreamRef.current) {
-      const videoTrack = localStreamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsVideoOff(!videoTrack.enabled);
-      }
     }
   };
 
@@ -1318,35 +886,6 @@ function MessagesPage() {
           </div>
         )}
 
-        {/* Incoming Call Modal */}
-        {incomingCall && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-[#132a24] rounded-2xl p-8 max-w-sm w-full mx-4 text-center">
-              <div className="w-24 h-24 rounded-full bg-slate-200 dark:bg-slate-700 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-[#0d1c17] dark:text-white mb-2">
-                Incoming {incomingCall.type} call
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-6">
-                {selectedMatch?.name} is calling you
-              </p>
-              <div className="flex gap-4 justify-center">
-                <button
-                  onClick={rejectCall}
-                  className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
-                >
-                  <PhoneOff className="w-6 h-6" />
-                </button>
-                <button
-                  onClick={acceptCall}
-                  className="p-4 bg-green-500 hover:bg-green-600 text-white rounded-full transition-colors"
-                >
-                  <Phone className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Toast Notification */}
         {notification && (
           <div className="fixed bottom-6 right-6 z-50 animate-slideIn">
@@ -1514,96 +1053,6 @@ function MessagesPage() {
                   Delete
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Call UI Overlay */}
-        {inCall && (
-          <div className="fixed inset-0 bg-black z-50 flex flex-col">
-            {/* Remote Video/Audio */}
-            <div className="flex-1 relative">
-              {callType === 'video' ? (
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="w-full h-full object-cover"
-                  onLoadedMetadata={() => console.log('Remote video loaded')}
-                  onError={(e) => console.error('Remote video error:', e)}
-                />
-              ) : (
-                <audio
-                  ref={remoteAudioRef}
-                  autoPlay
-                  onLoadedMetadata={() => console.log('Remote audio loaded')}
-                  onError={(e) => console.error('Remote audio error:', e)}
-                />
-              )}
-              {callType === 'audio' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
-                  <div className="text-center">
-                    <div className="w-32 h-32 rounded-full bg-slate-700 mx-auto mb-4 flex items-center justify-center">
-                      <Phone className="w-16 h-16 text-white" />
-                    </div>
-                    <p className="text-white text-xl font-semibold">{selectedMatch?.name}</p>
-                    <p className="text-white/60 text-sm mt-2">Audio Call</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Local Video (Picture-in-Picture) */}
-            {callType === 'video' && (
-              <div className="absolute top-4 right-4 w-32 h-48 bg-slate-900 rounded-lg overflow-hidden shadow-lg">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                  onLoadedMetadata={() => console.log('Local video loaded')}
-                  onError={(e) => console.error('Local video error:', e)}
-                />
-              </div>
-            )}
-
-            {/* Call Controls */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
-              <button
-                onClick={toggleMute}
-                className={`p-4 rounded-full transition-colors ${
-                  isMuted ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-700 hover:bg-slate-600'
-                } text-white`}
-              >
-                {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
-              </button>
-              
-              {callType === 'video' && (
-                <button
-                  onClick={toggleVideo}
-                  className={`p-4 rounded-full transition-colors ${
-                    isVideoOff ? 'bg-red-500 hover:bg-red-600' : 'bg-slate-700 hover:bg-slate-600'
-                  } text-white`}
-                >
-                  {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
-                </button>
-              )}
-              
-              <button
-                onClick={endCall}
-                className="p-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
-              >
-                <PhoneOff className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Call Info */}
-            <div className="absolute top-8 left-1/2 transform -translate-x-1/2 text-center bg-black/30 px-4 py-2 rounded-lg">
-              <p className="text-white text-lg font-semibold mb-1">{selectedMatch?.name}</p>
-              <p className="text-white/80 text-sm">
-                {callType === 'video' ? 'Video Call' : 'Audio Call'}
-              </p>
             </div>
           </div>
         )}
@@ -1794,16 +1243,18 @@ function MessagesPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <button 
-                    onClick={() => startCall('audio')}
+                    onClick={handleViewProfile}
                     className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all hover:scale-110 text-[#059467]"
+                    title="View profile"
                   >
-                    <Phone className="w-5 h-5" />
+                    <User className="w-5 h-5" />
                   </button>
                   <button 
-                    onClick={() => startCall('video')}
+                    onClick={handleShowOnMap}
                     className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all hover:scale-110 text-[#059467]"
+                    title="Show on map"
                   >
-                    <Video className="w-5 h-5" />
+                    <MapPin className="w-5 h-5" />
                   </button>
                   <div className="relative">
                     <button 
@@ -1821,7 +1272,7 @@ function MessagesPage() {
                           onClick={() => setShowOptionsMenu(false)}
                         />
                         <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#132a24] rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-2 z-50 animate-fadeIn">
-                          <button
+                          {/* <button
                             onClick={handleViewProfile}
                             className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors"
                           >
@@ -1836,7 +1287,7 @@ function MessagesPage() {
                             <MapPin className="w-4 h-4" />
                             Show on map
                           </button>
-                          
+                           */}
                           <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
                           
                           <button
