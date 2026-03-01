@@ -297,9 +297,9 @@ function MapPage() {
         const route = data.routes[0];
         const coordinates = route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
         
-        // Draw the actual road route
+        // Draw the actual road route in GREEN for directions
         const polyline = L.polyline(coordinates, {
-          color: '#059467',
+          color: '#10b981',
           opacity: 0.8,
           weight: 5
         }).addTo(mapRef.current);
@@ -348,10 +348,10 @@ function MapPage() {
     } catch (err) {
       console.error('OSRM routing failed, using straight line fallback:', err);
       
-      // Fallback to straight line if OSRM fails
+      // Fallback to straight line if OSRM fails - GREEN for directions
       const polyline = L.polyline(
         [[fromLocation.lat, fromLocation.lng], [destination.lat, destination.lng]],
-        { color: '#059467', opacity: 0.6, weight: 4, dashArray: '10, 10' }
+        { color: '#10b981', opacity: 0.6, weight: 4, dashArray: '10, 10' }
       ).addTo(mapRef.current);
 
       // Store polyline in ref for cleanup
@@ -738,8 +738,12 @@ function MapPage() {
       markersRef.current = {};
 
       if (activeTab === 'trips') {
-        const tripsWithCoords = filteredTrips.filter(t => t.lat && t.lng);
-        tripsWithCoords.forEach((trip) => {
+        // If a trip is selected, show only that trip; otherwise show all trips
+        const tripsToDisplay = selectedTrip 
+          ? filteredTrips.filter(t => t._id === selectedTrip && t.lat && t.lng)
+          : filteredTrips.filter(t => t.lat && t.lng);
+          
+        tripsToDisplay.forEach((trip) => {
           const isSelected = trip._id === selectedTrip;
           const iconHtml = `
             <div class="relative flex items-center justify-center transform transition-transform ${isSelected ? 'scale-125' : 'hover:scale-110'}">
@@ -788,10 +792,17 @@ function MapPage() {
           markersRef.current[trip._id] = marker;
         });
 
-        if (tripsWithCoords.length > 0) {
-          const bounds = L.latLngBounds(tripsWithCoords.map((t) => [t.lat!, t.lng!]));
-          const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
-          mapRef.current.fitBounds(bounds, { paddingBottomRight: [50, paddingBottom], paddingTopLeft: [50, 50], maxZoom: 10 });
+        if (tripsToDisplay.length > 0) {
+          if (tripsToDisplay.length === 1 && selectedTrip) {
+            // If only one trip is selected, center on it with a good zoom level
+            const trip = tripsToDisplay[0];
+            mapRef.current.setView([trip.lat!, trip.lng!], 13, { animate: true });
+          } else {
+            // Multiple trips, fit bounds to show all
+            const bounds = L.latLngBounds(tripsToDisplay.map((t: Trip) => [t.lat!, t.lng!]));
+            const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
+            mapRef.current.fitBounds(bounds, { paddingBottomRight: [50, paddingBottom], paddingTopLeft: [50, 50], maxZoom: 10 });
+          }
         }
       } else {
         filteredFriends.forEach((friend) => {
@@ -869,10 +880,13 @@ function MapPage() {
       mapLoaded, 
       hasMap: !!mapRef.current, 
       itineraryLength: tripItinerary.length,
-      itinerary: tripItinerary 
+      itinerary: tripItinerary,
+      activeTab,
+      selectedTrip
     });
     
-    if (!mapLoaded || !mapRef.current || tripItinerary.length === 0) {
+    // Only show itinerary if we're on trips tab AND a trip is selected
+    if (!mapLoaded || !mapRef.current || tripItinerary.length === 0 || activeTab !== 'trips' || !selectedTrip) {
       // Clear existing itinerary markers and routes
       Object.values(itineraryMarkersRef.current).forEach(marker => {
         try {
@@ -927,6 +941,9 @@ function MapPage() {
       }
       
       stopsWithCoords.forEach((stop, index) => {
+        // Safety check - ensure map still exists
+        if (!mapRef.current) return;
+        
         const dayNumber = index + 1;
         const iconHtml = `
           <div class="relative flex flex-col items-center">
@@ -971,6 +988,9 @@ function MapPage() {
       
       // Draw routes between consecutive stops using OSRM for road routing
       for (let i = 0; i < stopsWithCoords.length - 1; i++) {
+        // Safety check - ensure map still exists
+        if (!mapRef.current) break;
+        
         const currentStop = stopsWithCoords[i];
         const nextStop = stopsWithCoords[i + 1];
         
@@ -985,15 +1005,19 @@ function MapPage() {
             const route = data.routes[0];
             const coordinates = route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
             
-            // Draw the actual road route
+            // Draw the actual road route in RED for itinerary stops
             const polyline = L.polyline(coordinates, {
-              color: '#059467',
+              color: '#ef4444',
               weight: 4,
               opacity: 0.8,
               dashArray: '10, 5'
-            }).addTo(mapRef.current);
+            });
             
-            itineraryRoutesRef.current.push(polyline);
+            // Safety check before adding to map
+            if (mapRef.current) {
+              polyline.addTo(mapRef.current);
+              itineraryRoutesRef.current.push(polyline);
+            }
             
             // Get distance from OSRM (more accurate than straight-line)
             const distanceKm = (route.distance / 1000).toFixed(1);
@@ -1005,33 +1029,41 @@ function MapPage() {
             
             const distanceLabel = L.marker([midLat, midLng], {
               icon: L.divIcon({
-                html: `<div class="bg-white px-2 py-1 rounded-full text-[10px] font-bold text-[#059467] shadow-md border border-[#059467]/30">${distanceKm} km</div>`,
+                html: `<div class="bg-white px-2 py-1 rounded-full text-[10px] font-bold text-red-500 shadow-md border border-red-500/30">${distanceKm} km</div>`,
                 className: 'distance-label',
                 iconSize: [60, 20],
                 iconAnchor: [30, 10]
               }),
               zIndexOffset: 400
-            }).addTo(mapRef.current);
+            });
             
-            itineraryRoutesRef.current.push(distanceLabel);
+            // Safety check before adding to map
+            if (mapRef.current) {
+              distanceLabel.addTo(mapRef.current);
+              itineraryRoutesRef.current.push(distanceLabel);
+            }
           } else {
             throw new Error('OSRM routing failed');
           }
         } catch (err) {
           console.log('OSRM routing failed, using straight line:', err);
           
-          // Fallback to straight line if OSRM fails
+          // Fallback to straight line if OSRM fails - RED for itinerary stops
           const polyline = L.polyline(
             [[currentStop.lat, currentStop.lng], [nextStop.lat, nextStop.lng]],
             {
-              color: '#059467',
+              color: '#ef4444',
               weight: 3,
               opacity: 0.7,
               dashArray: '10, 5'
             }
-          ).addTo(mapRef.current);
+          );
           
-          itineraryRoutesRef.current.push(polyline);
+          // Safety check before adding to map
+          if (mapRef.current) {
+            polyline.addTo(mapRef.current);
+            itineraryRoutesRef.current.push(polyline);
+          }
           
           // Calculate straight-line distance
           const distance = calculateDistance(
@@ -1045,15 +1077,19 @@ function MapPage() {
           
           const distanceLabel = L.marker([midLat, midLng], {
             icon: L.divIcon({
-              html: `<div class="bg-white px-2 py-1 rounded-full text-[10px] font-bold text-[#059467] shadow-md border border-[#059467]/30">~${distance.toFixed(1)} km</div>`,
+              html: `<div class="bg-white px-2 py-1 rounded-full text-[10px] font-bold text-red-500 shadow-md border border-red-500/30">~${distance.toFixed(1)} km</div>`,
               className: 'distance-label',
               iconSize: [60, 20],
               iconAnchor: [30, 10]
             }),
             zIndexOffset: 400
-          }).addTo(mapRef.current);
+          });
           
-          itineraryRoutesRef.current.push(distanceLabel);
+          // Safety check before adding to map
+          if (mapRef.current) {
+            distanceLabel.addTo(mapRef.current);
+            itineraryRoutesRef.current.push(distanceLabel);
+          }
         }
       }
       
@@ -1216,7 +1252,19 @@ function MapPage() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 custom-scrollbar">
+          <div 
+            className="flex-1 overflow-y-auto px-5 py-4 space-y-3 custom-scrollbar"
+            onClick={(e) => {
+              // Deselect trip/friend when clicking in the empty space of the sidebar
+              if (e.target === e.currentTarget) {
+                if (activeTab === 'trips') {
+                  setSelectedTrip(null);
+                } else {
+                  setSelectedFriend(null);
+                }
+              }
+            }}
+          >
             {loading ? (
               <div className="flex flex-col items-center justify-center py-10">
                 <Loader2 className="w-8 h-8 text-[#059467] animate-spin mb-3" />
@@ -1239,7 +1287,11 @@ function MapPage() {
                   const hasLocation = trip.lat && trip.lng;
                   const hasActiveRoute = routeDestinationId === trip._id && routeInfo;
                   return (
-                    <div key={trip._id} className={`p-3 rounded-2xl border transition-all ${hasLocation ? 'hover:bg-slate-50' : 'opacity-60'} ${selectedTrip === trip._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 bg-white'}`}>
+                    <div 
+                      key={trip._id} 
+                      className={`p-3 rounded-2xl border transition-all ${hasLocation ? 'hover:bg-slate-50' : 'opacity-60'} ${selectedTrip === trip._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 bg-white'}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex gap-4 items-center">
                         <img 
                           src={trip.imageUrl || getDefaultImage(trip.destination)} 
@@ -1280,7 +1332,20 @@ function MapPage() {
 
                         {hasLocation && userLocation && (
                           <div className="flex gap-1 items-center">
-                            <button onClick={(e) => { e.stopPropagation(); setSelectedTrip(trip._id); calculateRoute({ lat: trip.lat!, lng: trip.lng! }, trip._id); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Get directions">
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setSelectedTrip(trip._id); 
+                                // Toggle route: if this trip already has active route, clear it; otherwise calculate new route
+                                if (routeDestinationId === trip._id && routeInfo) {
+                                  clearRoute();
+                                } else {
+                                  calculateRoute({ lat: trip.lat!, lng: trip.lng! }, trip._id);
+                                }
+                              }} 
+                              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${hasActiveRoute ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                              title={hasActiveRoute ? "Hide directions" : "Get directions"}
+                            >
                               <Navigation2 className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${trip.lat},${trip.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
@@ -1308,7 +1373,11 @@ function MapPage() {
                   const hasActiveRoute = routeDestinationId === friend._id && routeInfo;
                   
                   return (
-                    <div key={friend._id} className={`p-3.5 rounded-2xl border transition-all ${hasLocation ? 'hover:bg-slate-50' : 'opacity-60'} ${selectedFriend === friend._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 bg-white'}`}>
+                    <div 
+                      key={friend._id} 
+                      className={`p-3.5 rounded-2xl border transition-all ${hasLocation ? 'hover:bg-slate-50' : 'opacity-60'} ${selectedFriend === friend._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 bg-white'}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="flex gap-4 items-center">
                         <div className="relative cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); router.push(`/profile/${friend.username}`); }}>
                           {friend.profilePicture ? (
@@ -1338,7 +1407,20 @@ function MapPage() {
 
                         <div className="flex gap-1 items-center">
                           {hasLocation && userLocation && (
-                            <button onClick={(e) => { e.stopPropagation(); setSelectedFriend(friend._id); calculateRoute({ lat: friend.coordinates.lat, lng: friend.coordinates.lng }, friend._id); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Get directions">
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setSelectedFriend(friend._id); 
+                                // Toggle route: if this friend already has active route, clear it; otherwise calculate new route
+                                if (routeDestinationId === friend._id && routeInfo) {
+                                  clearRoute();
+                                } else {
+                                  calculateRoute({ lat: friend.coordinates.lat, lng: friend.coordinates.lng }, friend._id);
+                                }
+                              }} 
+                              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${hasActiveRoute ? 'bg-green-100 text-green-700' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}
+                              title={hasActiveRoute ? "Hide directions" : "Get directions"}
+                            >
                               <Navigation2 className="w-3.5 h-3.5" />
                             </button>
                           )}

@@ -17,7 +17,8 @@ import {
   Loader2,
   Users,
   X,
-  Trash2
+  Trash2,
+  Edit2
 } from 'lucide-react';
 
 interface Trip {
@@ -157,6 +158,18 @@ function DashboardPage() {
 
   const handleDeleteTrip = async (e: React.MouseEvent, tripId: string) => {
     e.stopPropagation();
+    
+    // Find the trip to check ownership
+    const trip = trips.find(t => t._id === tripId);
+    if (!trip || !user) return;
+    
+    // Check if current user is the owner
+    const isOwner = trip.userId._id === user._id;
+    
+    if (!isOwner) {
+      showToast('You cannot delete this trip. Only the trip creator can delete it.', 'error');
+      return;
+    }
     
     showConfirm({
       title: 'Delete Trip',
@@ -480,21 +493,38 @@ function DashboardPage() {
                       )}
                     </div>
 
-                    {/* Touch-Friendly Action Button */}
-                    {activeTab !== 'public' && (
-                      <div className="absolute top-3 md:top-6 right-3 md:right-6">
-                        <button 
-                          onClick={(e) => handleDeleteTrip(e, trip._id)}
-                          disabled={deletingId === trip._id}
-                          className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 dark:bg-black/20 backdrop-blur-md text-white hover:bg-red-500 hover:text-white shadow-sm ring-1 ring-white/30 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed z-10"
-                          aria-label="Delete Trip"
-                        >
-                          {deletingId === trip._id ? (
-                            <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
-                          )}
-                        </button>
+                    {/* Touch-Friendly Action Buttons */}
+                    {activeTab !== 'public' && user && (
+                      <div className="absolute top-3 md:top-6 right-3 md:right-6 flex gap-2">
+                        {/* Edit Button - Only show for trip owner */}
+                        {trip.userId._id === user._id && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/trips/${trip._id}/edit`);
+                            }}
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 dark:bg-black/20 backdrop-blur-md text-white hover:bg-blue-500 hover:text-white shadow-sm ring-1 ring-white/30 transition-all flex items-center justify-center z-10"
+                            aria-label="Edit Trip"
+                          >
+                            <Edit2 className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
+                          </button>
+                        )}
+                        
+                        {/* Delete Button - Only show for trip owner */}
+                        {trip.userId._id === user._id && (
+                          <button 
+                            onClick={(e) => handleDeleteTrip(e, trip._id)}
+                            disabled={deletingId === trip._id}
+                            className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/20 dark:bg-black/20 backdrop-blur-md text-white hover:bg-red-500 hover:text-white shadow-sm ring-1 ring-white/30 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed z-10"
+                            aria-label="Delete Trip"
+                          >
+                            {deletingId === trip._id ? (
+                              <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
+                            )}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

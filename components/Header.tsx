@@ -296,7 +296,7 @@ const Header: React.FC = () => {
         
         {/* Sidebar Header / Close */}
         <div className="flex items-center justify-between p-4 sm:p-5">
-          <button onClick={() => router.push('/')} className="flex items-center gap-2">
+          <button onClick={() => router.push(user ? '/dashboard' : '/')} className="flex items-center gap-2">
             <div className="size-8 bg-[#059467] rounded-lg flex items-center justify-center text-white">
               <Plane className="w-5 h-5 -rotate-12" />
             </div>
