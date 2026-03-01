@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { tripAPI, userAPI, matchAPI } from '../../services/api';
-import { MapPin, Search, Plus, Minus, Navigation, Layers, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { 
+  MapPin, Search, Plus, Minus, Navigation, Layers, 
+  Loader2, Car, X as CloseIcon, Navigation2, MessageCircle, ExternalLink 
+} from 'lucide-react';
 
 interface Trip {
   _id: string;
@@ -28,9 +31,12 @@ function MapPage() {
   // Mobile Sheet State
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   
+  // Desktop sidebar toggle
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  
   // Get initial tab from URL or default to 'friends'
-  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const initialTab = (searchParams.get('tab') as 'trips' | 'friends') || 'friends';
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialTab = (searchParams?.get('tab') as 'trips' | 'friends') || 'friends';
   
   const [activeTab, setActiveTab] = useState<'trips' | 'friends'>(initialTab);
   const [selectedTrip, setSelectedTrip] = useState<string | null>(null);
@@ -40,21 +46,36 @@ function MapPage() {
   const [friends, setFriends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
   const mapRef = useRef<any>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<{ [key: string]: any }>({});
   const userMarkerRef = useRef<any>(null);
+  const routePolylineRef = useRef<any>(null);
 
   const filters = ['All Trips', 'Planning', 'Traveling', 'Completed'];
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [currentLayer, setCurrentLayer] = useState<'street' | 'satellite' | 'terrain' | 'dark'>('street');
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const tileLayerRef = useRef<any>(null);
   const layerMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Route finding states
+  const [showRoutePanel, setShowRoutePanel] = useState(false);
+  const routeMode = 'car'; // Fixed to car mode only
+  const [routeControl, setRouteControl] = useState<any>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string; type?: 'road' | 'estimate' } | null>(null);
+  const [routeDestinationId, setRouteDestinationId] = useState<string | null>(null); // Track which destination has active route
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
+  const animatedMarkerRef = useRef<any>(null);
+  const animationRef = useRef<number | null>(null);
+  
+  // Itinerary stops states
+  const [tripItinerary, setTripItinerary] = useState<any[]>([]);
+  const itineraryMarkersRef = useRef<{ [key: string]: any }>({});
+  const itineraryRoutesRef = useRef<any[]>([]);
 
-  // Calculate distance between two coordinates using Haversine formula
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -72,11 +93,318 @@ function MapPage() {
     return `${Math.round(distance)}km away`;
   };
 
+  const clearRoute = () => {
+    // Remove the route polyline
+    if (routePolylineRef.current && mapRef.current) {
+      try {
+        mapRef.current.removeLayer(routePolylineRef.current);
+        console.log('Route polyline removed');
+      } catch (err) {
+        console.log('Route polyline cleanup handled');
+      }
+      routePolylineRef.current = null;
+    }
+    
+    // Remove old route control if exists
+    if (routeControl && mapRef.current) {
+      try {
+        mapRef.current.removeControl(routeControl);
+      } catch (err) {
+        try {
+          if (routeControl.remove) {
+            routeControl.remove();
+          }
+        } catch (e) {
+          console.log('Route control cleanup handled');
+        }
+      }
+      setRouteControl(null);
+    }
+    
+    // Remove animated marker
+    if (animatedMarkerRef.current && mapRef.current) {
+      try {
+        mapRef.current.removeLayer(animatedMarkerRef.current);
+        console.log('Animated marker removed');
+      } catch (err) {
+        console.log('Animated marker cleanup handled');
+      }
+      animatedMarkerRef.current = null;
+    }
+    
+    // Cancel animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+    
+    setRouteInfo(null);
+    setRouteDestinationId(null);
+    setShowRoutePanel(false);
+    console.log('Route cleared completely');
+  };
+
+  const calculateRoute = async (destination: { lat: number; lng: number }, destinationId: string) => {
+    console.log('Calculate route called for destination:', destination, 'ID:', destinationId);
+    
+    // Clear any existing route first
+    clearRoute();
+    
+    // Set the destination ID for this route
+    setRouteDestinationId(destinationId);
+    
+    // First, try to get the user's current real-time location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const currentLocation = { lat: latitude, lng: longitude };
+          
+          // Update user location state
+          setUserLocation(currentLocation);
+          
+          // Update user marker on map
+          if (mapRef.current) {
+            const L = (await import('leaflet')).default;
+            if (userMarkerRef.current) userMarkerRef.current.remove();
+            
+            const userIconHtml = `
+              <div class="relative flex items-center justify-center">
+                <div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg z-10"></div>
+                <div class="absolute w-10 h-10 bg-blue-500/30 rounded-full animate-ping"></div>
+              </div>
+            `;
+            
+            userMarkerRef.current = L.marker([latitude, longitude], { 
+              icon: L.divIcon({ html: userIconHtml, className: 'user-location-marker', iconSize: [40, 40], iconAnchor: [20, 20] })
+            }).addTo(mapRef.current).bindPopup('<div class="text-center p-2 font-bold text-sm">You are here</div>');
+          }
+          
+          // Now calculate route from current location
+          setIsCalculatingRoute(true);
+
+          try {
+            const L = (await import('leaflet')).default;
+            useFallbackRoute(L, destination, currentLocation);
+          } catch (error: any) {
+            console.error('Error calculating route:', error);
+            setIsCalculatingRoute(false);
+            alert('Failed to calculate route. Please try again.');
+          }
+        },
+        (error) => {
+          // If real-time location fails, fall back to stored location
+          if (!userLocation || !mapRef.current) {
+            alert('Please enable your location to get directions');
+            return;
+          }
+          
+          setIsCalculatingRoute(true);
+
+          (async () => {
+            try {
+              const L = (await import('leaflet')).default;
+              useFallbackRoute(L, destination, userLocation);
+            } catch (error: any) {
+              console.error('Error calculating route:', error);
+              setIsCalculatingRoute(false);
+              alert('Failed to calculate route. Please try again.');
+            }
+          })();
+        }
+      );
+    } else {
+      // No geolocation support, use stored location
+      if (!userLocation || !mapRef.current) {
+        alert('Please enable your location to get directions');
+        return;
+      }
+
+      setIsCalculatingRoute(true);
+
+      try {
+        const L = (await import('leaflet')).default;
+        useFallbackRoute(L, destination, userLocation);
+      } catch (error: any) {
+        console.error('Error calculating route:', error);
+        setIsCalculatingRoute(false);
+        alert('Failed to calculate route. Please try again.');
+      }
+    }
+  };
+
+  const useFallbackRoute = async (L: any, destination: { lat: number; lng: number }, fromLocation: { lat: number; lng: number }) => {
+    if (!fromLocation || !mapRef.current) return;
+    
+    try {
+      // Try to get actual road routing from OSRM (free, no API key needed)
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${fromLocation.lng},${fromLocation.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+      
+      const response = await fetch(osrmUrl);
+      const data = await response.json();
+      
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const coordinates = route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+        
+        // Draw the actual road route
+        const polyline = L.polyline(coordinates, {
+          color: '#059467',
+          opacity: 0.8,
+          weight: 5
+        }).addTo(mapRef.current);
+        
+        // Store polyline in ref for cleanup
+        routePolylineRef.current = polyline;
+        
+        // Get distance and duration from OSRM
+        const distanceKm = (route.distance / 1000).toFixed(1);
+        // OSRM duration is often optimistic, especially for long routes or difficult terrain
+        // Apply a more realistic multiplier based on distance
+        let durationSeconds = route.duration;
+        
+        // For routes over 100km, add 50% more time to account for real-world conditions
+        // For routes over 200km, add 80% more time
+        if (route.distance > 200000) {
+          durationSeconds = durationSeconds * 1.8;
+        } else if (route.distance > 100000) {
+          durationSeconds = durationSeconds * 1.5;
+        } else {
+          durationSeconds = durationSeconds * 1.3; // Add 30% for shorter routes
+        }
+        
+        const durationMin = Math.round(durationSeconds / 60);
+        const hours = Math.floor(durationMin / 60);
+        const minutes = durationMin % 60;
+        
+        setRouteInfo({
+          distance: `${distanceKm} km`,
+          duration: `${hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}`,
+          type: 'road'
+        });
+        
+        // Animate marker along the actual route
+        createAnimatedMarker(L, coordinates.map((coord: number[]) => ({ lat: coord[0], lng: coord[1] })));
+        
+        setRouteControl({ remove: () => polyline.remove() });
+        setIsCalculatingRoute(false);
+        setShowRoutePanel(true);
+        
+        // Fit map to show the entire route
+        mapRef.current.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+      } else {
+        throw new Error('No route found');
+      }
+    } catch (err) {
+      console.error('OSRM routing failed, using straight line fallback:', err);
+      
+      // Fallback to straight line if OSRM fails
+      const polyline = L.polyline(
+        [[fromLocation.lat, fromLocation.lng], [destination.lat, destination.lng]],
+        { color: '#059467', opacity: 0.6, weight: 4, dashArray: '10, 10' }
+      ).addTo(mapRef.current);
+
+      // Store polyline in ref for cleanup
+      routePolylineRef.current = polyline;
+
+      const distance = calculateDistance(fromLocation.lat, fromLocation.lng, destination.lat, destination.lng);
+      const speed = 60;
+      const durationMin = Math.round((distance / speed) * 60);
+      const hours = Math.floor(durationMin / 60);
+      const minutes = durationMin % 60;
+
+      setRouteInfo({
+        distance: `~${distance.toFixed(1)} km`,
+        duration: `~${hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}`,
+        type: 'estimate'
+      });
+
+      createAnimatedMarker(L, [{ lat: fromLocation.lat, lng: fromLocation.lng }, { lat: destination.lat, lng: destination.lng }]);
+      setRouteControl({ remove: () => polyline.remove() });
+      setIsCalculatingRoute(false);
+      setShowRoutePanel(true);
+    }
+  };
+
+  const createAnimatedMarker = (L: any, coordinates: any[]) => {
+    if (!mapRef.current || !coordinates || coordinates.length === 0) return;
+
+    // Clear any existing animated marker first
+    if (animatedMarkerRef.current && mapRef.current) {
+      try {
+        mapRef.current.removeLayer(animatedMarkerRef.current);
+      } catch (err) {
+        // Silently handle removal errors
+      }
+      animatedMarkerRef.current = null;
+    }
+
+    // Cancel any ongoing animation
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+
+    const vehicleIcon = '🚗';
+    const vehicleMarkerHtml = `
+      <div class="relative flex items-center justify-center">
+        <div class="text-4xl filter drop-shadow-lg animate-bounce">${vehicleIcon}</div>
+      </div>
+    `;
+
+    const marker = L.marker([coordinates[0].lat, coordinates[0].lng], {
+      icon: L.divIcon({ html: vehicleMarkerHtml, className: 'vehicle-marker', iconSize: [40, 40], iconAnchor: [20, 20] }),
+      zIndexOffset: 1000
+    }).addTo(mapRef.current);
+
+    animatedMarkerRef.current = marker;
+
+    let index = 0;
+    const animateMarker = () => {
+      if (index < coordinates.length - 1) {
+        const start = coordinates[index];
+        const end = coordinates[index + 1];
+        const steps = 50;
+        let step = 0;
+
+        const animate = () => {
+          if (step <= steps && marker && animatedMarkerRef.current) {
+            const lat = start.lat + (end.lat - start.lat) * (step / steps);
+            const lng = start.lng + (end.lng - start.lng) * (step / steps);
+            marker.setLatLng([lat, lng]);
+            step++;
+            animationRef.current = requestAnimationFrame(animate);
+          } else {
+            index++;
+            if (index < coordinates.length - 1) animateMarker();
+          }
+        };
+        animate();
+      }
+    };
+    animateMarker();
+  };
+
+  const handleRouteToFriend = () => {
+    if (!selectedFriend) return;
+    const friend = friends.find(f => f._id === selectedFriend);
+    if (friend?.coordinates?.lat && friend?.coordinates?.lng) {
+      calculateRoute({ lat: friend.coordinates.lat, lng: friend.coordinates.lng }, selectedFriend);
+    }
+  };
+
+  const handleRouteToTrip = () => {
+    if (!selectedTrip) return;
+    const trip = trips.find(t => t._id === selectedTrip);
+    if (trip?.lat && trip?.lng) {
+      calculateRoute({ lat: trip.lat, lng: trip.lng }, selectedTrip);
+    }
+  };
+
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
         const profile = await userAPI.getProfile();
-        setUserProfile(profile);
         if (profile.coordinates?.lat && profile.coordinates?.lng) {
           setUserLocation({ lat: profile.coordinates.lat, lng: profile.coordinates.lng });
         }
@@ -87,6 +415,43 @@ function MapPage() {
     loadUserProfile();
   }, []);
 
+  // Clear route when selected friend or trip changes
+  useEffect(() => {
+    // Clear route whenever selection changes (switching between cards)
+    clearRoute();
+  }, [selectedFriend, selectedTrip]);
+
+  // Fetch trip itinerary when a trip is selected
+  useEffect(() => {
+    const fetchTripItinerary = async () => {
+      if (!selectedTrip || activeTab !== 'trips') {
+        setTripItinerary([]);
+        return;
+      }
+      
+      try {
+        console.log('Fetching itinerary for trip:', selectedTrip);
+        const stops = await tripAPI.getItinerary(selectedTrip);
+        console.log('Fetched stops:', stops);
+        
+        // Sort stops by date
+        const sortedStops = (stops || []).sort((a: any, b: any) => 
+          new Date(a.time).getTime() - new Date(b.time).getTime()
+        );
+        
+        console.log('Sorted stops:', sortedStops);
+        console.log('Stops with coordinates:', sortedStops.filter((s: any) => s.lat && s.lng));
+        
+        setTripItinerary(sortedStops);
+      } catch (err) {
+        console.error('Failed to fetch itinerary:', err);
+        setTripItinerary([]);
+      }
+    };
+    
+    fetchTripItinerary();
+  }, [selectedTrip, activeTab]);
+
   const handleTabChange = (tab: 'trips' | 'friends') => {
     setActiveTab(tab);
     const url = new URL(window.location.href);
@@ -94,14 +459,9 @@ function MapPage() {
     window.history.pushState({}, '', url.toString());
   };
 
-  const handleZoomIn = () => mapRef.current?.zoomIn();
-  const handleZoomOut = () => mapRef.current?.zoomOut();
-
   const handleMyLocation = async () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser');
-      return;
-    }
+    if (!navigator.geolocation) return alert('Geolocation is not supported by your browser');
+    
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
@@ -118,24 +478,14 @@ function MapPage() {
             </div>
           `;
           
-          const userIcon = L.divIcon({
-            html: userIconHtml,
-            className: 'user-location-marker',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-          });
-          
-          userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon })
-            .addTo(mapRef.current)
-            .bindPopup('<div class="text-center p-2 font-bold text-sm">You are here</div>');
+          userMarkerRef.current = L.marker([latitude, longitude], { 
+            icon: L.divIcon({ html: userIconHtml, className: 'user-location-marker', iconSize: [40, 40], iconAnchor: [20, 20] })
+          }).addTo(mapRef.current).bindPopup('<div class="text-center p-2 font-bold text-sm">You are here</div>');
           
           mapRef.current.setView([latitude, longitude], 13, { animate: true });
         }
       },
-      (error) => {
-        console.error('Error getting location:', error);
-        alert('Unable to get your location. Please enable location services.');
-      }
+      () => alert('Unable to get your location. Please enable location services.')
     );
   };
 
@@ -151,15 +501,11 @@ function MapPage() {
     const L = (await import('leaflet')).default;
     tileLayerRef.current.remove();
     const layerConfig = mapLayers[layer];
-    tileLayerRef.current = L.tileLayer(layerConfig.url, {
-      attribution: layerConfig.attribution,
-      maxZoom: 19,
-    }).addTo(mapRef.current);
+    tileLayerRef.current = L.tileLayer(layerConfig.url, { attribution: layerConfig.attribution, maxZoom: 19 }).addTo(mapRef.current);
     setCurrentLayer(layer);
     setShowLayerMenu(false);
   };
 
-  // Rest of your data fetching logic remains unchanged
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -173,42 +519,33 @@ function MapPage() {
           if (firstTripWithCoords && !selectedTrip) setSelectedTrip(firstTripWithCoords._id);
           else if (data.length > 0 && !selectedTrip) setSelectedTrip(data[0]._id);
         } else {
+          const matchedFriends = await matchAPI.getMatches();
+          const matchedUsers = matchedFriends.map((match: any) => ({ ...match.user, connectionType: 'match' })).filter(Boolean);
+          
+          let mutualUsers: any[] = [];
           try {
-            const matchedFriends = await matchAPI.getMatches();
-            const matchedUsers = matchedFriends
-              .map((match: any) => ({ ...match.user, connectionType: 'match' }))
-              .filter((friend: any) => friend);
-            
-            let mutualUsers: any[] = [];
-            try {
-              const discoverResponse = await matchAPI.discover();
-              if (discoverResponse.success && discoverResponse.profiles) {
-                const mutualConnections = discoverResponse.profiles.filter((profile: any) => profile.connectionStatus === 'connected');
-                mutualUsers = mutualConnections.map((profile: any) => ({
-                  _id: profile.id, id: profile.id, name: profile.name, username: profile.username,
-                  age: profile.age, location: profile.location, profilePicture: profile.profilePicture,
-                  coordinates: profile.coordinates, updatedAt: profile.updatedAt, connectionType: 'mutual'
-                }));
-              }
-            } catch (discoverError) { console.error('Error fetching discover profiles:', discoverError); }
-            
-            const matchedIds = new Set(matchedUsers.map((u: any) => u._id || u.id));
-            const uniqueMutualUsers = mutualUsers.filter((u: any) => !matchedIds.has(u._id || u.id));
-            const allFriends = [...matchedUsers, ...uniqueMutualUsers];
-            
-            setFriends(allFriends);
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const userIdFromUrl = urlParams.get('user');
-            
-            if (userIdFromUrl) {
-              const friendFromUrl = allFriends.find((f: any) => f._id === userIdFromUrl || f.id === userIdFromUrl);
-              if (friendFromUrl) setSelectedFriend(friendFromUrl._id || friendFromUrl.id);
-            } else if (!selectedFriend) {
-              const firstFriendWithCoords = allFriends.find((friend: any) => friend.coordinates?.lat && friend.coordinates?.lng);
-              if (firstFriendWithCoords) setSelectedFriend(firstFriendWithCoords._id);
+            const discoverResponse = await matchAPI.discover();
+            if (discoverResponse.success && discoverResponse.profiles) {
+              mutualUsers = discoverResponse.profiles
+                .filter((profile: any) => profile.connectionStatus === 'connected')
+                .map((profile: any) => ({ ...profile, _id: profile.id, connectionType: 'mutual' }));
             }
-          } catch (error) { throw error; }
+          } catch (e) { console.error('Discover error:', e); }
+          
+          const matchedIds = new Set(matchedUsers.map((u: any) => u._id || u.id));
+          const uniqueMutualUsers = mutualUsers.filter((u: any) => !matchedIds.has(u._id || u.id));
+          const allFriends = [...matchedUsers, ...uniqueMutualUsers];
+          
+          setFriends(allFriends);
+          
+          const userIdFromUrl = searchParams?.get('user');
+          if (userIdFromUrl) {
+            const friendFromUrl = allFriends.find((f: any) => f._id === userIdFromUrl || f.id === userIdFromUrl);
+            if (friendFromUrl) setSelectedFriend(friendFromUrl._id || friendFromUrl.id);
+          } else if (!selectedFriend) {
+            const firstWithCoords = allFriends.find((f: any) => f.coordinates?.lat && f.coordinates?.lng);
+            if (firstWithCoords) setSelectedFriend(firstWithCoords._id);
+          }
         }
       } catch (err: any) {
         setError(err.message || 'Failed to load data');
@@ -217,7 +554,7 @@ function MapPage() {
       }
     };
     fetchData();
-  }, [activeTab]);
+  }, [activeTab]); // Removed unstable dependencies
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -228,17 +565,17 @@ function MapPage() {
   }, [showLayerMenu]);
 
   const filteredTrips = trips.filter((trip) => {
-    const matchesSearch = trip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          trip.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          trip.country.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = [trip.title, trip.destination, trip.country].some(val => 
+      val.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     const matchesFilter = activeFilter === 'All Trips' || trip.status?.toLowerCase() === activeFilter.toLowerCase();
     return matchesSearch && matchesFilter;
   });
 
-  const filteredFriends = friends.filter((friend) => {
-    return friend.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-           friend.location?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredFriends = friends.filter((friend) => 
+    friend.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    friend.location?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const formatDates = (startDate: string, endDate: string) => {
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
@@ -254,25 +591,26 @@ function MapPage() {
       'default': 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400&q=80',
     };
     const dest = destination.toLowerCase();
-    for (const key in images) { if (dest.includes(key)) return images[key]; }
+    for (const key in images) if (dest.includes(key)) return images[key];
     return images.default;
   };
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
-    if (mapRef.current) return;
+    if (mapRef.current) return; // Map already initialized
 
     const initMap = async () => {
       const L = (await import('leaflet')).default;
       const container = mapContainerRef.current;
-      if (container && (container as any)._leaflet_id) return;
+      
+      // Check if container is already initialized
+      if (!container || (container as any)._leaflet_id) {
+        console.log('Map container already initialized');
+        return;
+      }
 
-      const map = L.map(mapContainerRef.current!, {
-        center: [20, 0],
-        zoom: 2,
-        zoomControl: false,
-      });
-
+      const map = L.map(container, { center: [20, 0], zoom: 2, zoomControl: false });
+      
       const layerConfig = mapLayers[currentLayer];
       tileLayerRef.current = L.tileLayer(layerConfig.url, { attribution: layerConfig.attribution, maxZoom: 19 }).addTo(map);
       mapRef.current = map;
@@ -282,16 +620,24 @@ function MapPage() {
     initMap();
 
     return () => {
-      if (userMarkerRef.current) { userMarkerRef.current.remove(); userMarkerRef.current = null; }
-      if (tileLayerRef.current) { tileLayerRef.current.remove(); tileLayerRef.current = null; }
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; setMapLoaded(false); }
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+      if (tileLayerRef.current) {
+        tileLayerRef.current.remove();
+        tileLayerRef.current = null;
+      }
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+        setMapLoaded(false);
+      }
     };
   }, []);
 
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
-    if (activeTab === 'trips' && filteredTrips.length === 0) return;
-    if (activeTab === 'friends' && filteredFriends.length === 0) return;
 
     const updateMarkers = async () => {
       const L = (await import('leaflet')).default;
@@ -299,7 +645,7 @@ function MapPage() {
       markersRef.current = {};
 
       if (activeTab === 'trips') {
-        const tripsWithCoords = filteredTrips.filter(trip => trip.lat && trip.lng);
+        const tripsWithCoords = filteredTrips.filter(t => t.lat && t.lng);
         tripsWithCoords.forEach((trip) => {
           const isSelected = trip._id === selectedTrip;
           const iconHtml = `
@@ -310,10 +656,11 @@ function MapPage() {
             </div>
           `;
 
-          const customIcon = L.divIcon({ html: iconHtml, className: 'custom-marker', iconSize: [48, 48], iconAnchor: [24, 48], popupAnchor: [0, -48] });
-          const marker = L.marker([trip.lat!, trip.lng!], { icon: customIcon }).addTo(mapRef.current);
-          const image = trip.imageUrl || getDefaultImage(trip.destination);
+          const marker = L.marker([trip.lat!, trip.lng!], { 
+            icon: L.divIcon({ html: iconHtml, className: 'custom-marker', iconSize: [48, 48], iconAnchor: [24, 48], popupAnchor: [0, -48] }) 
+          }).addTo(mapRef.current);
           
+          const image = trip.imageUrl || getDefaultImage(trip.destination);
           const popupContent = `
             <div class="w-[240px]">
               <div class="h-[120px] w-full bg-cover bg-center relative rounded-t-xl" style="background-image: url('${image}')">
@@ -322,10 +669,17 @@ function MapPage() {
               <div class="p-4 bg-white">
                 <h3 class="text-slate-900 text-base font-bold leading-tight truncate">${trip.title}</h3>
                 <p class="text-slate-500 text-xs mt-1 font-medium">${formatDates(trip.startDate, trip.endDate)}</p>
-                <p class="text-slate-600 text-xs mt-1 truncate">${trip.destination}, ${trip.country}</p>
-                <a href="/trips/${trip._id}" class="inline-flex items-center gap-1 mt-3 text-[#059467] text-sm font-bold hover:text-[#047854] transition-colors">
-                  View Details →
-                </a>
+                <p class="text-slate-600 text-xs mt-1 truncate mb-3">${trip.destination}, ${trip.country}</p>
+                <button 
+                  onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${trip.lat},${trip.lng}', '_blank')"
+                  class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                  Open in Google Maps
+                </button>
               </div>
             </div>
           `;
@@ -336,8 +690,7 @@ function MapPage() {
         });
 
         if (tripsWithCoords.length > 0) {
-          const bounds = L.latLngBounds(tripsWithCoords.map((trip) => [trip.lat!, trip.lng!]));
-          // Adjust padding on mobile so it centers above the bottom sheet
+          const bounds = L.latLngBounds(tripsWithCoords.map((t) => [t.lat!, t.lng!]));
           const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
           mapRef.current.fitBounds(bounds, { paddingBottomRight: [50, paddingBottom], paddingTopLeft: [50, 50], maxZoom: 10 });
         }
@@ -357,8 +710,9 @@ function MapPage() {
             </div>
           `;
 
-          const customIcon = L.divIcon({ html: iconHtml, className: 'custom-marker', iconSize: [48, 48], iconAnchor: [24, 24], popupAnchor: [0, -24] });
-          const marker = L.marker([friend.coordinates.lat, friend.coordinates.lng], { icon: customIcon }).addTo(mapRef.current);
+          const marker = L.marker([friend.coordinates.lat, friend.coordinates.lng], { 
+            icon: L.divIcon({ html: iconHtml, className: 'custom-marker', iconSize: [48, 48], iconAnchor: [24, 24], popupAnchor: [0, -24] }) 
+          }).addTo(mapRef.current);
           
           const popupContent = `
             <div class="w-[220px] p-4 bg-white rounded-xl">
@@ -367,14 +721,20 @@ function MapPage() {
                   ${friend.profilePicture ? `<img src="${friend.profilePicture}" class="w-full h-full object-cover" />` : `<div class="w-full h-full flex items-center justify-center text-emerald-700 font-bold">${friend.name?.charAt(0).toUpperCase()}</div>`}
                 </div>
                 <div class="min-w-0">
-                  <h3 class="text-slate-900 font-bold truncate">${friend.name}</h3>
-                  ${friend.age ? `<p class="text-xs text-slate-500">${friend.age} yrs</p>` : ''}
+                  <h3 class="text-slate-900 font-bold truncate">${friend.name}${friend.age ? `, ${friend.age}` : ''}</h3>
                 </div>
               </div>
-              <p class="text-xs text-slate-600 mb-3 truncate font-medium"><i class="fas fa-map-marker-alt text-emerald-500 mr-1"></i>${friend.location || 'Unknown location'}</p>
-              <a href="/profile/${friend.username}" class="block w-full text-center py-2 bg-slate-50 text-[#059467] rounded-lg text-xs font-bold hover:bg-emerald-50 transition-colors">
-                View Profile
-              </a>
+              <p class="text-xs text-slate-600 mb-3 truncate font-medium">${friend.location || 'Unknown location'}</p>
+              <button 
+                onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${friend.coordinates.lat},${friend.coordinates.lng}', '_blank')"
+                class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+                Open in Google Maps
+              </button>
             </div>
           `;
 
@@ -383,47 +743,229 @@ function MapPage() {
           markersRef.current[friend._id] = marker;
         });
 
-        if (filteredFriends.length > 0) {
-          const coords = filteredFriends.filter(f => f.coordinates?.lat && f.coordinates?.lng).map(f => [f.coordinates.lat, f.coordinates.lng] as [number, number]);
-          if (coords.length > 0) {
-            const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
-            const bounds = L.latLngBounds(coords);
-            mapRef.current.fitBounds(bounds, { paddingBottomRight: [50, paddingBottom], paddingTopLeft: [50, 50], maxZoom: 10 });
+        if (filteredFriends.length > 0 && !showRoutePanel) {
+          // If a friend is selected, zoom to only that friend
+          if (selectedFriend) {
+            const selected = filteredFriends.find(f => f._id === selectedFriend);
+            if (selected && selected.coordinates?.lat && selected.coordinates?.lng) {
+              mapRef.current.setView([selected.coordinates.lat, selected.coordinates.lng], 13, { animate: true });
+            }
+          } else {
+            // If no friend is selected, show all friends
+            const coords = filteredFriends.filter(f => f.coordinates?.lat).map(f => [f.coordinates.lat, f.coordinates.lng] as [number, number]);
+            if (coords.length > 0) {
+              const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
+              mapRef.current.fitBounds(L.latLngBounds(coords), { paddingBottomRight: [50, paddingBottom], paddingTopLeft: [50, 50], maxZoom: 10 });
+            }
           }
         }
       }
     };
     updateMarkers();
-  }, [filteredTrips, filteredFriends, selectedTrip, selectedFriend, mapLoaded, activeTab, isMobileExpanded]);
+  }, [filteredTrips, filteredFriends, selectedTrip, selectedFriend, mapLoaded, activeTab, isMobileExpanded, showRoutePanel]);
 
+  // Display itinerary stops on map
   useEffect(() => {
-    if (!mapRef.current || !mapLoaded) return;
-    const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? [0, 250] : [0, 100]) : [0, 0];
-
-    if (activeTab === 'trips' && selectedTrip) {
-      const selectedTripData = trips.find((trip) => trip._id === selectedTrip);
-      if (selectedTripData && selectedTripData.lat && selectedTripData.lng) {
-        mapRef.current.setView([selectedTripData.lat, selectedTripData.lng], 8, { animate: true });
-        markersRef.current[selectedTrip]?.openPopup();
-      }
-    } else if (activeTab === 'friends' && selectedFriend) {
-      const selectedFriendData = friends.find((friend) => friend._id === selectedFriend);
-      if (selectedFriendData && selectedFriendData.coordinates?.lat && selectedFriendData.coordinates?.lng) {
-        mapRef.current.setView([selectedFriendData.coordinates.lat, selectedFriendData.coordinates.lng], 10, { animate: true });
-        markersRef.current[selectedFriend]?.openPopup();
-      }
+    console.log('Display itinerary effect triggered:', { 
+      mapLoaded, 
+      hasMap: !!mapRef.current, 
+      itineraryLength: tripItinerary.length,
+      itinerary: tripItinerary 
+    });
+    
+    if (!mapLoaded || !mapRef.current || tripItinerary.length === 0) {
+      // Clear existing itinerary markers and routes
+      Object.values(itineraryMarkersRef.current).forEach(marker => {
+        try {
+          mapRef.current.removeLayer(marker);
+        } catch (e) {}
+      });
+      itineraryMarkersRef.current = {};
+      
+      itineraryRoutesRef.current.forEach(route => {
+        try {
+          mapRef.current.removeLayer(route);
+        } catch (e) {}
+      });
+      itineraryRoutesRef.current = [];
+      return;
     }
-  }, [selectedTrip, selectedFriend, activeTab, mapLoaded, trips, friends]);
+    
+    const displayItineraryStops = async () => {
+      console.log('Starting to display itinerary stops...');
+      const L = (await import('leaflet')).default;
+      
+      // Clear existing itinerary markers
+      Object.values(itineraryMarkersRef.current).forEach(marker => {
+        try {
+          mapRef.current.removeLayer(marker);
+        } catch (e) {}
+      });
+      itineraryMarkersRef.current = {};
+      
+      // Clear existing routes
+      itineraryRoutesRef.current.forEach(route => {
+        try {
+          mapRef.current.removeLayer(route);
+        } catch (e) {}
+      });
+      itineraryRoutesRef.current = [];
+      
+      // Add markers for each stop
+      const stopsWithCoords = tripItinerary.filter(stop => stop.lat && stop.lng);
+      
+      console.log('Stops with coordinates:', stopsWithCoords.length, 'out of', tripItinerary.length);
+      
+      if (stopsWithCoords.length === 0) {
+        console.warn('No stops have coordinates!');
+        return;
+      }
+      
+      stopsWithCoords.forEach((stop, index) => {
+        const dayNumber = index + 1;
+        const iconHtml = `
+          <div class="relative flex flex-col items-center">
+            <div class="bg-[#059467] text-white rounded-full w-10 h-10 flex items-center justify-center font-bold text-sm shadow-lg border-3 border-white ring-2 ring-[#059467]/30">
+              ${dayNumber}
+            </div>
+            <div class="absolute -bottom-7 bg-white px-2 py-1 rounded-lg text-[10px] font-bold text-slate-700 shadow-md whitespace-nowrap border border-slate-200">
+              ${stop.name.length > 20 ? stop.name.substring(0, 20) + '...' : stop.name}
+            </div>
+          </div>
+        `;
+        
+        const marker = L.marker([stop.lat, stop.lng], {
+          icon: L.divIcon({
+            html: iconHtml,
+            className: 'itinerary-stop-marker',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+          }),
+          zIndexOffset: 500
+        }).addTo(mapRef.current);
+        
+        // Add popup with stop details
+        const popupContent = `
+          <div class="p-2">
+            <div class="font-bold text-sm text-[#059467] mb-1">Day ${dayNumber}</div>
+            <div class="font-bold text-sm mb-1">${stop.name}</div>
+            ${stop.activity ? `<div class="text-xs text-slate-600 italic">${stop.activity}</div>` : ''}
+            <div class="text-xs text-slate-500 mt-1">${new Date(stop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          </div>
+        `;
+        marker.bindPopup(popupContent, { maxWidth: 200, className: 'custom-popup' });
+        
+        itineraryMarkersRef.current[stop._id] = marker;
+      });
+      
+      // Draw routes between consecutive stops using OSRM for road routing
+      for (let i = 0; i < stopsWithCoords.length - 1; i++) {
+        const currentStop = stopsWithCoords[i];
+        const nextStop = stopsWithCoords[i + 1];
+        
+        try {
+          // Try to get actual road routing from OSRM
+          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${currentStop.lng},${currentStop.lat};${nextStop.lng},${nextStop.lat}?overview=full&geometries=geojson`;
+          
+          const response = await fetch(osrmUrl);
+          const data = await response.json();
+          
+          if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+            const route = data.routes[0];
+            const coordinates = route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
+            
+            // Draw the actual road route
+            const polyline = L.polyline(coordinates, {
+              color: '#059467',
+              weight: 4,
+              opacity: 0.8,
+              dashArray: '10, 5'
+            }).addTo(mapRef.current);
+            
+            itineraryRoutesRef.current.push(polyline);
+            
+            // Get distance from OSRM (more accurate than straight-line)
+            const distanceKm = (route.distance / 1000).toFixed(1);
+            
+            // Add distance label at midpoint of the route
+            const midIndex = Math.floor(coordinates.length / 2);
+            const midLat = coordinates[midIndex][0];
+            const midLng = coordinates[midIndex][1];
+            
+            const distanceLabel = L.marker([midLat, midLng], {
+              icon: L.divIcon({
+                html: `<div class="bg-white px-2 py-1 rounded-full text-[10px] font-bold text-[#059467] shadow-md border border-[#059467]/30">${distanceKm} km</div>`,
+                className: 'distance-label',
+                iconSize: [60, 20],
+                iconAnchor: [30, 10]
+              }),
+              zIndexOffset: 400
+            }).addTo(mapRef.current);
+            
+            itineraryRoutesRef.current.push(distanceLabel);
+          } else {
+            throw new Error('OSRM routing failed');
+          }
+        } catch (err) {
+          console.log('OSRM routing failed, using straight line:', err);
+          
+          // Fallback to straight line if OSRM fails
+          const polyline = L.polyline(
+            [[currentStop.lat, currentStop.lng], [nextStop.lat, nextStop.lng]],
+            {
+              color: '#059467',
+              weight: 3,
+              opacity: 0.7,
+              dashArray: '10, 5'
+            }
+          ).addTo(mapRef.current);
+          
+          itineraryRoutesRef.current.push(polyline);
+          
+          // Calculate straight-line distance
+          const distance = calculateDistance(
+            currentStop.lat, currentStop.lng,
+            nextStop.lat, nextStop.lng
+          );
+          
+          // Add distance label at midpoint
+          const midLat = (currentStop.lat + nextStop.lat) / 2;
+          const midLng = (currentStop.lng + nextStop.lng) / 2;
+          
+          const distanceLabel = L.marker([midLat, midLng], {
+            icon: L.divIcon({
+              html: `<div class="bg-white px-2 py-1 rounded-full text-[10px] font-bold text-[#059467] shadow-md border border-[#059467]/30">~${distance.toFixed(1)} km</div>`,
+              className: 'distance-label',
+              iconSize: [60, 20],
+              iconAnchor: [30, 10]
+            }),
+            zIndexOffset: 400
+          }).addTo(mapRef.current);
+          
+          itineraryRoutesRef.current.push(distanceLabel);
+        }
+      }
+      
+      // Fit map bounds to show all stops
+      if (stopsWithCoords.length > 0) {
+        const bounds = stopsWithCoords.map(stop => [stop.lat, stop.lng]);
+        mapRef.current.fitBounds(bounds, { padding: [80, 80], maxZoom: 12 });
+      }
+    };
+    
+    displayItineraryStops();
+  }, [tripItinerary, mapLoaded]);
 
   return (
     <div className="flex flex-col h-[100dvh] overflow-hidden bg-slate-50 dark:bg-slate-900">
+      {/* Required to render Leaflet map tiles correctly without broken styling */}
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      
       <div className="hidden md:block z-50 relative">
         <Header />
       </div>
       
       <main className="flex-1 relative w-full h-full overflow-hidden">
-        
-        {/* Full Screen Map Container */}
         <div className="absolute inset-0 z-0">
           <div ref={mapContainerRef} className="w-full h-full" />
           {!mapLoaded && (
@@ -436,35 +978,51 @@ function MapPage() {
           )}
         </div>
 
-        {/* Dynamic Map Controls - Floats above bottom sheet */}
-        <div className={`absolute right-4 md:right-8 flex flex-col gap-3 md:gap-4 items-center z-[40] transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
-          isMobileExpanded ? 'bottom-[calc(80vh+1rem)]' : 'bottom-[calc(35vh+1rem)] md:bottom-8'
-        }`}>
+        <div className={`absolute right-4 md:right-8 flex flex-col gap-3 md:gap-4 items-center z-[40] transition-all duration-300 ${isMobileExpanded ? 'bottom-[calc(80vh+1rem)]' : 'bottom-[calc(35vh+1rem)] md:bottom-8'}`}>
+          {/* Desktop Sidebar Toggle - Only visible on desktop */}
+          <button 
+            onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+            className="hidden md:flex w-11 h-11 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-lg border border-slate-200/50 items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+            title={isSidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
+          >
+            {isSidebarVisible ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+                <polyline points="15 9 12 12 15 15"></polyline>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+                <polyline points="12 9 15 12 12 15"></polyline>
+              </svg>
+            )}
+          </button>
+
           <div className="flex flex-col bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 overflow-hidden">
-            <button onClick={handleZoomIn} className="w-11 h-11 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors active:bg-slate-200">
+            <button onClick={() => mapRef.current?.zoomIn()} className="w-11 h-11 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
               <Plus className="w-5 h-5" />
             </button>
             <div className="h-[1px] w-8 bg-slate-200 dark:bg-slate-700 mx-auto"></div>
-            <button onClick={handleZoomOut} className="w-11 h-11 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors active:bg-slate-200">
+            <button onClick={() => mapRef.current?.zoomOut()} className="w-11 h-11 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">
               <Minus className="w-5 h-5" />
             </button>
           </div>
 
-          <button onClick={handleMyLocation} className="w-11 h-11 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-lg border border-slate-200/50 dark:border-slate-700/50 flex items-center justify-center text-[#059467] hover:bg-[#059467] hover:text-white transition-all active:scale-95 group">
+          <button onClick={handleMyLocation} className="w-11 h-11 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full shadow-lg border border-slate-200/50 flex items-center justify-center text-[#059467] hover:bg-[#059467] hover:text-white transition-all group">
             <Navigation className="w-5 h-5 transition-transform group-hover:rotate-45" />
           </button>
 
           <div className="relative" ref={layerMenuRef}>
-            <button onClick={() => setShowLayerMenu(!showLayerMenu)} className="w-11 h-11 bg-slate-900/90 dark:bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-slate-700 dark:border-slate-200 flex items-center justify-center text-white dark:text-slate-900 hover:scale-105 transition-all active:scale-95">
+            <button onClick={() => setShowLayerMenu(!showLayerMenu)} className="w-11 h-11 bg-slate-900/90 dark:bg-white/90 backdrop-blur-md rounded-full shadow-lg border border-slate-700 flex items-center justify-center text-white dark:text-slate-900 hover:scale-105 transition-all">
               <Layers className="w-5 h-5" />
             </button>
             
             {showLayerMenu && (
-              <div className="absolute bottom-full right-0 mb-3 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden min-w-[150px] animate-in fade-in slide-in-from-bottom-2">
+              <div className="absolute bottom-full right-0 mb-3 bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-200/50 min-w-[150px] animate-in fade-in">
                 {Object.entries(mapLayers).map(([key, layer]) => (
-                  <button key={key} onClick={() => handleLayerChange(key as any)} className={`w-full px-4 py-3 text-left text-sm font-semibold transition-colors flex items-center justify-between ${
-                      currentLayer === key ? 'bg-[#059467]/10 text-[#059467]' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}>
+                  <button key={key} onClick={() => handleLayerChange(key as any)} className={`w-full px-4 py-3 text-left text-sm font-semibold transition-colors flex items-center justify-between ${currentLayer === key ? 'bg-[#059467]/10 text-[#059467]' : 'text-slate-700 hover:bg-slate-50'}`}>
                     <span>{layer.name}</span>
                     {currentLayer === key && <div className="w-2 h-2 rounded-full bg-[#059467]" />}
                   </button>
@@ -474,36 +1032,49 @@ function MapPage() {
           </div>
         </div>
 
-        {/* Sidebar / Mobile Bottom Sheet */}
-        <aside className={`absolute md:relative left-0 right-0 md:w-[420px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl z-30 flex flex-col transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:h-full border-t md:border-t-0 md:border-r border-slate-200/50 dark:border-slate-800/50
-          ${isMobileExpanded ? 'bottom-0 h-[80vh] rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.15)]' : 'bottom-0 h-[35vh] md:h-full rounded-t-[2rem] md:rounded-none shadow-[0_-4px_20px_rgba(0,0,0,0.1)] md:shadow-2xl'}
-        `}>
-          
-          {/* Mobile Drag Handle */}
-          <div 
-            className="w-full pt-4 pb-2 flex justify-center md:hidden cursor-pointer touch-none"
-            onClick={() => setIsMobileExpanded(!isMobileExpanded)}
-          >
+        {showRoutePanel && routeInfo && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-[45]">
+            <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 px-4 py-2.5 animate-in slide-in-from-top flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Car className="w-4 h-4 text-[#059467]" />
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  {routeInfo.type === 'road' ? 'Route' : 'Est.'}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Distance:</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{routeInfo.distance}</span>
+                </div>
+                <div className="w-px h-4 bg-slate-300 dark:bg-slate-600"></div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Duration:</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{routeInfo.duration}</span>
+                </div>
+              </div>
+              
+              <button 
+                onClick={clearRoute}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors ml-1"
+              >
+                <CloseIcon className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <aside className={`absolute md:relative left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl z-30 flex flex-col transition-all duration-300 md:h-full border-t md:border-t-0 md:border-r border-slate-200/50 ${isMobileExpanded ? 'bottom-0 h-[80vh] rounded-t-[2rem] shadow-[0_-10px_40px_rgba(0,0,0,0.15)]' : 'bottom-0 h-[35vh] md:h-full rounded-t-[2rem] md:rounded-none shadow-[0_-4px_20px_rgba(0,0,0,0.1)] md:shadow-2xl'} ${isSidebarVisible ? 'md:w-[420px]' : 'md:w-0 md:overflow-hidden'}`}>
+          <div className="w-full pt-4 pb-2 flex justify-center md:hidden cursor-pointer touch-none" onClick={() => setIsMobileExpanded(!isMobileExpanded)}>
             <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full"></div>
           </div>
 
           <div className="px-5 pt-2 pb-4 flex-shrink-0">
-            {/* Segmented Control Tabs */}
-            <div className="flex bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-xl mb-5 border border-slate-200/50 dark:border-slate-700/50">
-              <button
-                onClick={() => { handleTabChange('friends'); setSelectedTrip(null); }}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === 'friends' ? 'bg-white dark:bg-slate-700 text-[#059467] dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
-                }`}
-              >
+            <div className="flex bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur-md p-1 rounded-xl mb-5 border border-slate-200/50">
+              <button onClick={() => { handleTabChange('friends'); setSelectedTrip(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'friends' ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 Buddies
               </button>
-              <button
-                onClick={() => { handleTabChange('trips'); setSelectedFriend(null); }}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === 'trips' ? 'bg-white dark:bg-slate-700 text-[#059467] dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
-                }`}
-              >
+              <button onClick={() => { handleTabChange('trips'); setSelectedFriend(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'trips' ? 'bg-white dark:bg-slate-700 text-[#059467] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                 Destinations
               </button>
             </div>
@@ -513,7 +1084,7 @@ function MapPage() {
                 <Search className="w-4 h-4 text-slate-400" />
               </div>
               <input
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#059467]/30 transition-all"
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#059467]/30 transition-all"
                 placeholder={activeTab === 'friends' ? 'Find travel buddies...' : 'Search locations...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -522,20 +1093,11 @@ function MapPage() {
             </div>
           </div>
 
-          {/* Filters - Trips Only */}
           {activeTab === 'trips' && (
-            <div className="px-5 pb-3 overflow-x-auto hide-scrollbar flex-shrink-0 border-b border-slate-100 dark:border-slate-800/50">
+            <div className="px-5 pb-3 overflow-x-auto hide-scrollbar flex-shrink-0 border-b border-slate-100">
               <div className="flex gap-2">
                 {filters.map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`px-4 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all flex-shrink-0 ${
-                      activeFilter === filter
-                        ? 'bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-md'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
+                  <button key={filter} onClick={() => setActiveFilter(filter)} className={`px-4 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all ${activeFilter === filter ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
                     {filter}
                   </button>
                 ))}
@@ -543,11 +1105,10 @@ function MapPage() {
             </div>
           )}
 
-          {/* Scrollable List Container */}
           <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 custom-scrollbar">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-10">
-                <Loader2 className="w-8 h-8 text-slate-900 dark:text-[#059467] animate-spin mb-3" />
+                <Loader2 className="w-8 h-8 text-[#059467] animate-spin mb-3" />
                 <p className="text-sm font-medium text-slate-500">Loading {activeTab}...</p>
               </div>
             ) : error ? (
@@ -558,96 +1119,118 @@ function MapPage() {
             ) : activeTab === 'trips' ? (
               filteredTrips.length === 0 ? (
                 <div className="text-center py-10 px-4">
-                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4"><MapPin className="w-6 h-6 text-slate-400" /></div>
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4"><MapPin className="w-6 h-6 text-slate-400" /></div>
                   <p className="text-slate-500 font-medium mb-4">{trips.length === 0 ? 'Map out your first adventure!' : 'No trips match your search.'}</p>
-                  {trips.length === 0 && (
-                    <button onClick={() => router.push('/trips/new')} className="px-5 py-2.5 bg-[#059467] text-white rounded-xl text-sm font-bold shadow-md shadow-[#059467]/20 hover:-translate-y-0.5 transition-all">Create Trip</button>
-                  )}
+                  {trips.length === 0 && <button onClick={() => router.push('/trips/new')} className="px-5 py-2.5 bg-[#059467] text-white rounded-xl text-sm font-bold shadow-md hover:-translate-y-0.5 transition-all">Create Trip</button>}
                 </div>
               ) : (
                 filteredTrips.map((trip) => {
-                  const image = trip.imageUrl || getDefaultImage(trip.destination);
                   const hasLocation = trip.lat && trip.lng;
+                  const hasActiveRoute = routeDestinationId === trip._id && routeInfo;
                   return (
-                    <div
-                      key={trip._id}
-                      onClick={() => {
-                        if (hasLocation) {
-                          setSelectedTrip(trip._id);
-                          if (window.innerWidth < 768) setIsMobileExpanded(false); // Auto collapse on select on mobile
-                        }
-                      }}
-                      className={`p-3 rounded-2xl border transition-all ${
-                        hasLocation ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : 'opacity-60 bg-slate-50/50'
-                      } ${selectedTrip === trip._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 dark:bg-emerald-900/10 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50'}`}
-                    >
+                    <div key={trip._id} className={`p-3 rounded-2xl border transition-all ${hasLocation ? 'hover:bg-slate-50' : 'opacity-60'} ${selectedTrip === trip._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 bg-white'}`}>
                       <div className="flex gap-4 items-center">
-                        <img src={image} className={`w-16 h-16 shrink-0 rounded-xl object-cover shadow-sm ${selectedTrip === trip._id ? '' : 'grayscale-[30%]'}`} alt={trip.title} />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 dark:text-white truncate text-sm mb-0.5">{trip.title}</h4>
+                        <img 
+                          src={trip.imageUrl || getDefaultImage(trip.destination)} 
+                          className={`w-16 h-16 shrink-0 rounded-xl object-cover shadow-sm cursor-pointer ${selectedTrip === trip._id ? '' : 'grayscale-[30%]'}`} 
+                          alt={trip.title}
+                          onClick={() => { if (hasLocation) { setSelectedTrip(trip._id); if (window.innerWidth < 768) setIsMobileExpanded(false); } }}
+                        />
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { if (hasLocation) { setSelectedTrip(trip._id); if (window.innerWidth < 768) setIsMobileExpanded(false); } }}>
+                          <h4 className="font-bold text-slate-900 truncate text-sm mb-0.5">{trip.title}</h4>
                           <p className="text-[11px] text-slate-500 font-medium truncate mb-1.5">{trip.destination}, {trip.country}</p>
-                          <div className="flex gap-2">
-                            <span className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-md font-semibold">{formatDates(trip.startDate, trip.endDate)}</span>
+                          <div className="flex gap-2 flex-wrap">
+                            <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-semibold">{formatDates(trip.startDate, trip.endDate)}</span>
                             {hasLocation ? (
                               <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold capitalize ${trip.status === 'Completed' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>{trip.status || 'Planning'}</span>
                             ) : (
                               <span className="text-[10px] px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md font-bold">No location</span>
                             )}
+                            {selectedTrip === trip._id && tripItinerary.length > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 bg-[#059467] text-white rounded-md font-bold">
+                                {tripItinerary.length} {tripItinerary.length === 1 ? 'stop' : 'stops'}
+                              </span>
+                            )}
+                            {hasActiveRoute && (
+                              <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md font-bold">
+                                {routeInfo.distance} • {routeInfo.duration}
+                              </span>
+                            )}
                           </div>
                         </div>
+
+                        {hasLocation && userLocation && (
+                          <div className="flex gap-1 items-center">
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedTrip(trip._id); calculateRoute({ lat: trip.lat!, lng: trip.lng! }, trip._id); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Get directions">
+                              <Navigation2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${trip.lat},${trip.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
                 })
               )
             ) : (
-              // Friends List Layout 
               filteredFriends.length === 0 ? (
                 <div className="text-center py-10 px-4">
-                  <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4"><Search className="w-6 h-6 text-slate-400" /></div>
-                  <p className="text-slate-500 font-medium mb-4">{friends.length === 0 ? 'Connect with buddies to see them on the map!' : 'No buddies found in search.'}</p>
-                  {friends.length === 0 && (
-                    <button onClick={() => router.push('/match')} className="px-5 py-2.5 bg-[#059467] text-white rounded-xl text-sm font-bold shadow-md shadow-[#059467]/20 hover:-translate-y-0.5 transition-all">Discover Buddies</button>
-                  )}
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4"><Search className="w-6 h-6 text-slate-400" /></div>
+                  <p className="text-slate-500 font-medium mb-4">{friends.length === 0 ? 'Connect with buddies to see them on the map!' : 'No buddies found.'}</p>
+                  {friends.length === 0 && <button onClick={() => router.push('/match')} className="px-5 py-2.5 bg-[#059467] text-white rounded-xl text-sm font-bold shadow-md hover:-translate-y-0.5 transition-all">Discover Buddies</button>}
                 </div>
               ) : (
                 filteredFriends.map((friend) => {
                   const hasLocation = friend.coordinates?.lat && friend.coordinates?.lng;
                   const distance = hasLocation && userLocation ? calculateDistance(userLocation.lat, userLocation.lng, friend.coordinates.lat, friend.coordinates.lng) : null;
                   const isOnline = friend.updatedAt ? (new Date().getTime() - new Date(friend.updatedAt).getTime()) < 5 * 60 * 1000 : false;
+                  const hasActiveRoute = routeDestinationId === friend._id && routeInfo;
                   
                   return (
-                    <div
-                      key={friend._id}
-                      onClick={() => {
-                        if (hasLocation) {
-                          setSelectedFriend(friend._id);
-                          if (window.innerWidth < 768) setIsMobileExpanded(false); // Auto collapse on select
-                        }
-                      }}
-                      className={`p-3.5 rounded-2xl border transition-all ${
-                        hasLocation ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : 'opacity-60 bg-slate-50/50'
-                      } ${selectedFriend === friend._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 dark:bg-emerald-900/10 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50'}`}
-                    >
+                    <div key={friend._id} className={`p-3.5 rounded-2xl border transition-all ${hasLocation ? 'hover:bg-slate-50' : 'opacity-60'} ${selectedFriend === friend._id && hasLocation ? 'border-[#059467] bg-emerald-50/30 ring-1 ring-[#059467]/30 shadow-sm' : 'border-slate-200 bg-white'}`}>
                       <div className="flex gap-4 items-center">
-                        <div className="relative">
+                        <div className="relative cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); router.push(`/profile/${friend.username}`); }}>
                           {friend.profilePicture ? (
                             <img src={friend.profilePicture} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" alt={friend.name} />
                           ) : (
                             <div className="w-12 h-12 bg-gradient-to-br from-[#059467] to-teal-700 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm">{friend.name?.charAt(0)}</div>
                           )}
-                          <div className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900 ${isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                          <div className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                         </div>
                         
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-slate-900 dark:text-white text-sm truncate">{friend.name}</h4>
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { if (hasLocation) { setSelectedFriend(friend._id); if (window.innerWidth < 768) setIsMobileExpanded(false); } }}>
+                          <h4 className="font-bold text-slate-900 text-sm truncate hover:text-[#059467] transition-colors">
+                            {friend.name}{friend.age ? `, ${friend.age}` : ''}
+                          </h4>
                           <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5 flex items-center gap-1">
-                            {hasLocation ? <MapPin className="w-3 h-3 text-[#059467]" /> : null}
-                            {friend.location || 'Location hidden'}
+                            {hasLocation && <MapPin className="w-3 h-3 text-[#059467]" />} {friend.location || 'Location hidden'}
                           </p>
-                          {distance !== null && (
-                            <p className="text-[10px] font-bold text-[#059467] mt-1 bg-emerald-50 inline-block px-1.5 py-0.5 rounded uppercase tracking-wider">{formatDistance(distance)}</p>
+                          <div className="flex gap-2 flex-wrap mt-1">
+                            {distance !== null && <span className="text-[10px] font-bold text-[#059467] bg-emerald-50 inline-block px-1.5 py-0.5 rounded uppercase tracking-wider">{formatDistance(distance)}</span>}
+                            {hasActiveRoute && (
+                              <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md font-bold">
+                                {routeInfo.distance} • {routeInfo.duration}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-1 items-center">
+                          {hasLocation && userLocation && (
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedFriend(friend._id); calculateRoute({ lat: friend.coordinates.lat, lng: friend.coordinates.lng }, friend._id); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" title="Get directions">
+                              <Navigation2 className="w-3.5 h-3.5" />
+                            </button>
                           )}
+                          {hasLocation && (
+                            <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${friend.coordinates.lat},${friend.coordinates.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); router.push(`/messages?user=${friend._id}`); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Send message">
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -655,11 +1238,9 @@ function MapPage() {
                 })
               )
             )}
-            {/* Spacer for mobile bottom sheet curve */}
             <div className="h-6 w-full md:hidden"></div>
           </div>
         </aside>
-
       </main>
 
       <style jsx global>{`
@@ -670,9 +1251,9 @@ function MapPage() {
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #334155; }
         
-        /* Leaflet overrides */
         .custom-marker { background: transparent; border: none; }
         .user-location-marker { background: transparent; border: none; }
+        .vehicle-marker { background: transparent; border: none; }
         .leaflet-container { z-index: 0 !important; background: transparent; }
         .leaflet-pane { z-index: 1 !important; }
         .leaflet-top, .leaflet-bottom { z-index: 2 !important; }
@@ -681,7 +1262,16 @@ function MapPage() {
         .custom-popup .leaflet-popup-content { margin: 0; min-width: 200px !important; }
         .custom-popup .leaflet-popup-tip { background: white; }
         .dark .custom-popup .leaflet-popup-tip { background: #1e293b; }
-        .leaflet-control-attribution { display: none !important; } /* Hide attribution for cleaner UI if permitted */
+        .leaflet-control-attribution { display: none !important; }
+        .leaflet-routing-container { display: none !important; }
+        
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .vehicle-marker .animate-bounce {
+          animation: bounce 2s ease-in-out infinite;
+        }
       `}</style>
     </div>
   );

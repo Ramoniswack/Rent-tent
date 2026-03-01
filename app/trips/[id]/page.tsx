@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuth } from '../../../hooks/useAuth';
 import { useToast } from '../../../hooks/useToast';
 import { formatNPR, formatNPRShort } from '../../../lib/currency';
@@ -43,8 +44,19 @@ import {
   Zap,
   Scale,
   Download,
-  Edit
+  Edit,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
+
+const LocationMap = dynamic(() => import('../../../components/LocationMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[200px] rounded-xl overflow-hidden relative bg-slate-100 dark:bg-slate-800 animate-pulse flex items-center justify-center">
+      <Loader2 className="w-6 h-6 text-[#059467] animate-spin" />
+    </div>
+  ),
+});
 
 type Tab = 'itinerary' | 'expenses' | 'packing';
 type StopStatus = 'planning' | 'traveling' | 'completed';
@@ -139,7 +151,7 @@ export default function TripDetailsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | StopStatus>('all');
   const [showStopMenu, setShowStopMenu] = useState<string | null>(null);
 
-  const [newStop, setNewStop] = useState({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
+  const [newStop, setNewStop] = useState<{ name: string; activity: string; time: string; lat?: number; lng?: number }>({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
   const [editStop, setEditStop] = useState({ id: '', name: '', activity: '', time: '' });
   const [newExpense, setNewExpense] = useState({ item: '', amount: 0, category: 'other' });
   const [editBudgetValue, setEditBudgetValue] = useState(0);
@@ -148,7 +160,10 @@ export default function TripDetailsPage() {
   const [newPackingItem, setNewPackingItem] = useState({ name: '', notes: '', quantity: 1, category: 'clothing' });
   const [dateError, setDateError] = useState('');
   const [weather, setWeather] = useState<any>(null);
+  const [locationSearching, setLocationSearching] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
+  const [showStopMapPicker, setShowStopMapPicker] = useState(false);
+  const [stopMapCenter, setStopMapCenter] = useState<[number, number]>([27.7172, 85.3240]);
   
   // Packing state
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
@@ -248,6 +263,19 @@ export default function TripDetailsPage() {
     return () => clearInterval(pollInterval);
   }, [tripId, trip]);
 
+  // Auto-search location when stop name changes
+  useEffect(() => {
+    if (!newStop.name || newStop.name.length < 3) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      searchLocation(newStop.name);
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [newStop.name]);
+
   // Update URL when tab changes
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -344,7 +372,19 @@ export default function TripDetailsPage() {
     }
     
     try {
-      const added = await tripAPI.addItineraryStop(tripId, newStop);
+      const stopData: any = {
+        name: newStop.name,
+        activity: newStop.activity,
+        time: newStop.time
+      };
+      
+      // Include coordinates if available
+      if (newStop.lat && newStop.lng) {
+        stopData.lat = newStop.lat;
+        stopData.lng = newStop.lng;
+      }
+      
+      const added = await tripAPI.addItineraryStop(tripId, stopData);
       setItinerary([...itinerary, added]);
       setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
       setDateError('');
@@ -352,6 +392,74 @@ export default function TripDetailsPage() {
     } catch (err) {
       console.error('Failed to add stop:', err);
       showToast('Failed to add stop. Please try again.', 'error');
+    }
+  };
+
+  const searchLocation = async (query: string) => {
+    if (!query || query.length < 3) {
+      setNewStop({ ...newStop, lat: undefined, lng: undefined });
+      return;
+    }
+    
+    try {
+      setLocationSearching(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        const latitude = parseFloat(lat);
+        const longitude = parseFloat(lon);
+        setNewStop({ ...newStop, lat: latitude, lng: longitude });
+        setStopMapCenter([latitude, longitude]);
+      } else {
+        setNewStop({ ...newStop, lat: undefined, lng: undefined });
+      }
+    } catch (err) {
+      console.error('Location search failed:', err);
+    } finally {
+      setLocationSearching(false);
+    }
+  };
+
+  const reverseGeocodeStop = async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+      );
+      const data = await response.json();
+      
+      if (data && data.address) {
+        // Extract relevant parts for a clean location name
+        const address = data.address;
+        const parts = [];
+        
+        // Priority order: tourism/attraction, amenity, building, road, suburb, city
+        if (address.tourism) parts.push(address.tourism);
+        else if (address.amenity) parts.push(address.amenity);
+        else if (address.building) parts.push(address.building);
+        else if (address.road) parts.push(address.road);
+        else if (address.suburb) parts.push(address.suburb);
+        else if (address.neighbourhood) parts.push(address.neighbourhood);
+        
+        // Add city/town
+        if (address.city) parts.push(address.city);
+        else if (address.town) parts.push(address.town);
+        else if (address.village) parts.push(address.village);
+        else if (address.municipality) parts.push(address.municipality);
+        
+        // Fallback to display_name if we couldn't extract good parts
+        const formattedName = parts.length > 0 ? parts.join(', ') : data.display_name;
+        
+        setNewStop({ ...newStop, name: formattedName, lat, lng });
+      } else if (data && data.display_name) {
+        // Fallback to display_name if address object not available
+        setNewStop({ ...newStop, name: data.display_name, lat, lng });
+      }
+    } catch (err) {
+      console.error('Reverse geocoding failed:', err);
     }
   };
 
@@ -1106,7 +1214,19 @@ export default function TripDetailsPage() {
                       Export PDF
                     </button>
                     <button
-                      onClick={() => setShowAddStop(true)}
+                      onClick={() => {
+                        // Calculate next date after last stop
+                        if (itinerary.length > 0) {
+                          const lastStop = itinerary[itinerary.length - 1];
+                          const lastDate = new Date(lastStop.time);
+                          const nextDate = new Date(lastDate);
+                          nextDate.setDate(nextDate.getDate() + 1);
+                          setNewStop({ name: '', activity: '', time: nextDate.toISOString().split('T')[0] });
+                        } else {
+                          setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
+                        }
+                        setShowAddStop(true);
+                      }}
                       className="flex items-center justify-center gap-2 bg-[#059467] hover:bg-[#047854] text-white px-5 py-2.5 rounded-xl font-bold shadow-md shadow-[#059467]/20 hover:-translate-y-0.5 transition-all text-sm"
                     >
                       <Plus className="w-4 h-4" />
@@ -1116,11 +1236,11 @@ export default function TripDetailsPage() {
                 </div>
 
                 {/* Timeline */}
-                <div className="relative pb-12">
+                <div className="relative pb-12 overflow-visible">
                   {/* Subtle Dashed vertical line */}
                   <div className="hidden md:block absolute left-[45px] top-6 bottom-0 w-0.5 border-l-2 border-dashed border-slate-200/80 dark:border-slate-700/60 z-0"></div>
                   
-                  <div className="relative z-10 space-y-6 md:space-y-10">
+                  <div className="relative z-10 space-y-6 md:space-y-10 overflow-visible">
                     {filteredItinerary.length === 0 ? (
                       <div className="bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-10 md:p-16 rounded-[2rem] text-center border-2 border-dashed border-slate-200 dark:border-slate-800 shadow-sm">
                         <div className="w-16 h-16 bg-slate-100 dark:bg-black/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1132,7 +1252,7 @@ export default function TripDetailsPage() {
                       </div>
                     ) : (
                       filteredItinerary.map((stop, idx) => (
-                        <div key={stop._id} className="relative flex flex-col md:flex-row gap-5 md:gap-8 group">
+                        <div key={stop._id} className={`relative flex flex-col md:flex-row gap-5 md:gap-8 group overflow-visible ${showStopMenu === stop._id ? 'z-50' : 'z-10'}`}>
                           
                           {/* Day Card */}
                           <div className="flex md:flex-col items-center gap-4 md:gap-3 md:min-w-[90px] shrink-0">
@@ -1173,14 +1293,14 @@ export default function TripDetailsPage() {
                           </div>
 
                           {/* Stop Details Glass Card */}
-                          <div className="flex-1 bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-5 md:p-7 rounded-3xl shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl transition-all duration-300">
+                          <div className="relative flex-1 bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-5 md:p-7 rounded-3xl shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl transition-all duration-300 overflow-visible">
                             <div className="flex justify-between items-start mb-3">
                               <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white line-clamp-2 pr-4 group-hover:text-[#059467] transition-colors">
                                 {stop.name}
                               </h3>
                               <button
                                 onClick={() => setShowStopMenu(showStopMenu === stop._id ? null : stop._id)}
-                                className="text-slate-400 hover:text-[#059467] dark:hover:text-[#059467] p-2 hover:bg-[#059467]/10 rounded-xl transition-all flex-shrink-0"
+                                className="text-slate-400 hover:text-[#059467] dark:hover:text-[#059467] p-2 hover:bg-[#059467]/10 rounded-xl transition-all flex-shrink-0 relative z-10"
                               >
                                 <MoreHorizontal className="w-5 h-5" />
                               </button>
@@ -1214,7 +1334,7 @@ export default function TripDetailsPage() {
                             
                             {/* Premium Glassmorphism Actions Menu */}
                             {showStopMenu === stop._id && (
-                              <div className="absolute right-6 top-16 w-56 bg-white/95 dark:bg-[#132a24]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                              <div className="absolute right-6 top-16 w-56 bg-white/95 dark:bg-[#132a24]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-visible z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
                                 <button
                                   onClick={() => openEditStopModal(stop)}
                                   className="w-full px-4 py-3.5 text-left text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-[#059467]/10 hover:text-[#059467] transition-all flex items-center gap-3"
@@ -1285,7 +1405,19 @@ export default function TripDetailsPage() {
 
                 {/* Floating Add Stop Button - Mobile Only */}
                 <button
-                  onClick={() => setShowAddStop(true)}
+                  onClick={() => {
+                    // Calculate next date after last stop
+                    if (itinerary.length > 0) {
+                      const lastStop = itinerary[itinerary.length - 1];
+                      const lastDate = new Date(lastStop.time);
+                      const nextDate = new Date(lastDate);
+                      nextDate.setDate(nextDate.getDate() + 1);
+                      setNewStop({ name: '', activity: '', time: nextDate.toISOString().split('T')[0] });
+                    } else {
+                      setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
+                    }
+                    setShowAddStop(true);
+                  }}
                   className="md:hidden fixed bottom-24 right-6 z-50 w-14 h-14 bg-[#059467] hover:bg-[#047854] text-white rounded-2xl shadow-xl shadow-[#059467]/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
                   aria-label="Add Stop"
                 >
@@ -2296,22 +2428,70 @@ export default function TripDetailsPage() {
         {/* Add Stop Modal */}
         {showAddStop && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Add New Stop</h3>
               <form onSubmit={handleAddStop} className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
                     Stop Name
                   </label>
-                  <input
-                    type="text"
-                    value={newStop.name}
-                    onChange={(e) => setNewStop({ ...newStop, name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
-                    placeholder="e.g., Kathmandu Arrival"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newStop.name}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewStop({ ...newStop, name: value });
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
+                      placeholder="e.g., Kathmandu, Nepal"
+                      required
+                    />
+                    {locationSearching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 text-[#059467] animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  {newStop.lat && newStop.lng && (
+                    <p className="text-xs text-[#059467] font-semibold mt-1.5 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      Location found: {newStop.lat.toFixed(4)}, {newStop.lng.toFixed(4)}
+                    </p>
+                  )}
                 </div>
+
+                {/* Map Picker Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Location on Map
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowStopMapPicker(true)}
+                      className="text-xs font-bold text-[#059467] hover:text-[#047854] flex items-center gap-1"
+                    >
+                      <Maximize2 className="w-3 h-3" />
+                      Fullscreen
+                    </button>
+                  </div>
+                  <div className="relative rounded-xl overflow-hidden shadow-inner ring-1 ring-slate-200 dark:ring-slate-700">
+                    <LocationMap 
+                      onLocationSelect={(lat, lng) => {
+                        setStopMapCenter([lat, lng]);
+                        reverseGeocodeStop(lat, lng);
+                      }}
+                      initialPosition={stopMapCenter}
+                      selectedLocation={newStop.lat && newStop.lng ? { lat: newStop.lat, lng: newStop.lng } : null}
+                      height="200px"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                    Click on the map to set location or type location name above
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
                     Activity/Notes
@@ -2422,6 +2602,45 @@ export default function TripDetailsPage() {
                 </div>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* Fullscreen Map Modal for Stop */}
+        {showStopMapPicker && (
+          <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col">
+            <div className="flex items-center justify-between p-4 bg-white/10 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <MapPin className="text-[#059467]" size={24} />
+                <h3 className="text-white font-black text-lg">Select Stop Location</h3>
+              </div>
+              <button
+                onClick={() => setShowStopMapPicker(false)}
+                className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+              >
+                <Minimize2 className="text-white" size={20} />
+              </button>
+            </div>
+            <div className="flex-1 relative">
+              <LocationMap 
+                onLocationSelect={(lat, lng) => {
+                  setStopMapCenter([lat, lng]);
+                  reverseGeocodeStop(lat, lng);
+                }}
+                initialPosition={stopMapCenter}
+                selectedLocation={newStop.lat && newStop.lng ? { lat: newStop.lat, lng: newStop.lng } : null}
+                height="100%"
+              />
+            </div>
+            {newStop.lat && newStop.lng && (
+              <div className="p-4 bg-white/10 backdrop-blur-sm">
+                <button
+                  onClick={() => setShowStopMapPicker(false)}
+                  className="w-full py-3 bg-[#059467] hover:bg-[#047854] text-white rounded-xl font-black transition-colors"
+                >
+                  Confirm Location
+                </button>
+              </div>
+            )}
           </div>
         )}
 

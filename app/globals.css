@@ -352,3 +352,25 @@ button, a {
     to { transform: translateX(-50%); }
   }
 }
+
+/* Itinerary Stop Markers */
+.itinerary-stop-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.distance-label {
+  background: transparent !important;
+  border: none !important;
+  pointer-events: none;
+}
+
+/* Leaflet popup customization for itinerary stops */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-tip {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
