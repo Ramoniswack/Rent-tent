@@ -166,6 +166,8 @@ export default function TripDetailsPage() {
   const [dateError, setDateError] = useState('');
   const [weather, setWeather] = useState<any>(null);
   const [locationSearching, setLocationSearching] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([]);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [showStopMapPicker, setShowStopMapPicker] = useState(false);
   const [stopMapCenter, setStopMapCenter] = useState<[number, number]>([27.7172, 85.3240]);
@@ -339,7 +341,7 @@ export default function TripDetailsPage() {
     }
 
     const timer = setTimeout(() => {
-      searchLocation(newStop.name);
+      searchLocationSuggestions(newStop.name);
     }, 800);
 
     return () => clearTimeout(timer);
@@ -464,6 +466,49 @@ export default function TripDetailsPage() {
     }
   };
 
+  // Search location using Nominatim API for autocomplete suggestions
+  const searchLocationSuggestions = async (query: string) => {
+    if (!query || query.length < 3) {
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+      return;
+    }
+
+    try {
+      setLocationSearching(true);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+        {
+          headers: {
+            'User-Agent': 'NomadNotes/1.0'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setLocationSuggestions(data);
+        setShowLocationSuggestions(data.length > 0);
+      }
+    } catch (error) {
+      console.error('Error searching location:', error);
+      setLocationSuggestions([]);
+      setShowLocationSuggestions(false);
+    } finally {
+      setLocationSearching(false);
+    }
+  };
+
+  // Select a location from suggestions
+  const selectLocation = (suggestion: { display_name: string; lat: string; lon: string }) => {
+    const lat = parseFloat(suggestion.lat);
+    const lng = parseFloat(suggestion.lon);
+    setNewStop({ ...newStop, name: suggestion.display_name, lat, lng });
+    setStopMapCenter([lat, lng]);
+    setShowLocationSuggestions(false);
+    setLocationSuggestions([]);
+  };
+
 
   const updateTripStatus = async (newStatus: 'planning' | 'traveling' | 'completed') => {
     if (!trip) return;
@@ -536,6 +581,7 @@ export default function TripDetailsPage() {
     }
   };
 
+  // Search location and get coordinates
   const searchLocation = async (query: string): Promise<{ lat: number; lng: number } | null> => {
     if (!query || query.length < 3) {
       return null;
@@ -544,7 +590,12 @@ export default function TripDetailsPage() {
     try {
       setLocationSearching(true);
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+        {
+          headers: {
+            'User-Agent': 'NomadNotes/1.0'
+          }
+        }
       );
       const data = await response.json();
       
@@ -2704,6 +2755,11 @@ export default function TripDetailsPage() {
                         const value = e.target.value;
                         setNewStop({ ...newStop, name: value });
                       }}
+                      onFocus={() => {
+                        if (locationSuggestions.length > 0) {
+                          setShowLocationSuggestions(true);
+                        }
+                      }}
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
                       placeholder="e.g., Kathmandu, Nepal"
                       required
@@ -2711,6 +2767,25 @@ export default function TripDetailsPage() {
                     {locationSearching && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <Loader2 className="w-4 h-4 text-[#059467] animate-spin" />
+                      </div>
+                    )}
+                    
+                    {/* Location Suggestions Dropdown */}
+                    {showLocationSuggestions && locationSuggestions.length > 0 && (
+                      <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                        {locationSuggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => selectLocation(suggestion)}
+                            className="w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-start gap-2 border-b border-slate-100 dark:border-slate-700 last:border-b-0"
+                          >
+                            <MapPin className="w-4 h-4 text-[#059467] flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-slate-900 dark:text-white line-clamp-2">
+                              {suggestion.display_name}
+                            </span>
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>

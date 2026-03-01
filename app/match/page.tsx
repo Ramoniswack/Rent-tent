@@ -299,7 +299,7 @@ const TravelMatch: React.FC = () => {
   const PageLayout = ({ children }: { children: React.ReactNode }) => (
     <div className="bg-[#f8faf9] dark:bg-[#0b1713] text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
       <Header />
-      <main className="w-full flex-grow relative overflow-hidden flex flex-col">
+      <main className="w-full flex-grow relative overflow-hidden flex flex-col pb-20 md:pb-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-50/50 to-transparent dark:from-emerald-900/10 dark:to-transparent z-0 pointer-events-none"></div>
         <div className="absolute inset-0 opacity-30 z-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23059467' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")` }} />
         <NavigationBar />
@@ -307,9 +307,6 @@ const TravelMatch: React.FC = () => {
           {children}
         </div>
       </main>
-      <div className="hidden md:block">
-        <Footer />
-      </div>
     </div>
   );
 
@@ -318,7 +315,7 @@ const TravelMatch: React.FC = () => {
     return (
       <div className="bg-[#f8faf9] dark:bg-[#0b1713] text-slate-900 dark:text-slate-100 antialiased min-h-screen flex flex-col">
         <Header />
-        <main className="w-full flex-grow relative overflow-hidden flex flex-col">
+        <main className="w-full flex-grow relative overflow-hidden flex flex-col pb-20 md:pb-0">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-50/50 to-transparent dark:from-emerald-900/10 dark:to-transparent z-0 pointer-events-none"></div>
           <div className="absolute inset-0 opacity-30 z-0 pointer-events-none mix-blend-multiply dark:mix-blend-screen" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z' fill='%23059467' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E")` }} />
           
@@ -348,9 +345,6 @@ const TravelMatch: React.FC = () => {
             </div>
           </div>
         </main>
-        <div className="hidden md:block">
-          <Footer />
-        </div>
       </div>
     );
   }
