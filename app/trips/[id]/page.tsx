@@ -174,6 +174,70 @@ export default function TripDetailsPage() {
   const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
   const [tempQuantity, setTempQuantity] = useState(1);
 
+  // Location-based highlighting
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyStopIds, setNearbyStopIds] = useState<Set<string>>(new Set());
+
+  // Get user's current location
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log('Location access denied or unavailable:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    }
+  }, []);
+
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistanceForHighlight = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
+  };
+
+  // Check which stops are nearby (within 5km)
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const nearby = new Set<string>();
+    const NEARBY_THRESHOLD_KM = 5; // Consider stops within 5km as "nearby"
+
+    itinerary.forEach(stop => {
+      if (stop.lat && stop.lng) {
+        const distance = calculateDistanceForHighlight(
+          userLocation.lat,
+          userLocation.lng,
+          stop.lat,
+          stop.lng
+        );
+        
+        if (distance <= NEARBY_THRESHOLD_KM) {
+          nearby.add(stop._id);
+        }
+      }
+    });
+
+    setNearbyStopIds(nearby);
+  }, [userLocation, itinerary]);
+
   useEffect(() => {
     fetchTripData();
   }, [tripId]);
@@ -1396,7 +1460,10 @@ export default function TripDetailsPage() {
                         </p>
                       </div>
                     ) : (
-                      filteredItinerary.map((stop, idx) => (
+                      filteredItinerary.map((stop, idx) => {
+                        const isNearby = nearbyStopIds.has(stop._id);
+                        
+                        return (
                         <div key={stop._id} className={`relative flex flex-col md:flex-row gap-5 md:gap-8 group overflow-visible ${showStopMenu === stop._id ? 'z-50' : 'z-10'}`}>
                           
                           {/* Day Card */}
@@ -1438,7 +1505,11 @@ export default function TripDetailsPage() {
                           </div>
 
                           {/* Stop Details Glass Card */}
-                          <div className="relative flex-1 bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-5 md:p-7 rounded-3xl shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl transition-all duration-300 overflow-visible">
+                          <div className={`relative flex-1 bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-5 md:p-7 rounded-3xl shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border transition-all duration-300 overflow-visible ${
+                            isNearby 
+                              ? 'border-[#059467] ring-4 ring-[#059467]/20 ring-offset-2 dark:ring-offset-slate-900 shadow-[#059467]/30 animate-pulse-slow' 
+                              : 'border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl'
+                          }`}>
                             {/* Day Title - Optional */}
                             {stop.title && (
                               <div className="mb-3 flex justify-between items-start">
@@ -1467,6 +1538,14 @@ export default function TripDetailsPage() {
                             )}
                             
                             <div className="flex flex-wrap items-center gap-3 mb-4">
+                              {isNearby && (
+                                <div className="flex items-center gap-1.5 text-xs font-black text-white bg-[#059467] px-3 py-1.5 rounded-lg border border-[#059467] shadow-md animate-in slide-in-from-left duration-500">
+                                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                  </svg>
+                                  <span>You're Here!</span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50">
                                 <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${
                                   stop.status === 'completed' ? 'text-[#059467]' :
@@ -1551,7 +1630,8 @@ export default function TripDetailsPage() {
                             )}
                           </div>
                         </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
