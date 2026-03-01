@@ -891,6 +891,12 @@ function MapPage() {
     }
     
     const displayItineraryStops = async () => {
+      // Check if map is initialized
+      if (!mapRef.current) {
+        console.log('Map not initialized yet, skipping itinerary display');
+        return;
+      }
+      
       console.log('Starting to display itinerary stops...');
       const L = (await import('leaflet')).default;
       
