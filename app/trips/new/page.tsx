@@ -262,6 +262,7 @@ export default function CreateTripPage() {
                       <input
                         type="date"
                         name="startDate"
+                        value={formData.startDate}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none font-bold text-sm text-black dark:text-white"
                         required
@@ -275,7 +276,9 @@ export default function CreateTripPage() {
                       <input
                         type="date"
                         name="endDate"
+                        value={formData.endDate}
                         onChange={handleInputChange}
+                        min={formData.startDate || undefined}
                         className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl border-none font-bold text-sm text-black dark:text-white"
                         required
                       />
@@ -308,7 +311,7 @@ export default function CreateTripPage() {
                 </div>
 
                 {/* Privacy Toggle */}
-                <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl">
+                {/* <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl">
                   <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-2xl ${formData.isPublic ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
                       {formData.isPublic ? <Eye size={20} /> : <Lock size={20} />}
@@ -322,7 +325,7 @@ export default function CreateTripPage() {
                     <input type="checkbox" name="isPublic" checked={formData.isPublic} onChange={handleInputChange} className="sr-only peer" />
                     <div className="w-14 h-8 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:start-[4px] after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
                   </label>
-                </div>
+                </div> */}
 
                 {/* Submit Action */}
                 <button
