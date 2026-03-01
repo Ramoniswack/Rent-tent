@@ -21,6 +21,17 @@ interface Trip {
   lat?: number;
   lng?: number;
   status?: string;
+  elevation?: number;
+}
+
+interface Stop {
+  _id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  time: string;
+  activity?: string;
+  elevation?: number;
 }
 
 function MapPage() {
@@ -72,9 +83,12 @@ function MapPage() {
   const animationRef = useRef<number | null>(null);
   
   // Itinerary stops states
-  const [tripItinerary, setTripItinerary] = useState<any[]>([]);
+  const [tripItinerary, setTripItinerary] = useState<Stop[]>([]);
   const itineraryMarkersRef = useRef<{ [key: string]: any }>({});
   const itineraryRoutesRef = useRef<any[]>([]);
+  
+  // Elevation states
+  const [elevationLoading, setElevationLoading] = useState(false);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
@@ -86,6 +100,42 @@ function MapPage() {
       Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  };
+
+  // Fetch elevation data for a single location
+  const fetchElevation = async (lat: number, lng: number): Promise<number | null> => {
+    try {
+      const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`);
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        return Math.round(data.results[0].elevation);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching elevation:', error);
+      return null;
+    }
+  };
+
+  // Fetch elevation data for multiple locations (batch)
+  const fetchElevationBatch = async (locations: { lat: number; lng: number }[]): Promise<(number | null)[]> => {
+    try {
+      const locationsStr = locations.map(loc => `${loc.lat},${loc.lng}`).join('|');
+      const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${locationsStr}`);
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        return data.results.map((result: any) => Math.round(result.elevation));
+      }
+      return locations.map(() => null);
+    } catch (error) {
+      console.error('Error fetching elevation batch:', error);
+      return locations.map(() => null);
+    }
+  };
+
+  const formatElevation = (elevation: number | null | undefined): string => {
+    if (elevation === null || elevation === undefined) return '';
+    return `${elevation.toLocaleString()}m`;
   };
 
   const formatDistance = (distance: number): string => {
@@ -443,9 +493,30 @@ function MapPage() {
         console.log('Stops with coordinates:', sortedStops.filter((s: any) => s.lat && s.lng));
         
         setTripItinerary(sortedStops);
+        
+        // Fetch elevation data for stops with coordinates
+        const stopsWithCoords = sortedStops.filter((s: any) => s.lat && s.lng);
+        if (stopsWithCoords.length > 0) {
+          setElevationLoading(true);
+          const locations = stopsWithCoords.map((s: any) => ({ lat: s.lat, lng: s.lng }));
+          const elevations = await fetchElevationBatch(locations);
+          
+          // Update stops with elevation data
+          const updatedStops = sortedStops.map((stop: any) => {
+            const index = stopsWithCoords.findIndex((s: any) => s._id === stop._id);
+            if (index !== -1 && elevations[index] !== null) {
+              return { ...stop, elevation: elevations[index] };
+            }
+            return stop;
+          });
+          
+          setTripItinerary(updatedStops);
+          setElevationLoading(false);
+        }
       } catch (err) {
         console.error('Failed to fetch itinerary:', err);
         setTripItinerary([]);
+        setElevationLoading(false);
       }
     };
     
@@ -514,7 +585,29 @@ function MapPage() {
         
         if (activeTab === 'trips') {
           const data = await tripAPI.getAll();
-          setTrips(data);
+          
+          // Fetch elevation data for trips with coordinates
+          const tripsWithCoords = data.filter((trip: Trip) => trip.lat && trip.lng);
+          if (tripsWithCoords.length > 0) {
+            setElevationLoading(true);
+            const locations = tripsWithCoords.map((t: Trip) => ({ lat: t.lat!, lng: t.lng! }));
+            const elevations = await fetchElevationBatch(locations);
+            
+            // Update trips with elevation data
+            const updatedTrips = data.map((trip: Trip) => {
+              const index = tripsWithCoords.findIndex((t: Trip) => t._id === trip._id);
+              if (index !== -1 && elevations[index] !== null) {
+                return { ...trip, elevation: elevations[index] };
+              }
+              return trip;
+            });
+            
+            setTrips(updatedTrips);
+            setElevationLoading(false);
+          } else {
+            setTrips(data);
+          }
+          
           const firstTripWithCoords = data.find((trip: Trip) => trip.lat && trip.lng);
           if (firstTripWithCoords && !selectedTrip) setSelectedTrip(firstTripWithCoords._id);
           else if (data.length > 0 && !selectedTrip) setSelectedTrip(data[0]._id);
@@ -665,6 +758,12 @@ function MapPage() {
             <div class="w-[240px]">
               <div class="h-[120px] w-full bg-cover bg-center relative rounded-t-xl" style="background-image: url('${image}')">
                 ${trip.status ? `<div class="absolute top-2 right-2 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-800 capitalize shadow-sm">${trip.status}</div>` : ''}
+                ${trip.elevation ? `<div class="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shadow-sm flex items-center gap-1">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 14 10 8 14 12 20 6"></polyline>
+                  </svg>
+                  ${formatElevation(trip.elevation)}
+                </div>` : ''}
               </div>
               <div class="p-4 bg-white">
                 <h3 class="text-slate-900 text-base font-bold leading-tight truncate">${trip.title}</h3>
@@ -850,10 +949,16 @@ function MapPage() {
             <div class="font-bold text-sm text-[#059467] mb-1">Day ${dayNumber}</div>
             <div class="font-bold text-sm mb-1">${stop.name}</div>
             ${stop.activity ? `<div class="text-xs text-slate-600 italic">${stop.activity}</div>` : ''}
+            ${stop.elevation ? `<div class="text-xs text-slate-700 mt-1 flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="4 14 10 8 14 12 20 6"></polyline>
+              </svg>
+              Elevation: ${formatElevation(stop.elevation)}
+            </div>` : ''}
             <div class="text-xs text-slate-500 mt-1">${new Date(stop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
           </div>
         `;
-        marker.bindPopup(popupContent, { maxWidth: 200, className: 'custom-popup' });
+        marker.bindPopup(popupContent, { maxWidth: 220, className: 'custom-popup' });
         
         itineraryMarkersRef.current[stop._id] = marker;
       });
@@ -1149,6 +1254,14 @@ function MapPage() {
                             {selectedTrip === trip._id && tripItinerary.length > 0 && (
                               <span className="text-[10px] px-2 py-0.5 bg-[#059467] text-white rounded-md font-bold">
                                 {tripItinerary.length} {tripItinerary.length === 1 ? 'stop' : 'stops'}
+                              </span>
+                            )}
+                            {trip.elevation && (
+                              <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md font-bold flex items-center gap-1">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="4 14 10 8 14 12 20 6"></polyline>
+                                </svg>
+                                {formatElevation(trip.elevation)}
                               </span>
                             )}
                             {hasActiveRoute && (

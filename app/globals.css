@@ -374,3 +374,17 @@ button, a {
 .leaflet-popup-tip {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Slow pulse animation for nearby trip cards */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

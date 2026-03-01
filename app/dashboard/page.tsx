@@ -30,6 +30,8 @@ interface Trip {
   status: string;
   imageUrl?: string;
   isPublic: boolean;
+  lat?: number;
+  lng?: number;
   collaborators: Array<{
     userId: {
       _id: string;
@@ -58,6 +60,69 @@ function DashboardPage() {
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyTripIds, setNearbyTripIds] = useState<Set<string>>(new Set());
+
+  // Get user's current location
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log('Location access denied or unavailable:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+    }
+  }, []);
+
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
+  };
+
+  // Check which trips are nearby (within 50km)
+  useEffect(() => {
+    if (!userLocation) return;
+
+    const nearby = new Set<string>();
+    const NEARBY_THRESHOLD_KM = 50; // Consider trips within 50km as "nearby"
+
+    trips.forEach(trip => {
+      // Check if trip has coordinates
+      if ((trip as any).lat && (trip as any).lng) {
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          (trip as any).lat,
+          (trip as any).lng
+        );
+        
+        if (distance <= NEARBY_THRESHOLD_KM) {
+          nearby.add(trip._id);
+        }
+      }
+    });
+
+    setNearbyTripIds(nearby);
+  }, [userLocation, trips]);
 
   useEffect(() => {
     fetchTrips();
@@ -362,11 +427,16 @@ function DashboardPage() {
               const allMembers = [trip.userId, ...acceptedCollaborators.map(c => c.userId)];
               const displayMembers = allMembers.slice(0, 4);
               const remainingCount = allMembers.length - 4;
+              const isNearby = nearbyTripIds.has(trip._id);
               
               return (
                 <div 
                   key={trip._id}
-                  className="trip-card group bg-white dark:bg-slate-800 rounded-3xl md:rounded-[2.5rem] shadow-xl shadow-slate-900/5 dark:shadow-black/20 overflow-hidden flex flex-col transition-all hover:shadow-2xl hover:shadow-[#059467]/10 cursor-pointer"
+                  className={`trip-card group bg-white dark:bg-slate-800 rounded-3xl md:rounded-[2.5rem] shadow-xl overflow-hidden flex flex-col transition-all hover:shadow-2xl cursor-pointer ${
+                    isNearby 
+                      ? 'ring-4 ring-[#059467] ring-offset-2 dark:ring-offset-slate-900 shadow-[#059467]/30 animate-pulse-slow' 
+                      : 'shadow-slate-900/5 dark:shadow-black/20 hover:shadow-[#059467]/10'
+                  }`}
                   onClick={() => router.push(`/trips/${trip._id}`)}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden">
@@ -377,23 +447,37 @@ function DashboardPage() {
                     />
                     
                     {/* Status Badge */}
-                    <div className="absolute top-3 md:top-6 left-3 md:left-6 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-3 md:px-4 py-1 md:py-1.5 rounded-full flex items-center gap-1.5 md:gap-2">
-                      {trip.status === 'traveling' && (
-                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    <div className="absolute top-3 md:top-6 left-3 md:left-6 flex flex-col gap-2">
+                      <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-md px-3 md:px-4 py-1 md:py-1.5 rounded-full flex items-center gap-1.5 md:gap-2">
+                        {trip.status === 'traveling' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        )}
+                        {trip.status === 'completed' && (
+                          <svg className="w-4 h-4 text-[#059467]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                        {trip.status === 'planning' && (
+                          <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                        <span className="text-[10px] md:text-xs font-bold text-[#0f172a] dark:text-white">
+                          {statusDisplay.label}
+                        </span>
+                      </div>
+                      
+                      {/* Nearby Badge */}
+                      {isNearby && (
+                        <div className="bg-[#059467] backdrop-blur-md px-3 md:px-4 py-1 md:py-1.5 rounded-full flex items-center gap-1.5 md:gap-2 animate-in slide-in-from-left duration-500">
+                          <svg className="w-3 h-3 md:w-4 md:h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-[10px] md:text-xs font-black text-white">
+                            You're Here!
+                          </span>
+                        </div>
                       )}
-                      {trip.status === 'completed' && (
-                        <svg className="w-4 h-4 text-[#059467]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {trip.status === 'planning' && (
-                        <svg className="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      <span className="text-[10px] md:text-xs font-bold text-[#0f172a] dark:text-white">
-                        {statusDisplay.label}
-                      </span>
                     </div>
 
                     {/* Touch-Friendly Action Button */}

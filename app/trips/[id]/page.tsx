@@ -74,6 +74,7 @@ interface Trip {
   budget?: number;
   lat?: number;
   lng?: number;
+  elevation?: number;
   userId: {
     _id: string;
     name: string;
@@ -101,9 +102,13 @@ interface Trip {
 interface ItineraryStop {
   _id: string;
   name: string;
+  title?: string;
   activity: string;
   time: string;
   status: StopStatus;
+  elevation?: number;
+  lat?: number;
+  lng?: number;
   createdBy?: {
     _id: string;
     name: string;
@@ -151,8 +156,8 @@ export default function TripDetailsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | StopStatus>('all');
   const [showStopMenu, setShowStopMenu] = useState<string | null>(null);
 
-  const [newStop, setNewStop] = useState<{ name: string; activity: string; time: string; lat?: number; lng?: number }>({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
-  const [editStop, setEditStop] = useState({ id: '', name: '', activity: '', time: '' });
+  const [newStop, setNewStop] = useState<{ name: string; activity: string; time: string; title?: string; lat?: number; lng?: number }>({ name: '', activity: '', time: new Date().toISOString().split('T')[0], title: '' });
+  const [editStop, setEditStop] = useState({ id: '', name: '', activity: '', time: '', title: '', lat: undefined as number | undefined, lng: undefined as number | undefined });
   const [newExpense, setNewExpense] = useState({ item: '', amount: 0, category: 'other' });
   const [editBudgetValue, setEditBudgetValue] = useState(0);
   const [inviteUsername, setInviteUsername] = useState('');
@@ -292,12 +297,48 @@ export default function TripDetailsPage() {
       
       // Fetch trip data
       const tripData = await tripAPI.getById(tripId);
+      
+      // Fetch elevation for trip destination if coordinates exist
+      if (tripData.lat && tripData.lng) {
+        try {
+          const elevation = await fetchElevation(tripData.lat, tripData.lng);
+          if (elevation !== null) {
+            tripData.elevation = elevation;
+          }
+        } catch (err) {
+          console.log('Failed to fetch trip elevation:', err);
+        }
+      }
+      
       setTrip(tripData);
       
       // Fetch itinerary and expenses
       try {
         const itineraryData = await tripAPI.getItinerary(tripId);
-        setItinerary(itineraryData || []);
+        
+        // Fetch elevation for stops with coordinates
+        if (itineraryData && itineraryData.length > 0) {
+          const stopsWithCoords = itineraryData.filter((s: any) => s.lat && s.lng);
+          if (stopsWithCoords.length > 0) {
+            const locations = stopsWithCoords.map((s: any) => ({ lat: s.lat, lng: s.lng }));
+            const elevations = await fetchElevationBatch(locations);
+            
+            // Update stops with elevation data
+            const updatedItinerary = itineraryData.map((stop: any) => {
+              const index = stopsWithCoords.findIndex((s: any) => s._id === stop._id);
+              if (index !== -1 && elevations[index] !== null) {
+                return { ...stop, elevation: elevations[index] };
+              }
+              return stop;
+            });
+            
+            setItinerary(updatedItinerary || []);
+          } else {
+            setItinerary(itineraryData || []);
+          }
+        } else {
+          setItinerary([]);
+        }
       } catch (err) {
         console.log('Itinerary not available');
         setItinerary([]);
@@ -325,6 +366,37 @@ export default function TripDetailsPage() {
       setError(err.message || 'Failed to load trip details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch elevation data for a single location
+  const fetchElevation = async (lat: number, lng: number): Promise<number | null> => {
+    try {
+      const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lng}`);
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        return Math.round(data.results[0].elevation);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching elevation:', error);
+      return null;
+    }
+  };
+
+  // Fetch elevation data for multiple locations (batch)
+  const fetchElevationBatch = async (locations: { lat: number; lng: number }[]): Promise<(number | null)[]> => {
+    try {
+      const locationsStr = locations.map(loc => `${loc.lat},${loc.lng}`).join('|');
+      const response = await fetch(`https://api.open-elevation.com/api/v1/lookup?locations=${locationsStr}`);
+      const data = await response.json();
+      if (data.results && data.results.length > 0) {
+        return data.results.map((result: any) => Math.round(result.elevation));
+      }
+      return locations.map(() => null);
+    } catch (error) {
+      console.error('Error fetching elevation batch:', error);
+      return locations.map(() => null);
     }
   };
 
@@ -378,6 +450,11 @@ export default function TripDetailsPage() {
         time: newStop.time
       };
       
+      // Include title if provided
+      if (newStop.title && newStop.title.trim()) {
+        stopData.title = newStop.title;
+      }
+      
       // Include coordinates if available
       if (newStop.lat && newStop.lng) {
         stopData.lat = newStop.lat;
@@ -386,7 +463,7 @@ export default function TripDetailsPage() {
       
       const added = await tripAPI.addItineraryStop(tripId, stopData);
       setItinerary([...itinerary, added]);
-      setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
+      setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0], title: '' });
       setDateError('');
       setShowAddStop(false);
     } catch (err) {
@@ -395,10 +472,9 @@ export default function TripDetailsPage() {
     }
   };
 
-  const searchLocation = async (query: string) => {
+  const searchLocation = async (query: string): Promise<{ lat: number; lng: number } | null> => {
     if (!query || query.length < 3) {
-      setNewStop({ ...newStop, lat: undefined, lng: undefined });
-      return;
+      return null;
     }
     
     try {
@@ -412,19 +488,18 @@ export default function TripDetailsPage() {
         const { lat, lon } = data[0];
         const latitude = parseFloat(lat);
         const longitude = parseFloat(lon);
-        setNewStop({ ...newStop, lat: latitude, lng: longitude });
-        setStopMapCenter([latitude, longitude]);
-      } else {
-        setNewStop({ ...newStop, lat: undefined, lng: undefined });
+        return { lat: latitude, lng: longitude };
       }
+      return null;
     } catch (err) {
       console.error('Location search failed:', err);
+      return null;
     } finally {
       setLocationSearching(false);
     }
   };
 
-  const reverseGeocodeStop = async (lat: number, lng: number) => {
+  const reverseGeocodeStop = async (lat: number, lng: number): Promise<string | null> => {
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
@@ -452,27 +527,41 @@ export default function TripDetailsPage() {
         
         // Fallback to display_name if we couldn't extract good parts
         const formattedName = parts.length > 0 ? parts.join(', ') : data.display_name;
-        
-        setNewStop({ ...newStop, name: formattedName, lat, lng });
+        return formattedName;
       } else if (data && data.display_name) {
         // Fallback to display_name if address object not available
-        setNewStop({ ...newStop, name: data.display_name, lat, lng });
+        return data.display_name;
       }
+      return null;
     } catch (err) {
       console.error('Reverse geocoding failed:', err);
+      return null;
     }
   };
 
   const handleEditStop = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const updated = await tripAPI.updateItineraryStop(editStop.id, {
+      const updateData: any = {
         name: editStop.name,
         activity: editStop.activity,
         time: editStop.time
-      });
+      };
+      
+      // Include title if provided
+      if (editStop.title && editStop.title.trim()) {
+        updateData.title = editStop.title;
+      }
+      
+      // Include coordinates if available
+      if (editStop.lat && editStop.lng) {
+        updateData.lat = editStop.lat;
+        updateData.lng = editStop.lng;
+      }
+      
+      const updated = await tripAPI.updateItineraryStop(editStop.id, updateData);
       setItinerary(itinerary.map(s => s._id === editStop.id ? updated : s));
-      setEditStop({ id: '', name: '', activity: '', time: '' });
+      setEditStop({ id: '', name: '', activity: '', time: '', title: '', lat: undefined, lng: undefined });
       setShowEditStop(false);
     } catch (err) {
       console.error('Failed to update stop:', err);
@@ -485,8 +574,14 @@ export default function TripDetailsPage() {
       id: stop._id,
       name: stop.name,
       activity: stop.activity || '',
-      time: stop.time.split('T')[0]
+      time: stop.time.split('T')[0],
+      title: stop.title || '',
+      lat: stop.lat,
+      lng: stop.lng
     });
+    if (stop.lat && stop.lng) {
+      setStopMapCenter([stop.lat, stop.lng]);
+    }
     setShowEditStop(true);
     setShowStopMenu(null);
   };
@@ -553,24 +648,68 @@ export default function TripDetailsPage() {
     doc.text(`${trip?.destination}, ${trip?.country}`, 14, 28);
     doc.text(`${formatDateShort(trip?.startDate || '')} - ${formatDateShort(trip?.endDate || '')}`, 14, 34);
     
-    // Itinerary Table
-    const tableData = itinerary.map((stop, idx) => [
-      `Day ${idx + 1}`,
-      stop.name,
-      formatDateShort(stop.time),
-      stop.status.toUpperCase(),
-      stop.activity || '-'
-    ]);
+    // Calculate distances between consecutive stops
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+    
+    // Itinerary Table with new columns
+    const tableData = itinerary.map((stop, idx) => {
+      const dayAndDate = `Day ${idx + 1}\n${formatDateShort(stop.time)}`;
+      const dayTitle = stop.title || '-';
+      const stopName = stop.name;
+      const elevation = stop.elevation ? `${stop.elevation.toLocaleString()}m` : '-';
+      
+      // Calculate distance from previous stop
+      let distance = '-';
+      if (idx > 0 && stop.lat && stop.lng && itinerary[idx - 1].lat && itinerary[idx - 1].lng) {
+        const dist = calculateDistance(
+          itinerary[idx - 1].lat!,
+          itinerary[idx - 1].lng!,
+          stop.lat,
+          stop.lng
+        );
+        distance = `${dist.toFixed(1)} km`;
+      } else if (idx === 0) {
+        distance = 'Start';
+      }
+      
+      const activities = stop.activity || '-';
+      
+      return [dayAndDate, dayTitle, stopName, elevation, distance, activities];
+    });
     
     autoTable(doc, {
       startY: 45,
-      head: [['Day', 'Stop', 'Date', 'Status', 'Activity']],
+      head: [['Day & Date', 'Day Title', 'Stop', 'Elevation', 'Distance', 'Activities']],
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [5, 148, 103], textColor: 255 },
-      styles: { fontSize: 9 },
+      headStyles: { 
+        fillColor: [5, 148, 103], 
+        textColor: 255,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      styles: { 
+        fontSize: 8,
+        cellPadding: 3,
+        valign: 'middle'
+      },
       columnStyles: {
-        4: { cellWidth: 60 }
+        0: { cellWidth: 25, halign: 'center' }, // Day & Date
+        1: { cellWidth: 30 }, // Day Title
+        2: { cellWidth: 35 }, // Stop
+        3: { cellWidth: 20, halign: 'center' }, // Elevation
+        4: { cellWidth: 20, halign: 'center' }, // Distance
+        5: { cellWidth: 50 } // Activities
       }
     });
     
@@ -1102,6 +1241,12 @@ export default function TripDetailsPage() {
                   <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   <span className="text-[10px] md:text-xs font-medium">{trip.destination}, {trip.country}</span>
                 </div>
+                {trip.elevation && (
+                  <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md px-2 py-1 rounded-lg">
+                    <TrendingUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                    <span className="text-[10px] md:text-xs font-bold">{trip.elevation.toLocaleString()}m</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1221,9 +1366,9 @@ export default function TripDetailsPage() {
                           const lastDate = new Date(lastStop.time);
                           const nextDate = new Date(lastDate);
                           nextDate.setDate(nextDate.getDate() + 1);
-                          setNewStop({ name: '', activity: '', time: nextDate.toISOString().split('T')[0] });
+                          setNewStop({ name: '', activity: '', time: nextDate.toISOString().split('T')[0], title: '' });
                         } else {
-                          setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0] });
+                          setNewStop({ name: '', activity: '', time: new Date().toISOString().split('T')[0], title: '' });
                         }
                         setShowAddStop(true);
                       }}
@@ -1294,17 +1439,32 @@ export default function TripDetailsPage() {
 
                           {/* Stop Details Glass Card */}
                           <div className="relative flex-1 bg-white/80 dark:bg-[#132a24]/80 backdrop-blur-xl p-5 md:p-7 rounded-3xl shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5 border border-slate-200/50 dark:border-slate-800/50 hover:shadow-2xl transition-all duration-300 overflow-visible">
-                            <div className="flex justify-between items-start mb-3">
-                              <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white line-clamp-2 pr-4 group-hover:text-[#059467] transition-colors">
-                                {stop.name}
-                              </h3>
-                              <button
-                                onClick={() => setShowStopMenu(showStopMenu === stop._id ? null : stop._id)}
-                                className="text-slate-400 hover:text-[#059467] dark:hover:text-[#059467] p-2 hover:bg-[#059467]/10 rounded-xl transition-all flex-shrink-0 relative z-10"
-                              >
-                                <MoreHorizontal className="w-5 h-5" />
-                              </button>
-                            </div>
+                            {/* Day Title - Optional */}
+                            {stop.title && (
+                              <div className="mb-3 flex justify-between items-start">
+                                <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white group-hover:text-[#059467] transition-colors">
+                                  {stop.title}
+                                </h3>
+                                <button
+                                  onClick={() => setShowStopMenu(showStopMenu === stop._id ? null : stop._id)}
+                                  className="text-slate-400 hover:text-[#059467] dark:hover:text-[#059467] p-2 hover:bg-[#059467]/10 rounded-xl transition-all flex-shrink-0 relative z-10"
+                                >
+                                  <MoreHorizontal className="w-5 h-5" />
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* If no title, show menu button */}
+                            {!stop.title && (
+                              <div className="flex justify-end mb-3">
+                                <button
+                                  onClick={() => setShowStopMenu(showStopMenu === stop._id ? null : stop._id)}
+                                  className="text-slate-400 hover:text-[#059467] dark:hover:text-[#059467] p-2 hover:bg-[#059467]/10 rounded-xl transition-all flex-shrink-0 relative z-10"
+                                >
+                                  <MoreHorizontal className="w-5 h-5" />
+                                </button>
+                              </div>
+                            )}
                             
                             <div className="flex flex-wrap items-center gap-3 mb-4">
                               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50">
@@ -1315,6 +1475,12 @@ export default function TripDetailsPage() {
                                 }`} />
                                 <span className="truncate max-w-[200px]">{stop.name}</span>
                               </div>
+                              {stop.elevation && (
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-800/50">
+                                  <TrendingUp className="w-3.5 h-3.5 flex-shrink-0 text-[#059467]" />
+                                  <span>{stop.elevation.toLocaleString()}m</span>
+                                </div>
+                              )}
                               <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
                                 stop.status === 'completed' ? 'bg-[#059467]/10 text-[#059467] border-[#059467]/20' :
                                 stop.status === 'traveling' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
@@ -2428,9 +2594,24 @@ export default function TripDetailsPage() {
         {/* Add Stop Modal */}
         {showAddStop && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Add New Stop</h3>
               <form onSubmit={handleAddStop} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Day Title (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newStop.title || ''}
+                    onChange={(e) => setNewStop({ ...newStop, title: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
+                    placeholder="e.g., Arrival Day, Summit Day, Rest Day"
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Give this day a memorable title
+                  </p>
+                </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
                     Stop Name
@@ -2478,9 +2659,14 @@ export default function TripDetailsPage() {
                   </div>
                   <div className="relative rounded-xl overflow-hidden shadow-inner ring-1 ring-slate-200 dark:ring-slate-700">
                     <LocationMap 
-                      onLocationSelect={(lat, lng) => {
+                      onLocationSelect={async (lat, lng) => {
                         setStopMapCenter([lat, lng]);
-                        reverseGeocodeStop(lat, lng);
+                        const name = await reverseGeocodeStop(lat, lng);
+                        if (name) {
+                          setNewStop({ ...newStop, name, lat, lng });
+                        } else {
+                          setNewStop({ ...newStop, lat, lng });
+                        }
                       }}
                       initialPosition={stopMapCenter}
                       selectedLocation={newStop.lat && newStop.lng ? { lat: newStop.lat, lng: newStop.lng } : null}
@@ -2568,22 +2754,6 @@ export default function TripDetailsPage() {
                       }
                     </p>
                   )}
-                  {itinerary.length > 0 && (
-                    <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                      <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
-                        Existing Stops (in order):
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {[...itinerary].sort((a, b) => 
-                          new Date(a.time).getTime() - new Date(b.time).getTime()
-                        ).map((stop, index) => (
-                          <span key={stop._id} className="text-[10px] px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded font-medium">
-                            Day {index + 1}: {new Date(stop.time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
                 <div className="flex gap-3 pt-4">
                   <button
@@ -2622,9 +2792,14 @@ export default function TripDetailsPage() {
             </div>
             <div className="flex-1 relative">
               <LocationMap 
-                onLocationSelect={(lat, lng) => {
+                onLocationSelect={async (lat, lng) => {
                   setStopMapCenter([lat, lng]);
-                  reverseGeocodeStop(lat, lng);
+                  const name = await reverseGeocodeStop(lat, lng);
+                  if (name) {
+                    setNewStop({ ...newStop, name, lat, lng });
+                  } else {
+                    setNewStop({ ...newStop, lat, lng });
+                  }
                 }}
                 initialPosition={stopMapCenter}
                 selectedLocation={newStop.lat && newStop.lng ? { lat: newStop.lat, lng: newStop.lng } : null}
@@ -2647,22 +2822,103 @@ export default function TripDetailsPage() {
         {/* Edit Stop Modal */}
         {showEditStop && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6">Edit Stop</h3>
               <form onSubmit={handleEditStop} className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                    Stop Name
+                    Day Title (Optional)
                   </label>
                   <input
                     type="text"
-                    value={editStop.name}
-                    onChange={(e) => setEditStop({ ...editStop, name: e.target.value })}
+                    value={editStop.title || ''}
+                    onChange={(e) => setEditStop({ ...editStop, title: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
-                    placeholder="e.g., Kathmandu Arrival"
-                    required
+                    placeholder="e.g., Arrival Day, Summit Day, Rest Day"
                   />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Give this day a memorable title
+                  </p>
                 </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                    Stop Name
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={editStop.name}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setEditStop({ ...editStop, name: value });
+                        // Auto-search location
+                        if (value.length >= 3) {
+                          const timer = setTimeout(() => {
+                            searchLocation(value).then(coords => {
+                              if (coords) {
+                                setEditStop({ ...editStop, name: value, lat: coords.lat, lng: coords.lng });
+                                setStopMapCenter([coords.lat, coords.lng]);
+                              }
+                            });
+                          }, 800);
+                          return () => clearTimeout(timer);
+                        }
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-[#059467] focus:border-transparent outline-none"
+                      placeholder="e.g., Kathmandu, Nepal"
+                      required
+                    />
+                    {locationSearching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-4 h-4 text-[#059467] animate-spin" />
+                      </div>
+                    )}
+                  </div>
+                  {editStop.lat && editStop.lng && (
+                    <p className="text-xs text-[#059467] font-semibold mt-1.5 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      Location: {editStop.lat.toFixed(4)}, {editStop.lng.toFixed(4)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Map Picker Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                      Location on Map
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowStopMapPicker(true)}
+                      className="text-xs font-bold text-[#059467] hover:text-[#047854] flex items-center gap-1"
+                    >
+                      <Maximize2 className="w-3 h-3" />
+                      Fullscreen
+                    </button>
+                  </div>
+                  <div className="relative rounded-xl overflow-hidden shadow-inner ring-1 ring-slate-200 dark:ring-slate-700">
+                    <LocationMap 
+                      onLocationSelect={(lat, lng) => {
+                        setStopMapCenter([lat, lng]);
+                        reverseGeocodeStop(lat, lng).then(name => {
+                          if (name) {
+                            setEditStop({ ...editStop, name, lat, lng });
+                          } else {
+                            setEditStop({ ...editStop, lat, lng });
+                          }
+                        });
+                      }}
+                      initialPosition={stopMapCenter}
+                      selectedLocation={editStop.lat && editStop.lng ? { lat: editStop.lat, lng: editStop.lng } : null}
+                      height="200px"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                    Click on the map to set location or type location name above
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
                     Activity/Notes
@@ -2692,7 +2948,7 @@ export default function TripDetailsPage() {
                     type="button"
                     onClick={() => {
                       setShowEditStop(false);
-                      setEditStop({ id: '', name: '', activity: '', time: '' });
+                      setEditStop({ id: '', name: '', activity: '', time: '', title: '', lat: undefined, lng: undefined });
                     }}
                     className="flex-1 px-6 py-3 rounded-full border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
                   >
