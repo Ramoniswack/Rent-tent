@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '../../../../components/Header';
 import Footer from '../../../../components/Footer';
@@ -8,7 +8,7 @@ import { CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [verifying, setVerifying] = useState(true);
@@ -167,5 +167,31 @@ export default function PaymentSuccessPage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={
+      <>
+        <Header />
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0b1713] pb-20">
+          <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-10 py-16">
+            <div className="text-center">
+              <Loader2 className="w-16 h-16 text-[#059467] animate-spin mx-auto mb-6" />
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Loading Payment Details
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400">
+                Please wait...
+              </p>
+            </div>
+          </main>
+        </div>
+        <Footer />
+      </>
+    }>
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }

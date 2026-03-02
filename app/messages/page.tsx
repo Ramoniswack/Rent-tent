@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -1745,7 +1745,22 @@ function MessagesPage() {
 export default function ProtectedMessagesPage() {
   return (
     <ProtectedRoute>
-      <MessagesPage />
+      <Suspense fallback={
+        <>
+          <Header />
+          <div className="min-h-screen bg-slate-50 dark:bg-[#0b1713] pb-20">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+              <div className="text-center py-16">
+                <Loader2 className="w-12 h-12 text-[#059467] animate-spin mx-auto mb-4" />
+                <p className="text-slate-600 dark:text-slate-400">Loading messages...</p>
+              </div>
+            </main>
+          </div>
+          <Footer />
+        </>
+      }>
+        <MessagesPage />
+      </Suspense>
     </ProtectedRoute>
   );
 }
