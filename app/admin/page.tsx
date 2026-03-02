@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '../../hooks/useToast';
 import { adminAPI, userAPI } from '../../services/api';
@@ -14,7 +14,7 @@ import {
 
 type Tab = 'overview' | 'users' | 'trips' | 'gear' | 'pages' | 'analytics';
 
-export default function AdminPage() {
+function AdminContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showConfirm, showToast } = useToast();
@@ -1019,5 +1019,29 @@ export default function AdminPage() {
         }
       `}</style>
     </>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-[#060d0b] flex flex-col relative overflow-hidden">
+        <Header />
+        <div className="flex flex-col items-center justify-center flex-1 gap-6 animate-in fade-in duration-500">
+          <div className="relative">
+            <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full animate-pulse" />
+            <div className="w-16 h-16 bg-white dark:bg-[#132a24] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl flex items-center justify-center relative z-10">
+              <Loader2 className="w-8 h-8 text-[#059467] animate-spin" />
+            </div>
+          </div>
+          <div className="text-center space-y-1">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Loading Admin Panel</h3>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Please wait...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <AdminContent />
+    </Suspense>
   );
 }
