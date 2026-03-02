@@ -156,10 +156,7 @@ function MapPage() {
     if (routePolylineRef.current && mapRef.current) {
       try {
         mapRef.current.removeLayer(routePolylineRef.current);
-        console.log('Route polyline removed');
-      } catch (err) {
-        console.log('Route polyline cleanup handled');
-      }
+      } catch (err) {}
       routePolylineRef.current = null;
     }
     
@@ -169,12 +166,8 @@ function MapPage() {
         mapRef.current.removeControl(routeControl);
       } catch (err) {
         try {
-          if (routeControl.remove) {
-            routeControl.remove();
-          }
-        } catch (e) {
-          console.log('Route control cleanup handled');
-        }
+          if (routeControl.remove) routeControl.remove();
+        } catch (e) {}
       }
       setRouteControl(null);
     }
@@ -183,10 +176,7 @@ function MapPage() {
     if (animatedMarkerRef.current && mapRef.current) {
       try {
         mapRef.current.removeLayer(animatedMarkerRef.current);
-        console.log('Animated marker removed');
-      } catch (err) {
-        console.log('Animated marker cleanup handled');
-      }
+      } catch (err) {}
       animatedMarkerRef.current = null;
     }
     
@@ -202,29 +192,18 @@ function MapPage() {
     setRouteInfo(null);
     setRouteDestinationId(null);
     setShowRoutePanel(false);
-    console.log('Route cleared completely');
   };
 
   const clearManualRoute = () => {
-    // Remove drawn markers
     drawnMarkersRef.current.forEach(marker => {
       if (mapRef.current) {
-        try {
-          mapRef.current.removeLayer(marker);
-        } catch (err) {
-          console.log('Marker cleanup handled');
-        }
+        try { mapRef.current.removeLayer(marker); } catch (err) {}
       }
     });
     drawnMarkersRef.current = [];
     
-    // Remove temporary polyline
     if (tempPolylineRef.current && mapRef.current) {
-      try {
-        mapRef.current.removeLayer(tempPolylineRef.current);
-      } catch (err) {
-        console.log('Polyline cleanup handled');
-      }
+      try { mapRef.current.removeLayer(tempPolylineRef.current); } catch (err) {}
       tempPolylineRef.current = null;
     }
     
@@ -263,13 +242,11 @@ function MapPage() {
       );
     }
     
-    // Estimate duration (assuming 60 km/h average speed)
     const speed = 60;
     const durationMin = Math.round((totalDistance / speed) * 60);
     const hours = Math.floor(durationMin / 60);
     const minutes = durationMin % 60;
     
-    // Create final polyline
     if (tempPolylineRef.current && mapRef.current) {
       mapRef.current.removeLayer(tempPolylineRef.current);
     }
@@ -282,11 +259,8 @@ function MapPage() {
     routePolylineRef.current = finalPolyline;
     tempPolylineRef.current = null;
     
-    // Clear drawn markers
     drawnMarkersRef.current.forEach(marker => {
-      if (mapRef.current) {
-        mapRef.current.removeLayer(marker);
-      }
+      if (mapRef.current) mapRef.current.removeLayer(marker);
     });
     drawnMarkersRef.current = [];
     
@@ -296,7 +270,6 @@ function MapPage() {
       type: 'manual'
     });
     
-    // Fit map to show the entire route
     mapRef.current.fitBounds(finalPolyline.getBounds(), { padding: [50, 50] });
   };
 
@@ -306,90 +279,65 @@ function MapPage() {
   };
 
   const calculateRoute = async (destination: { lat: number; lng: number }, destinationId: string) => {
-    console.log('Calculate route called for destination:', destination, 'ID:', destinationId);
-    
-    // Clear any existing route first
     clearRoute();
-    
-    // Set the destination ID for this route
     setRouteDestinationId(destinationId);
     
-    // First, try to get the user's current real-time location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           const currentLocation = { lat: latitude, lng: longitude };
-          
-          // Update user location state
           setUserLocation(currentLocation);
           
-          // Update user marker on map
           if (mapRef.current) {
             const L = (await import('leaflet')).default;
             if (userMarkerRef.current) userMarkerRef.current.remove();
-            
             const userIconHtml = `
               <div class="relative flex items-center justify-center">
                 <div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg z-10"></div>
                 <div class="absolute w-10 h-10 bg-blue-500/30 rounded-full animate-ping"></div>
               </div>
             `;
-            
             userMarkerRef.current = L.marker([latitude, longitude], { 
               icon: L.divIcon({ html: userIconHtml, className: 'user-location-marker', iconSize: [40, 40], iconAnchor: [20, 20] })
             }).addTo(mapRef.current).bindPopup('<div class="text-center p-2 font-bold text-sm">You are here</div>');
           }
           
-          // Now calculate route from current location
           setIsCalculatingRoute(true);
-
           try {
             const L = (await import('leaflet')).default;
             useFallbackRoute(L, destination, currentLocation);
           } catch (error: any) {
-            console.error('Error calculating route:', error);
             setIsCalculatingRoute(false);
-            alert('Failed to calculate route. Please try again.');
           }
         },
         (error) => {
-          // If real-time location fails, fall back to stored location
           if (!userLocation || !mapRef.current) {
             alert('Please enable your location to get directions');
             return;
           }
-          
           setIsCalculatingRoute(true);
-
           (async () => {
             try {
               const L = (await import('leaflet')).default;
               useFallbackRoute(L, destination, userLocation);
             } catch (error: any) {
-              console.error('Error calculating route:', error);
               setIsCalculatingRoute(false);
-              alert('Failed to calculate route. Please try again.');
             }
           })();
         }
       );
     } else {
-      // No geolocation support, use stored location
       if (!userLocation || !mapRef.current) {
         alert('Please enable your location to get directions');
         return;
       }
-
       setIsCalculatingRoute(true);
-
       try {
         const L = (await import('leaflet')).default;
         useFallbackRoute(L, destination, userLocation);
       } catch (error: any) {
-        console.error('Error calculating route:', error);
         setIsCalculatingRoute(false);
-        alert('Failed to calculate route. Please try again.');
       }
     }
   };
@@ -398,48 +346,28 @@ function MapPage() {
     if (!fromLocation || !mapRef.current) return;
     
     try {
-      // Try to get actual road routing from OSRM (free, no API key needed)
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${fromLocation.lng},${fromLocation.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
+      // Smart routing: Use foot for < 40km distances, driving for longer ones
+      const distanceCheck = calculateDistance(fromLocation.lat, fromLocation.lng, destination.lat, destination.lng);
+      const profile = distanceCheck < 40 ? 'foot' : 'driving';
+      const osrmUrl = `https://router.project-osrm.org/route/v1/${profile}/${fromLocation.lng},${fromLocation.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson`;
       
-      const response = await fetch(osrmUrl, { 
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
-      
-      if (!response.ok) {
-        throw new Error(`OSRM API returned ${response.status}`);
-      }
-      
+      const response = await fetch(osrmUrl, { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error(`OSRM API returned ${response.status}`);
       const data = await response.json();
       
       if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
         const route = data.routes[0];
         const coordinates = route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
         
-        // Draw the actual road route in GREEN for directions
-        const polyline = L.polyline(coordinates, {
-          color: '#10b981',
-          opacity: 0.8,
-          weight: 5
-        }).addTo(mapRef.current);
-        
-        // Store polyline in ref for cleanup
+        const polyline = L.polyline(coordinates, { color: '#10b981', opacity: 0.8, weight: 5 }).addTo(mapRef.current);
         routePolylineRef.current = polyline;
         
-        // Get distance and duration from OSRM
         const distanceKm = (route.distance / 1000).toFixed(1);
-        // OSRM duration is often optimistic, especially for long routes or difficult terrain
-        // Apply a more realistic multiplier based on distance
         let durationSeconds = route.duration;
         
-        // For routes over 100km, add 50% more time to account for real-world conditions
-        // For routes over 200km, add 80% more time
-        if (route.distance > 200000) {
-          durationSeconds = durationSeconds * 1.8;
-        } else if (route.distance > 100000) {
-          durationSeconds = durationSeconds * 1.5;
-        } else {
-          durationSeconds = durationSeconds * 1.3; // Add 30% for shorter routes
-        }
+        if (route.distance > 200000) durationSeconds = durationSeconds * 1.8;
+        else if (route.distance > 100000) durationSeconds = durationSeconds * 1.5;
+        else durationSeconds = durationSeconds * 1.3;
         
         const durationMin = Math.round(durationSeconds / 60);
         const hours = Math.floor(durationMin / 60);
@@ -451,37 +379,25 @@ function MapPage() {
           type: 'road'
         });
         
-        // Animate marker along the actual route
         createAnimatedMarker(L, coordinates.map((coord: number[]) => ({ lat: coord[0], lng: coord[1] })));
-        
         setRouteControl({ remove: () => polyline.remove() });
         setIsCalculatingRoute(false);
         setShowRoutePanel(true);
-        
-        // Fit map to show the entire route
         mapRef.current.fitBounds(polyline.getBounds(), { padding: [50, 50] });
       } else {
         throw new Error('No route found from OSRM');
       }
     } catch (err) {
-      console.warn('OSRM routing failed, using straight line fallback:', err);
-      
-      // Fallback to straight line if OSRM fails - GREEN for directions
       if (!mapRef.current) return;
-      
       const polyline = L.polyline(
         [[fromLocation.lat, fromLocation.lng], [destination.lat, destination.lng]],
         { color: '#10b981', opacity: 0.6, weight: 4, dashArray: '10, 10' }
       ).addTo(mapRef.current);
 
-      // Store polyline in ref for cleanup
       routePolylineRef.current = polyline;
-
       const distance = calculateDistance(fromLocation.lat, fromLocation.lng, destination.lat, destination.lng);
-      const speed = 60;
-      const durationMin = Math.round((distance / speed) * 60);
-      const hours = Math.floor(durationMin / 60);
-      const minutes = durationMin % 60;
+      const hours = Math.floor(distance / 60);
+      const minutes = Math.round(distance) % 60;
 
       setRouteInfo({
         distance: `~${distance.toFixed(1)} km`,
@@ -499,17 +415,11 @@ function MapPage() {
   const createAnimatedMarker = (L: any, coordinates: any[]) => {
     if (!mapRef.current || !coordinates || coordinates.length === 0) return;
 
-    // Clear any existing animated marker first
     if (animatedMarkerRef.current && mapRef.current) {
-      try {
-        mapRef.current.removeLayer(animatedMarkerRef.current);
-      } catch (err) {
-        // Silently handle removal errors
-      }
+      try { mapRef.current.removeLayer(animatedMarkerRef.current); } catch (err) {}
       animatedMarkerRef.current = null;
     }
 
-    // Cancel any ongoing animation
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
@@ -555,22 +465,6 @@ function MapPage() {
     animateMarker();
   };
 
-  const handleRouteToFriend = () => {
-    if (!selectedFriend) return;
-    const friend = friends.find(f => f._id === selectedFriend);
-    if (friend?.coordinates?.lat && friend?.coordinates?.lng) {
-      calculateRoute({ lat: friend.coordinates.lat, lng: friend.coordinates.lng }, selectedFriend);
-    }
-  };
-
-  const handleRouteToTrip = () => {
-    if (!selectedTrip) return;
-    const trip = trips.find(t => t._id === selectedTrip);
-    if (trip?.lat && trip?.lng) {
-      calculateRoute({ lat: trip.lat, lng: trip.lng }, selectedTrip);
-    }
-  };
-
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
@@ -578,20 +472,15 @@ function MapPage() {
         if (profile.coordinates?.lat && profile.coordinates?.lng) {
           setUserLocation({ lat: profile.coordinates.lat, lng: profile.coordinates.lng });
         }
-      } catch (error) {
-        console.error('Error loading user profile:', error);
-      }
+      } catch (error) {}
     };
     loadUserProfile();
   }, []);
 
-  // Clear route when selected friend or trip changes
   useEffect(() => {
-    // Clear route whenever selection changes (switching between cards)
     clearRoute();
   }, [selectedFriend, selectedTrip]);
 
-  // Fetch trip itinerary when a trip is selected
   useEffect(() => {
     const fetchTripItinerary = async () => {
       if (!selectedTrip || activeTab !== 'trips') {
@@ -600,28 +489,19 @@ function MapPage() {
       }
       
       try {
-        console.log('Fetching itinerary for trip:', selectedTrip);
         const stops = await tripAPI.getItinerary(selectedTrip);
-        console.log('Fetched stops:', stops);
-        
-        // Sort stops by date
         const sortedStops = (stops || []).sort((a: any, b: any) => 
           new Date(a.time).getTime() - new Date(b.time).getTime()
         );
         
-        console.log('Sorted stops:', sortedStops);
-        console.log('Stops with coordinates:', sortedStops.filter((s: any) => s.lat && s.lng));
-        
         setTripItinerary(sortedStops);
         
-        // Fetch elevation data for stops with coordinates
         const stopsWithCoords = sortedStops.filter((s: any) => s.lat && s.lng);
         if (stopsWithCoords.length > 0) {
           setElevationLoading(true);
           const locations = stopsWithCoords.map((s: any) => ({ lat: s.lat, lng: s.lng }));
           const elevations = await fetchElevationBatch(locations);
           
-          // Update stops with elevation data
           const updatedStops = sortedStops.map((stop: any) => {
             const index = stopsWithCoords.findIndex((s: any) => s._id === stop._id);
             if (index !== -1 && elevations[index] !== null) {
@@ -634,7 +514,6 @@ function MapPage() {
           setElevationLoading(false);
         }
       } catch (err) {
-        console.error('Failed to fetch itinerary:', err);
         setTripItinerary([]);
         setElevationLoading(false);
       }
@@ -706,14 +585,12 @@ function MapPage() {
         if (activeTab === 'trips') {
           const data = await tripAPI.getAll();
           
-          // Fetch elevation data for trips with coordinates
           const tripsWithCoords = data.filter((trip: Trip) => trip.lat && trip.lng);
           if (tripsWithCoords.length > 0) {
             setElevationLoading(true);
             const locations = tripsWithCoords.map((t: Trip) => ({ lat: t.lat!, lng: t.lng! }));
             const elevations = await fetchElevationBatch(locations);
             
-            // Update trips with elevation data
             const updatedTrips = data.map((trip: Trip) => {
               const index = tripsWithCoords.findIndex((t: Trip) => t._id === trip._id);
               if (index !== -1 && elevations[index] !== null) {
@@ -743,7 +620,7 @@ function MapPage() {
                 .filter((profile: any) => profile.connectionStatus === 'connected')
                 .map((profile: any) => ({ ...profile, _id: profile.id, connectionType: 'mutual' }));
             }
-          } catch (e) { console.error('Discover error:', e); }
+          } catch (e) {}
           
           const matchedIds = new Set(matchedUsers.map((u: any) => u._id || u.id));
           const uniqueMutualUsers = mutualUsers.filter((u: any) => !matchedIds.has(u._id || u.id));
@@ -767,7 +644,7 @@ function MapPage() {
       }
     };
     fetchData();
-  }, [activeTab]); // Removed unstable dependencies
+  }, [activeTab]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -810,17 +687,13 @@ function MapPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
-    if (mapRef.current) return; // Map already initialized
+    if (mapRef.current) return;
 
     const initMap = async () => {
       const L = (await import('leaflet')).default;
       const container = mapContainerRef.current;
       
-      // Check if container is already initialized
-      if (!container || (container as any)._leaflet_id) {
-        console.log('Map container already initialized');
-        return;
-      }
+      if (!container || (container as any)._leaflet_id) return;
 
       const map = L.map(container, { center: [20, 0], zoom: 2, zoomControl: false });
       
@@ -828,14 +701,12 @@ function MapPage() {
       tileLayerRef.current = L.tileLayer(layerConfig.url, { attribution: layerConfig.attribution, maxZoom: 19 }).addTo(map);
       mapRef.current = map;
       
-      // Add click handler for manual route drawing
       map.on('click', (e: any) => {
         if (!isDrawingModeRef.current) return;
         
         const { lat, lng } = e.latlng;
         const newPoint = { lat, lng };
         
-        // Add marker for this point
         const markerIcon = L.divIcon({
           html: `<div class="w-6 h-6 bg-green-500 border-2 border-white rounded-full shadow-lg flex items-center justify-center text-white text-xs font-bold">${drawnPointsRef.current.length + 1}</div>`,
           className: 'custom-draw-marker',
@@ -846,12 +717,10 @@ function MapPage() {
         const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
         drawnMarkersRef.current.push(marker);
         
-        // Update points
         const updatedPoints = [...drawnPointsRef.current, newPoint];
         drawnPointsRef.current = updatedPoints;
         setDrawnPoints(updatedPoints);
         
-        // Draw temporary polyline
         if (tempPolylineRef.current) {
           map.removeLayer(tempPolylineRef.current);
         }
@@ -896,7 +765,6 @@ function MapPage() {
       markersRef.current = {};
 
       if (activeTab === 'trips') {
-        // If a trip is selected, show only that trip; otherwise show all trips
         const tripsToDisplay = selectedTrip 
           ? filteredTrips.filter(t => t._id === selectedTrip && t.lat && t.lng)
           : filteredTrips.filter(t => t.lat && t.lng);
@@ -932,7 +800,7 @@ function MapPage() {
                 <p class="text-slate-500 text-xs mt-1 font-medium">${formatDates(trip.startDate, trip.endDate)}</p>
                 <p class="text-slate-600 text-xs mt-1 truncate mb-3">${trip.destination}, ${trip.country}</p>
                 <button 
-                  onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${trip.lat},${trip.lng}', '_blank')"
+                  onclick="window.open('https://www.google.com/maps/search/?api=1&query=${trip.lat},${trip.lng}', '_blank')"
                   class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition-colors"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -952,11 +820,9 @@ function MapPage() {
 
         if (tripsToDisplay.length > 0) {
           if (tripsToDisplay.length === 1 && selectedTrip) {
-            // If only one trip is selected, center on it with a good zoom level
             const trip = tripsToDisplay[0];
             mapRef.current.setView([trip.lat!, trip.lng!], 13, { animate: true });
           } else {
-            // Multiple trips, fit bounds to show all
             const bounds = L.latLngBounds(tripsToDisplay.map((t: Trip) => [t.lat!, t.lng!]));
             const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
             mapRef.current.fitBounds(bounds, { paddingBottomRight: [50, paddingBottom], paddingTopLeft: [50, 50], maxZoom: 10 });
@@ -994,7 +860,7 @@ function MapPage() {
               </div>
               <p class="text-xs text-slate-600 mb-3 truncate font-medium">${friend.location || 'Unknown location'}</p>
               <button 
-                onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${friend.coordinates.lat},${friend.coordinates.lng}', '_blank')"
+                onclick="window.open('https://www.google.com/maps/search/?api=1&query=${friend.coordinates.lat},${friend.coordinates.lng}', '_blank')"
                 class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold transition-colors"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1012,14 +878,12 @@ function MapPage() {
         });
 
         if (filteredFriends.length > 0 && !showRoutePanel) {
-          // If a friend is selected, zoom to only that friend
           if (selectedFriend) {
             const selected = filteredFriends.find(f => f._id === selectedFriend);
             if (selected && selected.coordinates?.lat && selected.coordinates?.lng) {
               mapRef.current.setView([selected.coordinates.lat, selected.coordinates.lng], 13, { animate: true });
             }
           } else {
-            // If no friend is selected, show all friends
             const coords = filteredFriends.filter(f => f.coordinates?.lat).map(f => [f.coordinates.lat, f.coordinates.lng] as [number, number]);
             if (coords.length > 0) {
               const paddingBottom = window.innerWidth < 768 ? (isMobileExpanded ? 400 : 250) : 50;
@@ -1032,75 +896,44 @@ function MapPage() {
     updateMarkers();
   }, [filteredTrips, filteredFriends, selectedTrip, selectedFriend, mapLoaded, activeTab, isMobileExpanded, showRoutePanel]);
 
-  // Display itinerary stops on map
+  // IMPORTANT FIX: Using an isCancelled flag for Race Conditions and a delay for API rate limits
   useEffect(() => {
-    console.log('Display itinerary effect triggered:', { 
-      mapLoaded, 
-      hasMap: !!mapRef.current, 
-      itineraryLength: tripItinerary.length,
-      itinerary: tripItinerary,
-      activeTab,
-      selectedTrip
-    });
+    let isCancelled = false;
     
-    // Only show itinerary if we're on trips tab AND a trip is selected
     if (!mapLoaded || !mapRef.current || tripItinerary.length === 0 || activeTab !== 'trips' || !selectedTrip) {
-      // Clear existing itinerary markers and routes
       Object.values(itineraryMarkersRef.current).forEach(marker => {
-        try {
-          mapRef.current.removeLayer(marker);
-        } catch (e) {}
+        try { mapRef.current.removeLayer(marker); } catch (e) {}
       });
       itineraryMarkersRef.current = {};
       
       itineraryRoutesRef.current.forEach(route => {
-        try {
-          mapRef.current.removeLayer(route);
-        } catch (e) {}
+        try { mapRef.current.removeLayer(route); } catch (e) {}
       });
       itineraryRoutesRef.current = [];
       return;
     }
     
     const displayItineraryStops = async () => {
-      // Check if map is initialized
-      if (!mapRef.current) {
-        console.log('Map not initialized yet, skipping itinerary display');
-        return;
-      }
+      if (!mapRef.current) return;
       
-      console.log('Starting to display itinerary stops...');
       const L = (await import('leaflet')).default;
+      if (isCancelled) return;
       
-      // Clear existing itinerary markers
       Object.values(itineraryMarkersRef.current).forEach(marker => {
-        try {
-          mapRef.current.removeLayer(marker);
-        } catch (e) {}
+        try { mapRef.current.removeLayer(marker); } catch (e) {}
       });
       itineraryMarkersRef.current = {};
       
-      // Clear existing routes
       itineraryRoutesRef.current.forEach(route => {
-        try {
-          mapRef.current.removeLayer(route);
-        } catch (e) {}
+        try { mapRef.current.removeLayer(route); } catch (e) {}
       });
       itineraryRoutesRef.current = [];
       
-      // Add markers for each stop
       const stopsWithCoords = tripItinerary.filter(stop => stop.lat && stop.lng);
-      
-      console.log('Stops with coordinates:', stopsWithCoords.length, 'out of', tripItinerary.length);
-      
-      if (stopsWithCoords.length === 0) {
-        console.warn('No stops have coordinates!');
-        return;
-      }
+      if (stopsWithCoords.length === 0) return;
       
       stopsWithCoords.forEach((stop, index) => {
-        // Safety check - ensure map still exists
-        if (!mapRef.current) return;
+        if (!mapRef.current || isCancelled) return;
         
         const dayNumber = index + 1;
         const iconHtml = `
@@ -1115,16 +948,10 @@ function MapPage() {
         `;
         
         const marker = L.marker([stop.lat, stop.lng], {
-          icon: L.divIcon({
-            html: iconHtml,
-            className: 'itinerary-stop-marker',
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-          }),
+          icon: L.divIcon({ html: iconHtml, className: 'itinerary-stop-marker', iconSize: [40, 40], iconAnchor: [20, 20] }),
           zIndexOffset: 500
         }).addTo(mapRef.current);
         
-        // Add popup with stop details
         const popupContent = `
           <div class="p-2">
             <div class="font-bold text-sm text-[#059467] mb-1">Day ${dayNumber}</div>
@@ -1140,54 +967,42 @@ function MapPage() {
           </div>
         `;
         marker.bindPopup(popupContent, { maxWidth: 220, className: 'custom-popup' });
-        
         itineraryMarkersRef.current[stop._id] = marker;
       });
       
-      // Draw routes between consecutive stops using OSRM for road routing
       for (let i = 0; i < stopsWithCoords.length - 1; i++) {
-        // Safety check - ensure map still exists
-        if (!mapRef.current) break;
+        if (!mapRef.current || isCancelled) break;
         
         const currentStop = stopsWithCoords[i];
         const nextStop = stopsWithCoords[i + 1];
         
         try {
-          // Try to get actual road routing from OSRM
-          const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${currentStop.lng},${currentStop.lat};${nextStop.lng},${nextStop.lat}?overview=full&geometries=geojson`;
+          // Smart routing heuristic: Under 40km is likely a trek. Over 40km is likely a drive or flight.
+          const distanceCheck = calculateDistance(currentStop.lat, currentStop.lng, nextStop.lat, nextStop.lng);
+          const routeProfile = distanceCheck < 40 ? 'foot' : 'driving';
           
-          const response = await fetch(osrmUrl, {
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-          });
+          const osrmUrl = `https://router.project-osrm.org/route/v1/${routeProfile}/${currentStop.lng},${currentStop.lat};${nextStop.lng},${nextStop.lat}?overview=full&geometries=geojson`;
           
-          if (!response.ok) {
-            throw new Error(`OSRM API returned ${response.status}`);
-          }
+          const response = await fetch(osrmUrl, { signal: AbortSignal.timeout(5000) });
+          if (isCancelled) break; // Check again after await
+          
+          if (!response.ok) throw new Error(`OSRM API returned ${response.status}`);
           
           const data = await response.json();
+          if (isCancelled) break; // Check again after await
           
           if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
             const route = data.routes[0];
             const coordinates = route.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]]);
             
-            // Draw the actual road route in RED for itinerary stops
-            const polyline = L.polyline(coordinates, {
-              color: '#ef4444',
-              weight: 4,
-              opacity: 0.8,
-              dashArray: '10, 5'
-            });
+            const polyline = L.polyline(coordinates, { color: '#ef4444', weight: 4, opacity: 0.8, dashArray: '10, 5' });
             
-            // Safety check before adding to map
             if (mapRef.current) {
               polyline.addTo(mapRef.current);
               itineraryRoutesRef.current.push(polyline);
             }
             
-            // Get distance from OSRM (more accurate than straight-line)
             const distanceKm = (route.distance / 1000).toFixed(1);
-            
-            // Add distance label at midpoint of the route
             const midIndex = Math.floor(coordinates.length / 2);
             const midLat = coordinates[midIndex][0];
             const midLng = coordinates[midIndex][1];
@@ -1202,7 +1017,6 @@ function MapPage() {
               zIndexOffset: 400
             });
             
-            // Safety check before adding to map
             if (mapRef.current) {
               distanceLabel.addTo(mapRef.current);
               itineraryRoutesRef.current.push(distanceLabel);
@@ -1211,34 +1025,19 @@ function MapPage() {
             throw new Error('OSRM routing failed - no valid route');
           }
         } catch (err) {
-          console.warn(`OSRM routing failed for stop ${i} to ${i+1}, using straight line:`, err);
-          
-          // Fallback to straight line if OSRM fails - RED for itinerary stops
-          if (!mapRef.current) continue;
+          if (!mapRef.current || isCancelled) continue;
           
           const polyline = L.polyline(
             [[currentStop.lat, currentStop.lng], [nextStop.lat, nextStop.lng]],
-            {
-              color: '#ef4444',
-              weight: 3,
-              opacity: 0.7,
-              dashArray: '10, 5'
-            }
+            { color: '#ef4444', weight: 3, opacity: 0.7, dashArray: '10, 5' }
           );
           
-          // Safety check before adding to map
           if (mapRef.current) {
             polyline.addTo(mapRef.current);
             itineraryRoutesRef.current.push(polyline);
           }
           
-          // Calculate straight-line distance
-          const distance = calculateDistance(
-            currentStop.lat, currentStop.lng,
-            nextStop.lat, nextStop.lng
-          );
-          
-          // Add distance label at midpoint
+          const distance = calculateDistance(currentStop.lat, currentStop.lng, nextStop.lat, nextStop.lng);
           const midLat = (currentStop.lat + nextStop.lat) / 2;
           const midLng = (currentStop.lng + nextStop.lng) / 2;
           
@@ -1252,22 +1051,30 @@ function MapPage() {
             zIndexOffset: 400
           });
           
-          // Safety check before adding to map
           if (mapRef.current) {
             distanceLabel.addTo(mapRef.current);
             itineraryRoutesRef.current.push(distanceLabel);
           }
         }
+        
+        // Anti-Rate Limit Delay: Wait 400ms between OSRM requests to prevent blocking
+        if (i < stopsWithCoords.length - 2 && !isCancelled) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
       }
       
-      // Fit map bounds to show all stops
-      if (stopsWithCoords.length > 0) {
+      if (!isCancelled && stopsWithCoords.length > 0 && mapRef.current) {
         const bounds = stopsWithCoords.map(stop => [stop.lat, stop.lng]);
         mapRef.current.fitBounds(bounds, { padding: [80, 80], maxZoom: 12 });
       }
     };
     
     displayItineraryStops();
+    
+    // Cleanup function: Safely cancels the async loop if data updates mid-draw
+    return () => {
+      isCancelled = true;
+    };
   }, [tripItinerary, mapLoaded]);
 
   return (
@@ -1456,7 +1263,6 @@ function MapPage() {
           <div 
             className="flex-1 overflow-y-auto px-5 py-4 space-y-3 custom-scrollbar"
             onClick={(e) => {
-              // Deselect trip/friend when clicking in the empty space of the sidebar
               if (e.target === e.currentTarget) {
                 if (activeTab === 'trips') {
                   setSelectedTrip(null);
@@ -1537,7 +1343,6 @@ function MapPage() {
                               onClick={(e) => { 
                                 e.stopPropagation(); 
                                 setSelectedTrip(trip._id); 
-                                // Toggle route: if this trip already has active route, clear it; otherwise calculate new route
                                 if (routeDestinationId === trip._id && routeInfo) {
                                   clearRoute();
                                 } else {
@@ -1562,7 +1367,7 @@ function MapPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                               </svg>
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${trip.lat},${trip.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
+                            <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${trip.lat},${trip.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
                               <ExternalLink className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -1625,7 +1430,6 @@ function MapPage() {
                               onClick={(e) => { 
                                 e.stopPropagation(); 
                                 setSelectedFriend(friend._id); 
-                                // Toggle route: if this friend already has active route, clear it; otherwise calculate new route
                                 if (routeDestinationId === friend._id && routeInfo) {
                                   clearRoute();
                                 } else {
@@ -1639,7 +1443,7 @@ function MapPage() {
                             </button>
                           )}
                           {hasLocation && (
-                            <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/dir/?api=1&destination=${friend.coordinates.lat},${friend.coordinates.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
+                            <button onClick={(e) => { e.stopPropagation(); window.open(`https://www.google.com/maps/search/?api=1&query=${friend.coordinates.lat},${friend.coordinates.lng}`, '_blank'); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Open in Google Maps">
                               <ExternalLink className="w-3.5 h-3.5" />
                             </button>
                           )}
